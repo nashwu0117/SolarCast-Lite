@@ -266,6 +266,13 @@ class NationalGrid:
         t = pd.Timestamp(time_utc)
         return (t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")).floor("h")
 
+    def wait_live(self, timeout_s: float = 600) -> bool:
+        """Block until the live grid computed in the background is ready (True) or timeout_s passes (False)."""
+        end = time.time() + timeout_s
+        while self._live_busy.is_set() and time.time() < end:
+            time.sleep(1)
+        return self._live is not None
+
     def snapshot(self, time_utc, at: str | None = None, summarize: bool = True) -> dict:
         """All cells for one issue hour t (forecast for [t, t+1h)), with national numbers and the briefing."""
         live = str(time_utc).lower() == "live"

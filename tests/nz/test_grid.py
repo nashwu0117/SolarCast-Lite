@@ -171,3 +171,14 @@ def test_live_grid_still_computing_is_a_clear_error(service, fake_fetch):
     g._live_busy.set()
     with pytest.raises(RuntimeError, match="still being computed"):
         g.snapshot("live")
+
+
+def test_wait_live_blocks_until_ready_or_timeout(service, fake_fetch):
+    """The judges notebook waits for the live grid before it prints the dashboard link."""
+    g = nzgrid.NationalGrid(service, CELLS, 0.5)
+    g._live_busy.set()
+    t0 = time.time()
+    assert g.wait_live(timeout_s=0.5) is False and time.time() - t0 < 3   # still computing -> gives up at the timeout
+    g._live_busy.clear()
+    g._live = {"ready": True}
+    assert g.wait_live(timeout_s=5) is True

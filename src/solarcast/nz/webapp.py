@@ -409,6 +409,19 @@ INDEX_HTML = r"""<!doctype html>
   .cform button { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .cform button:disabled { opacity: .5; cursor: default; }
   @media (max-width: 600px) { #chat { right: 8px; left: 8px; bottom: 8px; width: auto; max-width: none; height: calc(100vh - 16px); } }
+  /* Power-flow animation: sun -> your panels -> home -> EV */
+  .flow { display: block; width: 100%; max-width: 420px; height: auto; margin: 6px 0 2px; }
+  .flow text { font: 600 10px system-ui, sans-serif; fill: var(--muted); }
+  .flow .kw { fill: var(--good); font-size: 11px; }
+  .flow .wire { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+  .flow .juice { fill: none; stroke: var(--good); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 4 12;
+                 animation: flowdash var(--speed, 1.5s) linear infinite; }
+  .flow .grid-juice { fill: none; stroke: var(--night); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 4 12;
+                      animation: flowdash 2.2s linear infinite; }
+  .flow .sunrays { transform-origin: 30px 26px; animation: spin 14s linear infinite; }
+  @keyframes flowdash { to { stroke-dashoffset: -32; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .flow .juice, .flow .grid-juice, .flow .sunrays { animation: none; } }
 </style>
 </head>
 <body>
@@ -793,10 +806,49 @@ function selectPoint(lat, lon) {
 map.on('click', e => selectPoint(e.latlng.lat, e.latlng.lng));
 
 let lastPanel = null;
+// Animated picture of where the next hour's power goes: sun -> your panels -> home (-> EV when the example says charge).
+// The dots move faster and the sun is brighter when the panels give more of their rated power; at night the home runs on the grid.
+function flowSvg(d) {
+  const kw = typeof d.predicted_kw_next === 'number' ? d.predicted_kw_next : 0;
+  const share = Math.max(0, Math.min(1, kw / REF));
+  const on = share >= 0.02, car = on && !!d.charge_now;
+  const speed = (2.6 - 2.1 * share).toFixed(2) + 's';
+  const rays = [0, 45, 90, 135, 180, 225, 270, 315].map(a => {
+    const r = a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    return `<line x1="${(30 + 15 * c).toFixed(1)}" y1="${(26 + 15 * s).toFixed(1)}" x2="${(30 + 21 * c).toFixed(1)}" y2="${(26 + 21 * s).toFixed(1)}"/>`;
+  }).join('');
+  const sun = on
+    ? `<g opacity="${(0.35 + 0.65 * share).toFixed(2)}"><g class="sunrays" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round">${rays}</g>
+       <circle cx="30" cy="26" r="11" fill="#f5b400"/></g>`
+    : `<path d="M36 14 a13 13 0 1 0 6 22 a10 10 0 1 1 -6 -22z" fill="#8a9bb8"/>`;
+  const juice = (p, cls) => `<path class="wire" d="${p}"/><path class="${cls}" d="${p}" style="--speed:${speed}"/>`;
+  return `<svg class="flow" viewBox="0 0 330 118" role="img" aria-label="${on
+      ? `Power flow: your ${SIZE} kW panels send about ${num(S(kw), kwd())} kW to your home${car ? ' and the EV' : ''} next hour`
+      : 'No solar power next hour: the home runs on the grid'}">
+    ${sun}
+    ${on ? juice('M52 40 L92 62', 'juice') : '<path class="wire" d="M52 40 L92 62"/>'}
+    <g transform="translate(92 54)"><path d="M0 22 L12 0 L44 0 L32 22 Z" fill="#1e3a5f"/>
+      <path d="M11 2 L5 20 M22 0 L16 22 M33 0 L27 22 M6 11 L38 11" stroke="#7fa7d6" stroke-width="1"/>
+      <line x1="22" y1="22" x2="22" y2="34" stroke="#6b7684" stroke-width="2"/></g>
+    <text x="114" y="104" text-anchor="middle">Your ${SIZE} kW</text>
+    ${on ? juice('M134 70 C170 70 180 70 214 70', 'juice') : '<path class="wire" d="M134 70 C170 70 180 70 214 70"/>'}
+    ${on ? `<text class="kw" x="174" y="60" text-anchor="middle">${num(S(kw), kwd())} kW</text>` : ''}
+    <g transform="translate(214 46)"><path d="M0 18 L22 0 L44 18 Z" fill="#c2410c"/><rect x="5" y="18" width="34" height="26" fill="#f1e4d3"/>
+      <rect x="17" y="28" width="10" height="16" fill="#8b5a2b"/><rect x="8" y="22" width="7" height="7" fill="${on ? '#fde68a' : '#93c5fd'}"/></g>
+    <text x="236" y="104" text-anchor="middle">Home</text>
+    ${car ? juice('M258 82 C276 86 280 92 292 92', 'juice') : '<path class="wire" d="M258 82 C276 86 280 92 292 92"/>'}
+    <g transform="translate(288 80)" opacity="${car ? 1 : 0.45}"><path d="M2 12 L8 3 L26 3 L33 12 L38 13 L38 20 L0 20 L0 13 Z" fill="${car ? '#1f8f4d' : '#6b7684'}"/>
+      <circle cx="9" cy="21" r="4" fill="#1c2733"/><circle cx="29" cy="21" r="4" fill="#1c2733"/></g>
+    <text x="328" y="114" text-anchor="end">${car ? 'EV charging' : 'EV'}</text>
+    ${on ? '' : `<g transform="translate(176 6)" stroke="#243b6b" stroke-width="2" fill="none"><path d="M10 0 L2 34 M10 0 L18 34 M4 14 L16 14 M3 24 L17 24"/></g>
+      <text x="200" y="20">Grid</text>${juice('M186 42 C200 56 210 60 222 62', 'grid-juice')}`}
+  </svg>`;
+}
 function yoursHtml(d) {
   const sum = a => (a || []).reduce((t, v) => t + (typeof v === 'number' ? v : 0), 0);
   const day = S(sum(d.predicted_kw)), done = (d.actual_kw || []).some(v => typeof v === 'number') ? S(sum(d.actual_kw)) : null;
   return `<div class="yours"><div class="sub">Your ${SIZE} kW panels, next hour</div>
+    ${flowSvg(d)}
     <div class="big">${num(S(d.predicted_kw_next), kwd())} kW <small>&asymp; ${num(S(d.predicted_kw_next), kwd())} kWh over the hour</small></div>
     <div class="stats" style="margin-top:8px">
       <div class="stat"><b>${num(day)}</b><span>kWh forecast for this day</span></div>

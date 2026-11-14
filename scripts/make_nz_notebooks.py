@@ -49,6 +49,10 @@ CODE_COMMENTS = {
               "zh-TW": "學習曲線（針對第一版模型 v1 量測）：模型看過越多訓練天數，誤差就越小。"},
     "sample": {"en": "One sample week: actual power vs. the model vs. the persistence baseline.",
                "zh-TW": "取樣一週：實際發電量、模型預測、以及「持續性」基準線的比較。"},
+    "ready": {"en": "Wait until the AI model is loaded and the live grid is computed, so the page opens complete (usually 2-6 minutes).",
+              "zh-TW": "等 AI 模型載入完成、即時格子算好，網頁一打開就是完整的（通常 2 到 6 分鐘）。"},
+    "warm": {"en": "Let the AI write the national briefing for the current hour and answer one warm-up question, so the first judge question is fast.",
+             "zh-TW": "先讓 AI 寫好現在這個小時的全國摘要，並回答一個暖身問題，讓評審問第一個問題時就很快。"},
     "serve": {"en": "Start the dashboard (Flask) and open a free Cloudflare tunnel so anyone can reach it.",
               "zh-TW": "啟動儀表板（Flask），並開啟免費的 Cloudflare 通道，讓任何人都能連進來。"},
     "big": {"en": "Show the link big. If there is no tunnel, the local URL is shown instead.",
@@ -58,8 +62,8 @@ CODE_COMMENTS = {
     "gpu": {"en": "Which hardware did we get?", "zh-TW": "我們分配到的是什麼硬體？"},
     "chat": {"en": "The chat on the dashboard uses the same data as the map; it has no internet access and no tools.",
              "zh-TW": "儀表板上的聊天使用和地圖一樣的資料；它不能上網，也沒有任何工具。"},
-    "wait": {"en": "Wait (up to about 10 minutes) for the AI model, then ask it two test questions. The dashboard link above already works.",
-             "zh-TW": "等待 AI 模型準備好（最多約 10 分鐘），再問它兩個測試問題。上面的儀表板連結已經可以用了。"},
+    "wait": {"en": "The AI model is already loaded (the cell above waited for it); this check only confirms it.",
+             "zh-TW": "AI 模型已經載入好了（上一個儲存格有等它），這裡只是再確認一次。"},
     "ask": {"en": "Two normal questions (a 5 kW home system, and the EV example) and one it must refuse.", "zh-TW": "兩個正常問題（家用 5 kW 系統、電動車範例），和一個它必須拒絕的問題。"},
     "grid": {"en": "Nationwide grid: run the model for every land cell of New Zealand now (live hours and the default replay day), so the map opens fully computed.",
              "zh-TW": "全國格子：現在就幫紐西蘭每一個陸地格子跑模型（即時的時段和預設的回放日），讓地圖一打開就全部算好。"},
@@ -233,6 +237,25 @@ assistant = Assistant(svc, llm, grid=grid)
 grid.summarizer = assistant.summarize
 # @@hourly@@
 grid.start_hourly()
+
+# @@ready@@
+import time
+t0 = time.time()
+while llm.status()["state"] not in ("ready", "templates") and time.time() - t0 < 900:
+    print("\\r" + llm.status()["detail"][:100].ljust(100), end="", flush=True)
+    time.sleep(5)
+print("\\nAI model:", llm.status()["detail"])
+live_ok = grid.wait_live(600)
+print("live grid ready:", live_ok)
+if llm.status()["state"] == "ready" and live_ok:
+    # @@warm@@
+    grid.snapshot("live")                              # starts the AI national briefing for the current hour
+    while grid.snapshot("live", summarize=False)["briefing"]["mode"] != "llm" and time.time() - t0 < 1200:
+        time.sleep(3)
+    w = time.time()
+    assistant.ask("How much power will Auckland give next hour?", "live", system_kw=5)
+    print(f"AI briefing written; first chat answer took {time.time() - w:.0f} s (later ones are faster)")
+print(f"everything ready after {time.time() - t0:.0f} s")
 url = webapp.serve(svc, port=8000, tunnel=True, assistant=assistant, grid=grid)
 
 # @@big@@
@@ -587,14 +610,17 @@ AI 工具：Claude Code（Anthropic）協助撰寫與測試程式。"""},
   "en": """## 5. FINAL STEP: start the dashboard
 Run the cell below. It prints a **big link** to the SolarCast NZ dashboard (map of New Zealand: pick your panel size at the top, hover a region
 for weather and generation, click it for your panels' next hour, the day chart and the EV example; the Model tab shows the report above; use the Replay slider
-or the Live button; **Ask SolarCast AI** at the bottom right opens the chat). Before the link appears, the cell runs the model
-for about 120 grid cells covering **all of New Zealand** (the coloured squares), and it keeps them fresh by recomputing the live
+or the Live button; **Ask SolarCast AI** at the bottom right opens the chat). The link appears only when **everything is ready**:
+the AI model is loaded (usually 2-6 minutes on a T4, it waits for you), the AI has written the national briefing and answered a
+warm-up question, so the page opens complete and in **Live** mode. Before that, the cell runs the model
+for about 140 grid cells covering **all of New Zealand** (the coloured squares), and it keeps them fresh by recomputing the live
 grid every hour at :50; the banner above the map is a national briefing written by the AI from those numbers.
 Keep this notebook running while you use the link.""",
   "zh-TW": """## 5. 最後一步：啟動儀表板
 執行下面的儲存格，會印出一個**很大的連結**，連到 SolarCast NZ 儀表板（紐西蘭地圖：先在上方選你的系統大小，滑鼠移到區域上看天氣與發電量，
 點擊區域看你的太陽能板下一小時發電量、當天圖表和電動車範例；Model 分頁有上面的模型報告；可以用 Replay 滑桿或 Live 按鈕；
-右下角的 **Ask SolarCast AI** 可以打開聊天）。連結出現前，這個儲存格會先幫涵蓋**全紐西蘭**的約 120 個格子跑模型
+右下角的 **Ask SolarCast AI** 可以打開聊天）。連結會等**全部準備好**才出現：AI 模型載入完成（T4 上通常 2 到 6 分鐘，會自動等待）、
+AI 寫好全國摘要並回答過一個暖身問題，所以網頁一打開就是完整的，而且停在 **Live（現在）** 模式。在這之前，這個儲存格會先幫涵蓋**全紐西蘭**的約 140 個格子跑模型
 （地圖上的彩色方格），之後每小時 :50 分重算一次即時格子；地圖上方的橫幅是 AI 根據這些數字寫的全國摘要。
 使用連結的時候，請讓這個筆記本保持在執行狀態。"""},
  # ----- train -----
