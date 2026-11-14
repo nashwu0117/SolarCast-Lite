@@ -2,119 +2,124 @@
 
 **English** | [繁體中文](COLAB_GUIDE.zh-TW.md)
 
-Everyone works in Google Colab. The code lives in the GitHub repo
-`nashwu0117/SolarCast-Lite` (currently **private**). Read this once, then keep it open.
+Everyone works in Google Colab; nothing needs to run on your own computer. The code lives in the **public** GitHub repo
+`nashwu0117/SolarCast-Lite`. Read this once, then keep it open.
 
-**Deadline: Sunday Nov 15, 2026, 11:59 PM ET (= Monday Nov 16, 12:59 Taiwan time).**
+**Deadline: Sunday Nov 15, 2026, 11:59 PM ET (= Monday Nov 16, 5:59 PM New Zealand time).** Submit a first version a
+few hours early, then resubmit if you improve it.
 
-## 1. Get access to the private repo (one time)
+## 1. The two notebooks
 
-1. Send your GitHub username to the repo owner and accept the **collaborator invitation** (check your email).
-2. Open any notebook link below. Colab will ask to connect to GitHub: click **Authorize** (allow access to private repos).
-3. Create a token so notebooks can clone and push:
-   - GitHub, Settings, Developer settings, Personal access tokens, **Fine-grained tokens**, Generate new token.
-   - Repository access: *Only select repositories*, choose `SolarCast-Lite`.
-   - Permissions: **Contents: Read and write**.
-   - Copy the token (you only see it once).
-4. In Colab, click the key icon (**Secrets**) in the left sidebar, **Add new secret**:
-   name `GITHUB_TOKEN`, value = your token, and switch **Notebook access** on.
-   Never paste the token into a notebook cell or chat.
+| Notebook | What it does | English | 繁體中文 |
+|---|---|---|---|
+| **Judges** (submission) | Loads our trained model from GitHub, shows the test results, opens the map dashboard with the AI chat | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) |
+| **Train** | Downloads Open-Meteo history, trains and evaluates the model, backs it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) |
 
-## 2. Open a notebook
+The **English Judges notebook is the one we submit.** The zh-TW one is the same code with Chinese explanations, for
+testing and learning.
 
-Open the link (replace nothing, just click):
+## 2. Run the Judges notebook
 
-| Notebook | Link |
-|---|---|
-| main (submission) | https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/main.ipynb |
-| 01 data exploration | https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/01_data_exploration.ipynb |
-| 02 modeling | https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/02_modeling.ipynb |
-| 03 demo | https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/03_demo.ipynb |
+1. Open the link. It asks Colab for a free **T4 GPU** (Runtime > Change runtime type shows "T4 GPU"). If Colab says no
+   GPU is available, choose **Connect without GPU**: everything still works, only the AI chat is slower.
+2. Runtime > **Run all**.
+3. After about 2-3 minutes, section 5 prints a big **dashboard link** (a free Cloudflare tunnel). Open it.
+4. The **Ask SolarCast AI** button (bottom right of the dashboard) becomes a real AI chat a few minutes later, once the
+   model is downloaded and loaded. Until then it answers with fixed templates. Section 6 waits for it and asks two test
+   questions (one normal, one it must refuse).
+5. Keep the notebook tab open while you use the link: the dashboard runs on that Colab machine.
 
-Or: Colab, File, Open notebook, GitHub tab, pick `nashwu0117/SolarCast-Lite`.
+Things to try on the dashboard: drag the **Replay** slider to a New Zealand daytime hour (in Live mode at night every
+region shows 0 kW, which is correct), hover a region, click it for the detail panel, open the **Model** tab, and ask the
+chat "Which region generates the most solar power next hour?" or「基督城今天可以省多少錢？」.
 
-Run the first code cell (setup) first. It clones the repo into `/content/SolarCast-Lite` (or pulls the latest),
-adds `src/` to the Python path and turns on autoreload. Then run the rest top to bottom.
+## 3. Run the Train notebook
 
-## 3. Save notebook changes to GitHub
+- `QUICK = True` (config cell): a 1-minute smoke test with 2 regions x 120 days. The model in the repo is not touched.
+- `QUICK = False`: the full run, 14 regions from 2022. The Open-Meteo download can take about 30 minutes because of
+  rate limits.
+- Backup to GitHub (last cell, `BACKUP = True`) needs a token. See section 6. Only promote a model that beats the current
+  one on **validation** by more than 1 W/m2; the test period is looked at once per promoted model.
 
-File, **Save a copy in GitHub**. Pick repo `nashwu0117/SolarCast-Lite`, branch **main**, the same file path,
-write a short commit message (for example `02: try deeper trees on val`), and tick the box to include the Colab link if you like.
-Do not save a notebook someone else owns without asking first.
+## 4. Change the code
 
-## 4. Edit the Python files (`src/solarcast/*.py`)
+- Python code: `src/solarcast/nz/` (config, data, features, ensemble, model, service, webapp, app, assistant,
+  llm_setup). Open the file browser (folder icon), go to `/content/SolarCast-Lite/src/solarcast/nz`, double-click a file,
+  save with Ctrl/Cmd+S, then Runtime > **Restart session** and run again (autoreload does not work on Colab's Python 3.13).
+- **Notebooks are generated.** Do not edit the `.ipynb` files by hand: change `scripts/make_nz_notebooks.py` (code cells
+  are shared, the text is written in English and zh-TW there) and run `python scripts/make_nz_notebooks.py`. That keeps
+  the two languages identical.
+- Module interfaces are written down in `docs/NZ_CONTRACT.md`. If you change one, update that file first and tell the team.
 
-1. Open the file browser (folder icon on the left) and go to `/content/SolarCast-Lite/src/solarcast`.
-2. Double-click a file to edit it in Colab. Save with Ctrl/Cmd+S.
-3. The setup cell tries to turn on autoreload so the next cell uses the new code. Colab's current IPython cannot load
-   autoreload on Python 3.12+; the setup cell then prints "autoreload unavailable". In that case use Runtime,
-   **Restart session**, and re-run the setup cell after each edit.
+## 5. Run the tests in Colab
 
-### Push your edits to GitHub
+```python
+!pip -q install pytest flask
+!cd /content/SolarCast-Lite && PYTHONPATH=src python -m pytest -q tests/nz
+```
 
-Paste this into a **new cell** at the bottom of your notebook (never commit it into the notebook with the token filled in; it reads the token from Secrets). Fill in your name and email and the commit message:
+All 57 tests should pass in about 20 seconds. They are offline: no model download, no network.
+
+## 6. Push your changes to GitHub
+
+1. Create a token (one time): GitHub > Settings > Developer settings > Personal access tokens > **Fine-grained tokens** >
+   Generate new token. Repository access: only `SolarCast-Lite`. Permissions: **Contents: Read and write**.
+2. In Colab, click the key icon (**Secrets**) > **Add new secret**: name `GITHUB_TOKEN`, value = your token, and turn
+   **Notebook access** on. Never paste the token into a cell, a commit or a chat.
+3. Paste this into a new cell (it reads the token from Secrets and never prints it):
 
 ```python
 import subprocess
 from google.colab import userdata
 
 NAME = "Your Name"
-EMAIL = "you@example.com"
-MESSAGE = "describe your change"
+EMAIL = "you@users.noreply.github.com"
+MESSAGE = "fix(nz): describe your change"
 
 REPO = "/content/SolarCast-Lite"
 token = userdata.get("GITHUB_TOKEN")
 url = f"https://x-access-token:{token}@github.com/nashwu0117/SolarCast-Lite.git"
 
-def git(*args, hide=True):
+def git(*args):
     r = subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True)
-    out = (r.stdout + r.stderr).replace(token, "***")
-    print(out.strip())
+    print((r.stdout + r.stderr).replace(token, "***").strip())
     return r.returncode
 
 git("config", "user.name", NAME)
 git("config", "user.email", EMAIL)
-git("add", "src", "tests", "docs", "README.md", "README.zh-TW.md", "notebooks", "scripts")
+git("add", "src", "tests", "docs", "scripts", "notebooks", "README.md", "README.zh-TW.md")
 git("commit", "-m", MESSAGE)
 git("pull", "--rebase", url, "main")
 git("push", url, "HEAD:main")
 ```
 
-If `pull --rebase` reports a conflict, stop and ask the owner of that file. The token is never printed.
+Write commit messages in English in the Conventional Commits style (`feat(nz): ...`, `fix(nz): ...`, `docs: ...`). If
+`pull --rebase` reports a conflict, stop and ask the person who owns that file.
 
-## 5. Get your teammates' changes
-
-Re-run the setup cell (it runs `git pull --ff-only`). Then Runtime, **Restart session** if code looks out of date.
-If the pull says it cannot fast-forward, you have local edits: push them first (section 4), then pull.
-
-## 6. Ownership rules
+## 7. Who owns what
 
 **One person edits a given file at a time.** Before editing a file you do not own, tell its owner.
 
-| Role | Owns |
+| Area | Files |
 |---|---|
-| Data Lead | `src/solarcast/data.py`, `features.py`, `baselines.py`, `notebooks/01_data_exploration.ipynb` |
-| ML Lead | `src/solarcast/models.py`, `evaluate.py`, `pipeline.py`, `notebooks/02_modeling.ipynb` |
-| Product & Demo Lead | `src/solarcast/demo.py`, `notebooks/03_demo.ipynb`, `notebooks/main.ipynb`, `README.md` |
+| Data and features | `src/solarcast/nz/data.py`, `features.py`, `data/nz/`, `scripts/build_replay_data.py` |
+| Model and evaluation | `src/solarcast/nz/model.py`, `ensemble.py`, `scripts/train_nz.py`, `docs/MODEL*.md` |
+| Dashboard and AI chat | `src/solarcast/nz/service.py`, `webapp.py`, `assistant.py`, `llm_setup.py`, `app.py` |
+| Notebooks and write-up | `scripts/make_nz_notebooks.py`, `README*.md`, `NOTICE*.md`, the one-page write-up and the video |
 
-Shared and changed only by agreement: `src/solarcast/config.py` and `docs/CONTRACT.md`. If an interface changes, update
-`docs/CONTRACT.md` first and tell everyone.
+Shared, changed only by agreement: `src/solarcast/nz/config.py` and `docs/NZ_CONTRACT.md`.
 
-Golden rule: **never tune on the test split.** Train on `train`, choose on `val`, report `test` once.
-
-## 7. Run the tests in Colab
-
-```python
-!pip -q install pytest
-!cd /content/SolarCast-Lite && PYTHONPATH=src python -m pytest -q
-```
-
-`PYTHONPATH=src` is needed because the package is used from `src/` directly, not pip-installed. All 30 tests
-should pass in about 10 seconds.
+Golden rule: **never tune on the test period.** Train on 2022-2024, choose on Jan-Jun 2025, report Jul 2025-Oct 2026 once.
 
 ## 8. Before submitting
 
-1. In `main.ipynb`: Runtime, **Restart session and run all**. Everything must run with no errors.
-2. Check the demo launches and prints a public link.
-3. Save the notebook with outputs to GitHub (section 3) and make sure the README results section is filled in with real numbers.
-4. Submit before **Sun Nov 15, 11:59 PM ET (Mon Nov 16, 12:59 Taiwan time)**. Aim to finish a few hours early.
+1. Open the **English Judges** link in an incognito window (it must open without signing in, so the repo must stay public) and
+   Runtime > **Run all**. Everything must run with no errors, the dashboard link must open, and the chat must answer.
+2. The notebook in the repo is saved **with outputs** (the brief requires it). If you change it, re-run it on Colab and
+   save it with outputs.
+3. Check the README results and the credits (`NOTICE.md`: every dataset, pretrained model and AI tool, with links).
+4. Submission form: code link (the English Judges notebook or the repo), write-up link (README or a Google Doc set to
+   "anyone with the link can view"), optional video (up to 2 minutes, unlisted YouTube or Drive), track **AI + Climate**,
+   every teammate's name, email and school, and what we added ("Make it your own": New Zealand, next-hour instead of
+   next-day, the EV charging decision, the AI chat).
+5. Submit before **Mon Nov 16, 5:59 PM New Zealand time**, ideally a few hours earlier.
