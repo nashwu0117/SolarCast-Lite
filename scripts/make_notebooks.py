@@ -190,7 +190,38 @@ print("Site B, own models")
 display(res_b.metrics["test"].round(3))
 print("Site B test split, Site A models")
 display(cross_site(res_a, res_b).round(3))"""),
-        md("""## 7. Interactive demo
+        md("""## 7. The decision: when should the workshop charge its EV?
+Our user runs a small workshop with this 50 kW rooftop system and one EV that needs 40 kWh every day
+(11 kW charger, plugged in 08:00-18:00, workshop load 6 kW). These are **synthetic assumptions**; the solar
+power is real. Each hour one fixed rule decides how much to charge:
+`charge = clip(max(must_now, forecast - load), 0, min(11 kW, still needed))`, and the cost is judged with the
+**actual** solar power of that hour. Only the forecast changes between strategies. Nothing here was tuned on test."""),
+        code("""from solarcast import charging
+
+COLS = ["days", "ev_grid_kwh", "solar_share_pct", "grid_kwh_saved", "money_saved_eur", "co2_saved_kg", "pct_of_perfect"]
+for site, res in [("A", res_a), ("B", res_b)]:
+    preds = {k: v for k, v in res.predictions["test"].items() if k != "Previous-day same hour"}
+    _, summary = charging.simulate(res.splits["test"], preds)
+    print(f"Site {site}, test period (Mar-Jun 2026)")
+    display(summary[COLS])"""),
+        md("""**What we found.** Any forecast-based plan buys far less grid power for the EV than charging on arrival.
+But in spring and summer the simple persistence forecast makes *better* charging decisions than Model B, even though
+Model B's forecasts are about twice as accurate. The cell below shows why: persistence lags behind the sunrise, so in the
+morning it under-forecasts by 8-10 kW and waits. In summer waiting is free, because plenty of sun comes later. Model B is
+unbiased, so on about half of the marginal morning hours it over-forecasts and the EV pulls grid power.
+
+We tried a safety margin (charge only `forecast - load - margin`), choosing the margin on the **validation** period only
+(`experiments/charging_margin.py`). In winter validation, waiting is expensive (little sun later), so the best margin was
+0 and the result does not transfer to summer. **Lesson: a more accurate forecast is not automatically a more useful one.**
+The rule also needs to know how much sun is still coming later in the day, which points to a multi-hour forecast as the
+next step."""),
+        code("""slots = charging.daily_slots(res_a.splits["test"])
+bias = pd.DataFrame({name: res_a.predictions["test"][name].reindex(slots.index) - slots["actual_kw"]
+                     for name in ("Persistence", "Model B")})
+bias["hour (local)"] = slots["hour"]
+print("Mean forecast bias (forecast - actual, kW) by hour, Site A test period")
+display(bias.groupby("hour (local)").mean().round(2))"""),
+        md("""## 8. Interactive demo
 Pick a site and a daytime hour from the test split to see the one-hour-ahead forecast next to the baselines and the
 actual value. In Colab this launches with a public `share=True` link.
 *Historical replay on held-out test data. Prototype.*"""),

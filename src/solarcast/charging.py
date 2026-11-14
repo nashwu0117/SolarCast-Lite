@@ -6,7 +6,7 @@ day and must receive EV_NEED_KWH before it leaves. Each hour we choose how much 
 it. All rules are fixed in advance; nothing is tuned on the test period.
 
 Rule for every strategy (only the forecast differs):
-    expected_surplus = forecast_solar - workshop_load
+    expected_surplus = forecast_solar - workshop_load - margin
     must_now         = energy still needed that cannot fit into the remaining hours at full power
     charge           = clip(max(must_now, expected_surplus), 0, min(CHARGER_KW, energy still needed))
 What it costs is judged with the ACTUAL solar power of that hour:
@@ -23,6 +23,10 @@ CHARGER_KW = 11.0                   # typical 3-phase AC wallbox
 WORKSHOP_LOAD_KW = 6.0              # workshop machines and lights during opening hours
 GRID_PRICE_PER_KWH = 0.25           # EUR per kWh bought from the grid (assumption)
 GRID_CO2_KG_PER_KWH = 0.26          # kg CO2 per grid kWh (assumption, order of magnitude for Romania)
+# Safety margin (kW) subtracted from the forecast surplus. Over-forecasting costs grid power right now, while
+# under-forecasting only delays charging, so a cautious plan pays off. Chosen on the VALIDATION period only
+# (experiments/charging_margin.py); 0 = trust the forecast exactly.
+SAFETY_MARGIN_KW = 0.0
 
 
 def daily_slots(feat: pd.DataFrame) -> pd.DataFrame:
@@ -39,7 +43,7 @@ def daily_slots(feat: pd.DataFrame) -> pd.DataFrame:
     return slots[complete]
 
 
-def simulate_day(forecast_kw: np.ndarray, actual_kw: np.ndarray) -> dict:
+def simulate_day(forecast_kw: np.ndarray, actual_kw: np.ndarray, margin: float = SAFETY_MARGIN_KW) -> dict:
     """Run the charging rule through one day's opening hours; return energy totals in kWh."""
     need = EV_NEED_KWH
     grid_ev = 0.0          # grid energy caused by the EV (import with EV minus import without it)
@@ -47,7 +51,7 @@ def simulate_day(forecast_kw: np.ndarray, actual_kw: np.ndarray) -> dict:
     for i in range(n):
         hours_after = n - i - 1
         must_now = max(0.0, need - CHARGER_KW * hours_after)
-        surplus = forecast_kw[i] - WORKSHOP_LOAD_KW
+        surplus = forecast_kw[i] - WORKSHOP_LOAD_KW - margin
         charge = float(np.clip(max(must_now, surplus), 0.0, min(CHARGER_KW, need)))
         need -= charge
         import_with = max(0.0, WORKSHOP_LOAD_KW + charge - actual_kw[i])
@@ -62,7 +66,7 @@ def charge_on_arrival(n: int) -> np.ndarray:
     return np.full(n, WORKSHOP_LOAD_KW + CHARGER_KW)
 
 
-def simulate(feat: pd.DataFrame, predictions: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+def simulate(feat: pd.DataFrame, predictions: dict, margin: float = SAFETY_MARGIN_KW) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Compare charging strategies over every complete day in `feat`.
 
     predictions: {name: Series of forecast kW indexed like feat}. Two strategies are added automatically:
@@ -78,7 +82,8 @@ def simulate(feat: pd.DataFrame, predictions: dict) -> tuple[pd.DataFrame, pd.Da
             fc = charge_on_arrival(len(day)) if series is None else series.reindex(day.index).to_numpy()
             if np.isnan(fc).any():
                 continue
-            rows.append({"date": date, "strategy": name, **simulate_day(fc, actual)})
+            m = 0.0 if name == "Perfect forecast" else margin  # a perfect forecast needs no margin
+            rows.append({"date": date, "strategy": name, **simulate_day(fc, actual, m)})
     daily = pd.DataFrame(rows)
     summary = summarize(daily)
     return daily, summary
