@@ -208,3 +208,18 @@ def test_chat_uses_live_data_unless_the_question_is_about_the_replayed_hour(svc)
         assert res["data_time"] == t and "REPLAY" in llm.calls[-1][1]["content"]
     assert a.ask("How much power will Nelson give next hour?", "live")["data_time"] == "live"
     assert not asst.asks_about_replay("現在基督城下一小時能發多少電？")
+
+
+def test_half_finished_ollama_install_is_detected(tmp_path, monkeypatch):
+    """A restart while the installer unpacks leaves `ollama` without its engine; setup must reinstall then."""
+    from solarcast.nz import llm_setup
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "lib" / "ollama").mkdir(parents=True)
+    exe = tmp_path / "bin" / "ollama"
+    exe.write_text("")
+    monkeypatch.setattr(llm_setup.shutil, "which", lambda name: str(exe))
+    assert llm_setup.install_complete() is False
+    (tmp_path / "lib" / "ollama" / "llama-server").write_text("")
+    assert llm_setup.install_complete() is True
+    monkeypatch.setattr(llm_setup.shutil, "which", lambda name: None)
+    assert llm_setup.install_complete() is False

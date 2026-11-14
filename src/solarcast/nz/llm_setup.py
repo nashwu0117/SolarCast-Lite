@@ -21,6 +21,7 @@ import subprocess
 import threading
 import time
 import urllib.request
+from pathlib import Path
 
 from solarcast.nz.assistant import OllamaLLM
 
@@ -98,7 +99,8 @@ class LocalLLM(OllamaLLM):
 
     def setup(self):
         try:
-            if not shutil.which("ollama"):
+            if not install_complete():                            # missing, or cut off by a restart mid-install
+                self._sh("pkill -x ollama || true")
                 self._set("installing", "Installing Ollama (local model server)...")
                 self._sh("command -v zstd >/dev/null || (apt-get -qq update && apt-get -qq install -y zstd) >/dev/null 2>&1")
                 self._sh(f"curl -fsSL {INSTALL_URL} | sh")
@@ -145,6 +147,16 @@ class LocalLLM(OllamaLLM):
                 if attempt == tries - 1:
                     raise
                 time.sleep(5)
+
+
+def install_complete() -> bool:
+    """True when Ollama is installed with its model engine. If a session restarts while the installer is still
+    unpacking, `ollama` exists but lib/ollama/llama-server does not, and every model load fails; then reinstall."""
+    exe = shutil.which("ollama")
+    if not exe:
+        return False
+    lib = Path(exe).resolve().parent.parent / "lib" / "ollama"
+    return (lib / "llama-server").exists()
 
 
 def choose_model(gpu: bool, memory_mb: int) -> str:
