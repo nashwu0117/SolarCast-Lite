@@ -5,3 +5,6 @@ __pycache__/
 data/raw/
 *.env
 .env
+models/
+*.joblib
+*.egg-info/
