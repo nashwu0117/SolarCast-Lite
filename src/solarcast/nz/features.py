@@ -37,8 +37,17 @@ def clear_sky_ghi(elevation_deg) -> np.ndarray:
     return np.where(cz > 0.01, 1098.0 * cz * np.exp(-0.057 / np.maximum(cz, 0.01)), 0.0)
 
 
+def _location(df: pd.DataFrame, region: str) -> tuple[float, float, int]:
+    """(lat, lon, region_id). A clicked map point (not one of the 14 regions) carries loc_lat/loc_lon/loc_region_id
+    columns; its region_id is the nearest region's, so the model treats it like that region's climate."""
+    if region in config.REGIONS:
+        lat, lon = config.REGIONS[region]
+        return lat, lon, list(config.REGIONS).index(region)
+    return float(df["loc_lat"].iloc[0]), float(df["loc_lon"].iloc[0]), int(df["loc_region_id"].iloc[0])
+
+
 def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
-    lat, lon = config.REGIONS[region]
+    lat, lon, region_id = _location(df, region)
     g = df.sort_values("time_utc").set_index("time_utc")
     g = g.reindex(pd.date_range(g.index.min(), g.index.max(), freq="h", tz="UTC"))    # gaps become NaN
     ghi = g["ghi_wm2"]
@@ -62,7 +71,7 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
     mid = target_time - HALF
     f["hour_sin"], f["hour_cos"] = np.sin(2 * np.pi * mid.hour / 24), np.cos(2 * np.pi * mid.hour / 24)
     f["doy_sin"], f["doy_cos"] = np.sin(2 * np.pi * mid.dayofyear / 365.25), np.cos(2 * np.pi * mid.dayofyear / 365.25)
-    f["region_id"], f["lat"] = list(config.REGIONS).index(region), lat
+    f["region_id"], f["lat"] = region_id, lat
 
     # Day-ahead forecast for the target stamp (issued ~24 h before t, see module docstring). NaN when unavailable.
     fc = {c: g[c] if c in g.columns else pd.Series(np.nan, index=g.index) for c in config.FORECAST_COLUMNS}

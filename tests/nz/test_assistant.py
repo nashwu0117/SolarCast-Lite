@@ -127,3 +127,24 @@ def test_chat_routes(svc):
     res = client.post("/api/chat", json={"question": "How sunny is Dunedin?", "t": "live", "history": []})
     assert res.status_code == 200 and res.get_json()["mode"] == "llm"
     assert "SolarCast AI" in client.get("/").get_data(as_text=True)
+
+
+def test_point_route_and_chat_with_point(svc):
+    class PointService(_fake.FakeService):
+        def point(self, lat, lon, t):
+            if lat > -34:
+                raise ValueError("Please click inside New Zealand.")
+            d = self.detail("Wellington", t)
+            d.update(lat=lat, lon=lon, nearest_region="Wellington", distance_km=12.3, is_point=True,
+                     predicted_kw_next=20.0, cloud_now_pct=30)
+            return d
+
+    s = PointService()
+    llm = RecordingLLM()
+    client = create_app(s, asst.Assistant(s, llm)).test_client()
+    assert client.get("/api/point?lat=-41.1&lon=175.2").get_json()["nearest_region"] == "Wellington"
+    assert client.get("/api/point?lat=-20&lon=175").status_code == 400
+    assert client.get("/api/point?lat=abc&lon=1").status_code == 400
+    res = client.post("/api/chat", json={"question": "How much power here next hour?", "t": "live",
+                                         "point": {"lat": -41.1, "lon": 175.2}})
+    assert res.get_json()["mode"] == "llm" and "clicked map point" in llm.calls[0][1]["content"]

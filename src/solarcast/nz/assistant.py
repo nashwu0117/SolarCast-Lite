@@ -207,7 +207,7 @@ class Assistant:
         return True
 
     # ----- facts -----
-    def facts(self, time_utc: str, region: str | None) -> dict:
+    def facts(self, time_utc: str, region: str | None, point: tuple | None = None) -> dict:
         """Everything the model may use, from the same Service the map uses."""
         snap = self.service.snapshot(time_utc)
         rows = sorted(snap, key=lambda r: -(r.get("predicted_kw_next") or 0))
@@ -227,12 +227,21 @@ class Assistant:
             "total_predicted_kw_next_hour_all_regions": round(sum(r.get("predicted_kw_next") or 0 for r in rows), 1),
             "model": self._model_facts(),
         }
+        d = label = None
         if region:
-            d = self.service.detail(region, time_utc)
+            d, label = self.service.detail(region, time_utc), region
+        elif point and hasattr(self.service, "point"):
+            try:
+                d = self.service.point(point[0], point[1], time_utc)
+                label = f"clicked map point at {d['lat']:.2f}, {d['lon']:.2f} (nearest region {d['nearest_region']}, " \
+                        f"{d['distance_km']} km; next hour {d['predicted_kw_next']} kW, cloud {d['cloud_now_pct']}%)"
+            except Exception:
+                d = None
+        if d:
             pred = [v for v in d.get("predicted_kw", []) if v is not None]
             act = [v for v in d.get("actual_kw", []) if v is not None]
             out["selected_region"] = {
-                "region": region, "local_date": d.get("local_date"),
+                "region": label, "local_date": d.get("local_date"),
                 "hourly": [{"hour": f"{h:02d}:00", "predicted_kw": _r(p), "actual_kw": _r(a), "cloud_pct": _r(c, 0)}
                            for h, p, a, c in zip(d.get("hours", []), d.get("predicted_kw", []),
                                                  d.get("actual_kw", []), d.get("cloud_cover_pct", []))
@@ -275,7 +284,7 @@ class Assistant:
 
     # ----- answering -----
     def ask(self, question: str, time_utc: str = "live", region: str | None = None,
-            history: list[dict] | None = None) -> dict:
+            history: list[dict] | None = None, point: tuple | None = None) -> dict:
         q = (question or "").strip()
         lang = detect_lang(q)
         if not q:
@@ -288,8 +297,9 @@ class Assistant:
             return {"answer": REFUSAL[lang], "mode": "refused"}
         if not in_scope(q, history):
             return {"answer": OFF_TOPIC[lang], "mode": "refused"}
-        region = find_region(q) or (region if region in config.REGIONS else None)
-        facts = self.facts(time_utc, region)
+        named = find_region(q)
+        region = named or (region if region in config.REGIONS else None)
+        facts = self.facts(time_utc, region, None if named else point)
 
         if not self._llm_ready():
             return {"answer": self._template_answer(q, lang, facts), "mode": "templates", "region": region}

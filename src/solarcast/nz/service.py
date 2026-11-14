@@ -14,6 +14,18 @@ from solarcast.nz.features import FEATURES, build_features, daytime_mask
 HOUR = pd.Timedelta("1h")
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 LIVE_TTL_S = 600
+NZ_BOX = (-47.6, -34.0, 165.8, 178.9)        # lat min, lat max, lon min, lon max (main islands and Stewart Island)
+
+
+def nearest_region(lat: float, lon: float) -> tuple[str, float]:
+    """(name, km) of the closest of the 14 regions (great-circle distance)."""
+    best = None
+    for name, (la, lo) in config.REGIONS.items():
+        p1, p2, dl = np.radians(lat), np.radians(la), np.radians(lo - lon)
+        km = 6371 * np.arccos(np.clip(np.sin(p1) * np.sin(p2) + np.cos(p1) * np.cos(p2) * np.cos(dl), -1, 1))
+        if best is None or km < best[1]:
+            best = (name, float(km))
+    return best
 
 
 # ---------- EV charging rule (same rule as the older charging module, NZ constants) ----------
@@ -45,6 +57,7 @@ class Service:
         self._hist = self._prepare(history_long_df)
         self._live, self._live_at = None, 0.0
         self._report = None
+        self._points: dict = {}                                    # clicked map points, cached per (lat, lon, day)
 
     # ----- data preparation -----
     def _prepare(self, long_df: pd.DataFrame) -> dict:
@@ -122,7 +135,62 @@ class Service:
     # ----- detail -----
     def detail(self, region: str, time_utc) -> dict:
         st, t, live = self._state(time_utc)
-        f = st["feat"].loc[region].copy()                          # indexed by target_time
+        metrics = self.meta.get("metrics", {}).get("test", {}).get("per_region", {}).get(region, {})
+        return self._day_detail(st["feat"].loc[region].copy(), region, t, live, metrics)
+
+    # ----- any clicked point in New Zealand -----
+    def point(self, lat: float, lon: float, time_utc) -> dict:
+        """Forecast for ANY map point: download that point's weather from Open-Meteo and run the same model.
+
+        The point borrows the nearest region's id (its climate) and uses its own latitude and sun position.
+        Its accuracy was not measured separately: the panel shows the nearest region's test error as a guide.
+        """
+        lat, lon = float(lat), float(lon)
+        if not (NZ_BOX[0] <= lat <= NZ_BOX[1] and NZ_BOX[2] <= lon <= NZ_BOX[3]):
+            raise ValueError("Please click inside New Zealand.")
+        live = str(time_utc).lower() == "live"
+        t = None if live else self._state(time_utc)[1]
+        key = (round(lat, 2), round(lon, 2), "live" if live else t.tz_convert(config.LOCAL_TZ).date())
+        st = self._points.get(key)
+        if st is None or (live and time.time() - st["at"] > LIVE_TTL_S):
+            nearest, dist = nearest_region(lat, lon)
+            name = f"Point {lat:.2f}, {lon:.2f}"
+            if live:
+                raw = data.fetch_point(lat, lon, name)
+                fc = raw[raw["is_forecast"]]["time_utc"]
+                now = fc.min() - HOUR if len(fc) else raw["time_utc"].max()
+            else:
+                day = t.tz_convert(config.LOCAL_TZ).normalize()
+                start = (day - pd.Timedelta("2D")).tz_convert("UTC").strftime("%Y-%m-%d")
+                end = (day + pd.Timedelta("2D")).tz_convert("UTC").strftime("%Y-%m-%d")
+                raw, now = data.fetch_point(lat, lon, name, start, end), None
+            raw = raw.assign(loc_lat=lat, loc_lon=lon, loc_region_id=list(config.REGIONS).index(nearest))
+            feat = build_features(raw, require_target=False)
+            feat["pred_ghi"] = nzmodel.predict(self.model, feat)
+            st = {"feat": feat, "raw": raw.set_index("time_utc"), "name": name, "nearest": nearest, "dist": dist,
+                  "now": now, "at": time.time()}
+            if len(self._points) > 200:
+                self._points.clear()
+            self._points[key] = st
+        t = st["now"] if live else t
+        f = st["feat"].loc[st["name"]].copy()
+        if t + HOUR not in f.index:
+            raise ValueError("No weather data for this point at this time.")
+        row = f.loc[t + HOUR]
+        pred = float(nzmodel.to_kw(row["pred_ghi"], row["temp_t"]))
+        actual = None if live or pd.isna(row["target_kw"]) else float(row["target_kw"])
+        metrics = self.meta.get("metrics", {}).get("test", {}).get("per_region", {}).get(st["nearest"], {})
+        res = self._day_detail(f, st["name"], t, live, metrics)
+        res.update({"name": st["name"], "lat": lat, "lon": lon, "nearest_region": st["nearest"],
+                    "distance_km": round(st["dist"], 1), "is_point": True,
+                    "local_time": t.tz_convert(config.LOCAL_TZ).strftime("%Y-%m-%d %H:%M"),
+                    "cloud_now_pct": _num(row["cloud_t"], 0), "temp_c": _num(row["temp_t"], 1),
+                    "wind_kmh": _num(row["wind_t"], 1), "ghi_now_wm2": _num(row["ghi_t"], 0),
+                    "predicted_kw_next": _num(pred), "actual_kw_next": _num(actual), "generating": bool(pred > 1)})
+        return res
+
+    def _day_detail(self, f: pd.DataFrame, region: str, t, live: bool, metrics: dict) -> dict:
+        """The local day of one location (feature rows indexed by target_time) -> chart lists, EV advice, savings."""
         start = f.index - HOUR                                     # the hour each row forecasts: [start, start+1h)
         local = start.tz_convert(config.LOCAL_TZ)
         day = t.tz_convert(config.LOCAL_TZ).date()                 # local day of the NEXT hour is t's local day
@@ -152,7 +220,7 @@ class Service:
                "persistence_kw": [_num(v) for v in pers_kw], "cloud_cover_pct": [_num(v, 0) for v in f["cloud_t"]],
                "totals_estimated": bool(live), **advice,
                **{k: round(float(v), 2) for k, v in saved.items()},
-               "metrics": self.meta.get("metrics", {}).get("test", {}).get("per_region", {}).get(region, {})}
+               "metrics": metrics}
         return res
 
     @staticmethod

@@ -7,7 +7,8 @@ Routes:
     GET /api/snapshot  ?t=<ISO UTC | live>             -> {"time": t, "regions": [...]}
     GET /api/model     -> Service.model_report(): periods, overall, per_region, importance, sample
     GET /api/detail    ?region=<name>&t=<ISO | live>   -> the dict from Service.detail (plus "region", "time")
-    GET /api/chat/status                               -> SolarCast AI state (off / downloading / ready / templates)
+    GET /api/point     ?lat=&lon=&t=                   -> Service.point: forecast for ANY clicked NZ location
+    GET /api/chat/status                              -> SolarCast AI state (off / downloading / ready / templates)
     POST /api/chat     {question, t, region, history} -> {answer, mode} (see assistant.py; rate-limited)
 
 The app only talks to a `service` object (see docs/NZ_CONTRACT.md, section nz/service.py):
@@ -111,6 +112,30 @@ def create_app(service, assistant=None) -> Flask:
         data.setdefault("time", t)
         return _json(data)
 
+    # ----- any clicked point (downloads that point's weather; rate-limited per visitor) -----
+    point_hits: dict = {}
+
+    @app.get("/api/point")
+    def api_point():
+        if not hasattr(service, "point"):
+            return _json({"error": "clicking any point is not supported by this service"}, 404)
+        try:
+            lat, lon = float(request.args["lat"]), float(request.args["lon"])
+        except (KeyError, ValueError):
+            return _json({"error": "missing or bad lat/lon"}, 400)
+        client = request.headers.get("CF-Connecting-IP") or request.remote_addr or "?"
+        now = time.time()
+        hits = [h for h in point_hits.get(client, []) if now - h < 60]
+        if len(hits) >= 20:
+            return _json({"error": "Too many clicks; please wait a minute."}, 429)
+        point_hits[client] = hits + [now]
+        try:
+            return _json(service.point(lat, lon, request.args.get("t") or service.default_time()))
+        except ValueError as exc:
+            return _json({"error": str(exc)}, 400)
+        except Exception as exc:  # e.g. Open-Meteo unreachable or rate-limited
+            return _json({"error": f"could not get this point's weather ({type(exc).__name__}); try again"}, 502)
+
     # ----- SolarCast AI chat (optional; templates only when no language model is loaded) -----
     @app.get("/api/chat/status")
     def api_chat_status():
@@ -127,9 +152,14 @@ def create_app(service, assistant=None) -> Flask:
         if not assistant.allow(client):
             return _json({"error": "Too many questions; please wait a minute."}, 429)
         history = body.get("history") if isinstance(body.get("history"), list) else []
+        pt = body.get("point") if isinstance(body.get("point"), dict) else None
+        try:
+            point = (float(pt["lat"]), float(pt["lon"])) if pt else None
+        except (KeyError, TypeError, ValueError):
+            point = None
         try:
             res = assistant.ask(str(body.get("question", ""))[:2000], str(body.get("t") or "live"),
-                                body.get("region") or None, history)
+                                body.get("region") or None, history, point=point)
         except Exception as exc:
             return _json({"error": f"chat failed: {exc}"}, 502)
         return _json(res)
@@ -378,7 +408,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="legend" id="legend"></div>
   </div>
   <aside class="panel" id="panel">
-    <div class="empty">Click a region on the map to see its hourly chart, EV charging advice and savings.</div>
+    <div class="empty">Click a region circle, or <b>anywhere in New Zealand</b>, to see its hourly chart, EV charging advice and savings.</div>
   </aside>
 </main>
 
@@ -506,7 +536,7 @@ function drawRegions(regions) {
     };
     let m = markers[r.name];
     if (!m) {
-      m = L.circleMarker([r.lat, r.lon], style).addTo(map);
+      m = L.circleMarker([r.lat, r.lon], { ...style, bubblingMouseEvents: false }).addTo(map);
       m.bindTooltip('', { sticky: true, direction: 'top', offset: [0, -8], className: 'tip' });
       m.on('click', () => selectRegion(r.name));
       m.label = L.marker([r.lat, r.lon], { interactive: false, icon: L.divIcon({ className: '', html: '', iconSize: [0, 0] }) })
@@ -558,6 +588,7 @@ async function loadSnapshot() {
     if (id === reqId) setNote('Could not load data: ' + e.message, 'error');
   }
   if (selected) loadDetail(selected);
+  else if (selectedPoint) loadPoint();
 }
 
 function setTime(t) {
@@ -583,11 +614,11 @@ $('slider').addEventListener('input', () => {
 // ---------- detail panel ----------
 function hourLabel(h) { return (typeof h === 'number') ? String(h).padStart(2, '0') + ':00' : String(h); }
 
-function metricsHtml(m) {
+function metricsHtml(m, label) {
   if (!m || typeof m !== 'object') return '';
   const rows = Object.entries(m).filter(([, v]) => typeof v === 'number')
     .map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, ' '))}</td><td>${num(v, 2)}</td></tr>`).join('');
-  return rows ? `<h3>Model accuracy in this region (test period)</h3><table class="m">${rows}</table>` : '';
+  return rows ? `<h3>${label || 'Model accuracy in this region (test period)'}</h3><table class="m">${rows}</table>` : '';
 }
 
 async function loadDetail(name) {
@@ -598,11 +629,43 @@ async function loadDetail(name) {
   try { d = await getJson('/api/detail?region=' + encodeURIComponent(name) + '&t=' + encodeURIComponent(current)); }
   catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load ${esc(name)}: ${esc(e.message)}</div>`; return; }
   if (id !== detailId) return;
+  renderPanel(d, esc(name), 'Local day, hourly power of the rooftop system');
+}
 
+// ---------- any point in New Zealand ----------
+let selectedPoint = null, pin = null;
+async function loadPoint() {
+  const p = selectedPoint, id = ++detailId, panel = $('panel');
+  panel.innerHTML = `<div class="empty">Downloading the weather for ${num(p.lat, 2)}, ${num(p.lon, 2)} and running the model...</div>`;
+  let d;
+  try { d = await getJson(`/api/point?lat=${p.lat}&lon=${p.lon}&t=` + encodeURIComponent(current)); }
+  catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load this point: ${esc(e.message)}</div>`; return; }
+  if (id !== detailId) return;
+  const gen = d.generating ? `<b style="color:var(--good)">Generating: ${num(d.predicted_kw_next)} kW expected next hour</b>`
+                           : `<b>Not generating: ${num(d.predicted_kw_next)} kW expected next hour</b>`;
+  pin.setTooltipContent(`<b>${num(d.lat, 2)}, ${num(d.lon, 2)}</b><br>${gen}`);
+  renderPanel(d, `Point ${num(d.lat, 2)}, ${num(d.lon, 2)}`,
+    `${esc(d.local_time)} NZ &middot; ${gen}<br>Cloud ${num(d.cloud_now_pct, 0)}% &middot; ${num(d.temp_c)} &deg;C &middot; wind ${num(d.wind_kmh, 0)} km/h &middot; sunlight now ${num(d.ghi_now_wm2, 0)} W/m&sup2;<br>` +
+    `Weather downloaded for this exact spot; the model uses the climate of the nearest region, <b>${esc(d.nearest_region)}</b> (${num(d.distance_km, 0)} km away).`);
+}
+function selectPoint(lat, lon) {
+  selected = null; selectedPoint = { lat: +lat.toFixed(4), lon: +lon.toFixed(4) };
+  Object.values(markers).forEach(m => m.setStyle({ radius: 14, color: '#ffffff', weight: 2 }));
+  if (!pin) pin = L.circleMarker([lat, lon], { radius: 9, color: '#ffffff', weight: 3, fillColor: '#2563eb', fillOpacity: 1, bubblingMouseEvents: false })
+    .addTo(map).bindTooltip('', { direction: 'top', offset: [0, -8], className: 'tip' });
+  pin.setLatLng([lat, lon]);
+  loadPoint();
+  if (window.matchMedia('(max-width: 900px)').matches) $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+map.on('click', e => selectPoint(e.latlng.lat, e.latlng.lng));
+
+function renderPanel(d, titleHtml, subHtml) {
+  const panel = $('panel');
   const yes = !!d.charge_now;
+  const mlabel = d.is_point ? `Model accuracy in the nearest region (${esc(d.nearest_region)}, test period)` : null;
   panel.innerHTML = `
-    <h2>${esc(name)}</h2>
-    <div class="sub">Local day, hourly power of the rooftop system</div>
+    <h2>${titleHtml}</h2>
+    <div class="sub">${subHtml}</div>
     <div class="chartbox"><canvas id="chart"></canvas></div>
     <h3>EV charging advice for the next hour</h3>
     <div class="advice ${yes ? 'yes' : 'no'}"><strong>${yes ? 'Charge now' : 'Wait'}</strong><br>${esc(d.reason || '')}</div>
@@ -613,7 +676,7 @@ async function loadDetail(name) {
       <div class="stat"><b>${num(d.co2_saved_kg)}</b><span>kg CO2 avoided</span></div>
     </div>
     ${d.assumptions ? `<div class="sub" style="margin-top:6px">Assumptions: ${esc(d.assumptions)}</div>` : ''}
-    ${metricsHtml(d.metrics)}`;
+    ${metricsHtml(d.metrics, mlabel)}`;
   drawChart(d);
 }
 
@@ -643,7 +706,8 @@ function drawChart(d) {
 }
 
 function selectRegion(name) {
-  selected = name;
+  selected = name; selectedPoint = null;
+  if (pin) { map.removeLayer(pin); pin = null; }
   Object.entries(markers).forEach(([n, m]) => m.setStyle({ radius: n === name ? 17 : 14, color: n === name ? '#1c2733' : '#ffffff', weight: n === name ? 3 : 2 }));
   loadDetail(name);
   if (window.matchMedia('(max-width: 900px)').matches) $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -742,7 +806,8 @@ function addMsg(role, html, cls = '') {
 }
 function chatContext() {
   const when = current === 'live' ? 'Live' : nzString(current);
-  $('chatCtx').textContent = `Answers use the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).` : '.');
+  $('chatCtx').textContent = `Answers use the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).`
+    : selectedPoint ? ` and the clicked point (${selectedPoint.lat.toFixed(2)}, ${selectedPoint.lon.toFixed(2)}).` : '.');
 }
 async function pollChat() {
   clearTimeout(chatTimer);
@@ -771,7 +836,7 @@ async function sendChat(q) {
   chatContext();
   try {
     const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, t: current, region: selected, history: chatHistory.slice(-6) }) });
+      body: JSON.stringify({ question: q, t: current, region: selected, point: selectedPoint, history: chatHistory.slice(-6) }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
     const tag = body.mode === 'llm' ? 'AI answer from the dashboard data' : body.mode === 'templates' ? 'template answer'

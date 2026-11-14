@@ -74,12 +74,12 @@ def _get(url: str, params: dict, tries: int = 6) -> dict:
         except (requests.Timeout, requests.ConnectionError):
             if k == tries - 1:
                 raise
-            time.sleep(20 * (k + 1))
+            time.sleep(20 * (k + 1) if tries > 2 else 3)
             continue
         if r.status_code == 200:
             return r.json()
         if r.status_code in (429, 500, 502, 503, 504) and k < tries - 1:
-            time.sleep(30 * (k + 1))
+            time.sleep(30 * (k + 1) if tries > 2 else 3)
             continue
         r.raise_for_status()
     raise RuntimeError("unreachable")
@@ -144,6 +144,35 @@ def fetch_history(start: str, end: str, regions=config.REGIONS, forecasts: bool 
     if forecasts:
         out = add_forecasts(out, fetch_forecast_history(start, end, regions))
     return out
+
+
+def fetch_point(lat: float, lon: float, name: str, start: str | None = None, end: str | None = None) -> pd.DataFrame:
+    """Weather + day-ahead forecasts for ONE clicked map point, long format like fetch_history (no disk cache).
+
+    With start/end (dates): the archive (replay). Without: live, the last 48 h plus the next 24 h with `is_forecast`.
+    Only two quick tries per request so a click never hangs for minutes on a rate limit.
+    """
+    loc = {"latitude": round(lat, 4), "longitude": round(lon, 4), "timezone": "UTC"}
+    if start:
+        weather = _get(ARCHIVE_URL, {**loc, "start_date": start, "end_date": end, "hourly": ",".join(config.HOURLY_VARS)}, tries=2)
+        fc_params = {**loc, "start_date": max(start, config.FORECAST_START), "end_date": end}
+    else:
+        span = {"past_days": 2, "forecast_days": 2}
+        weather = _get(FORECAST_URL, {**loc, **span, "hourly": ",".join(config.HOURLY_VARS)}, tries=2)
+        fc_params = {**loc, **span}
+    df = _to_frame(weather["hourly"], name, lat, lon)
+    try:
+        if end and end < config.FORECAST_START:
+            raise ValueError("no archived forecasts before FORECAST_START")
+        fc = _forecast_frame(_get(PREVIOUS_RUNS_URL, {**fc_params, "hourly": ",".join(config.FORECAST_VARS)}, tries=2)["hourly"])
+        df = df.merge(fc, on="time_utc", how="left")
+    except Exception:                                              # forecasts are an extra input: NaN is handled by the model
+        df = df.assign(**{c: np.nan for c in config.FORECAST_COLUMNS})
+    if not start:
+        now = pd.Timestamp.now(tz="UTC").floor("h")
+        df = df[(df["time_utc"] >= now - pd.Timedelta("48h")) & (df["time_utc"] <= now + pd.Timedelta("24h"))]
+        df = df.assign(is_forecast=df["time_utc"] > now)
+    return df.reset_index(drop=True)
 
 
 def fetch_live(regions=config.REGIONS) -> pd.DataFrame:

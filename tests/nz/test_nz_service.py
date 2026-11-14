@@ -88,3 +88,30 @@ def test_model_report_adds_version_and_previous(long_df):
     rep = s.model_report()
     assert rep["version"] == "v4" and rep["previous"]["test"] == m and rep["experiments"] == {"bar_wm2": 1.0}
     json.dumps(rep)
+
+
+def test_point_anywhere_in_nz(service, monkeypatch):
+    """A clicked point downloads its own weather (mocked here) and runs the same model."""
+    calls = []
+
+    def fake_fetch_point(lat, lon, name, start=None, end=None):
+        calls.append((lat, lon, start, end))
+        g = make_long("2025-12-20", "2026-03-01", ["Wellington"], seed=3)
+        return g.assign(region=name).drop(columns=[])
+
+    monkeypatch.setattr(svc.data, "fetch_point", fake_fetch_point)
+    t = service.default_time()
+    d = service.point(-41.0, 175.5, t)                    # Wairarapa, between Wellington and Palmerston North
+    assert d["is_point"] and d["nearest_region"] in config.REGIONS and d["distance_km"] > 0
+    assert len(d["hours"]) == len(d["predicted_kw"]) == len(d["cloud_cover_pct"]) and "charge_now" in d
+    assert d["predicted_kw_next"] is not None and d["cloud_now_pct"] is not None
+    json.dumps(d)
+    service.point(-41.0, 175.5, t)                        # same point and day: served from the cache
+    assert len(calls) == 1
+    with pytest.raises(ValueError):
+        service.point(-33.0, 151.2, t)                    # Sydney is not in New Zealand
+
+
+def test_nearest_region():
+    assert svc.nearest_region(-43.5, 172.6)[0] == "Christchurch"
+    assert svc.nearest_region(-45.0, 168.7)[0] == "Queenstown"

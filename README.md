@@ -25,6 +25,8 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
 ## The dashboard
 - **Map of New Zealand** with 14 regions, coloured by the predicted solar power for the next hour.
 - **Hover** a region: current weather and whether (and how much) solar power it is generating.
+- **Click anywhere in New Zealand** (not only the 14 circles): a blue pin downloads that exact spot's weather from
+  Open-Meteo and runs the same model (it borrows the nearest region's climate id; its accuracy is shown for that region).
 - **Click** a region: the day's actual vs predicted power, the EV advice for the next hour with its reason,
   and the day's savings (kWh, NZD, kg CO2).
 - **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
