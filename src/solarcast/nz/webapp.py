@@ -7,6 +7,8 @@ Routes:
     GET /api/snapshot  ?t=<ISO UTC | live>             -> {"time": t, "regions": [...]}
     GET /api/model     -> Service.model_report(): periods, overall, per_region, importance, sample
     GET /api/detail    ?region=<name>&t=<ISO | live>   -> the dict from Service.detail (plus "region", "time")
+    GET /api/chat/status                               -> SolarCast AI state (off / downloading / ready / templates)
+    POST /api/chat     {question, t, region, history} -> {answer, mode} (see assistant.py; rate-limited)
 
 The app only talks to a `service` object (see docs/NZ_CONTRACT.md, section nz/service.py):
     available_times(), default_time(), snapshot(t), detail(region, t)
@@ -60,9 +62,10 @@ def _json(payload, status=200) -> Response:
 # ----------------------------------------------------------------------------------------------------------
 # Flask app
 # ----------------------------------------------------------------------------------------------------------
-def create_app(service) -> Flask:
-    """Build the Flask app around a service object."""
+def create_app(service, assistant=None) -> Flask:
+    """Build the Flask app around a service object (and, optionally, the SolarCast AI assistant)."""
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 64 * 1024          # chat requests are small; refuse huge bodies
 
     @app.get("/")
     def index():
@@ -107,6 +110,29 @@ def create_app(service) -> Flask:
         data.setdefault("region", region)
         data.setdefault("time", t)
         return _json(data)
+
+    # ----- SolarCast AI chat (optional; templates only when no language model is loaded) -----
+    @app.get("/api/chat/status")
+    def api_chat_status():
+        if assistant is None:
+            return _json({"state": "off", "detail": "The AI assistant is not enabled."})
+        return _json(assistant.status())
+
+    @app.post("/api/chat")
+    def api_chat():
+        if assistant is None:
+            return _json({"error": "The AI assistant is not enabled."}, 404)
+        body = request.get_json(silent=True) or {}
+        client = request.headers.get("CF-Connecting-IP") or request.remote_addr or "?"
+        if not assistant.allow(client):
+            return _json({"error": "Too many questions; please wait a minute."}, 429)
+        history = body.get("history") if isinstance(body.get("history"), list) else []
+        try:
+            res = assistant.ask(str(body.get("question", ""))[:2000], str(body.get("t") or "live"),
+                                body.get("region") or None, history)
+        except Exception as exc:
+            return _json({"error": f"chat failed: {exc}"}, 502)
+        return _json(res)
 
     return app
 
@@ -179,7 +205,7 @@ def _start_tunnel(port: int) -> tuple[subprocess.Popen | None, str | None]:
     return proc, found["url"]
 
 
-def serve(service, port: int = 8000, tunnel: bool = True) -> str:
+def serve(service, port: int = 8000, tunnel: bool = True, assistant=None) -> str:
     """Run the web app in a background thread; return the public tunnel URL (or the local URL).
 
     Safe to call twice: a second call reuses the running server and tunnel and returns the same URL.
@@ -187,7 +213,7 @@ def serve(service, port: int = 8000, tunnel: bool = True) -> str:
     with _LOCK:
         local_url = f"http://127.0.0.1:{port}"
         if _STATE["server"] is None:
-            _STATE["server"], _STATE["thread"] = _start_server(create_app(service), port)
+            _STATE["server"], _STATE["thread"] = _start_server(create_app(service, assistant), port)
             _STATE["port"] = port
             time.sleep(0.3)
         local_url = f"http://127.0.0.1:{_STATE['port']}"
@@ -292,6 +318,32 @@ INDEX_HTML = r"""<!doctype html>
     .clock { text-align: left; }
     .chartbox { height: 230px; }
   }
+  /* ----- SolarCast AI chat ----- */
+  #chatBtn { position: fixed; right: 18px; bottom: 18px; z-index: 1001; background: var(--ink); color: #fff; border: 0;
+             padding: 12px 18px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.25); display: none; }
+  #chatBtn:hover { background: #2d3d4f; }
+  #chat { position: fixed; right: 18px; bottom: 18px; z-index: 1002; width: 400px; max-width: calc(100vw - 32px);
+          height: min(620px, calc(100vh - 36px)); background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          box-shadow: 0 12px 34px rgba(0,0,0,.22); display: none; flex-direction: column; overflow: hidden; }
+  #chat.open { display: flex; }
+  .chead { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  .chead b { flex: 1; } .chead button { padding: 2px 10px; }
+  #chatStatus { font-size: 12px; color: var(--muted); padding: 6px 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #chatStatus.ready { color: var(--good); }
+  #chatLog { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 88%; padding: 8px 11px; border-radius: 12px; font-size: 14px; white-space: normal; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+  .msg.bot.wait { color: var(--muted); font-style: italic; }
+  .msg .tag { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
+  .chips button { font-size: 12px; padding: 4px 10px; }
+  #chatCtx { font-size: 11px; color: var(--muted); padding: 0 12px 6px; }
+  .cform { display: flex; gap: 6px; padding: 8px 12px 12px; border-top: 1px solid var(--line); }
+  .cform input { flex: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 999px; min-width: 0; }
+  .cform button { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .cform button:disabled { opacity: .5; cursor: default; }
+  @media (max-width: 600px) { #chat { right: 8px; left: 8px; bottom: 8px; width: auto; max-width: none; height: calc(100vh - 16px); } }
 </style>
 </head>
 <body>
@@ -343,7 +395,25 @@ INDEX_HTML = r"""<!doctype html>
   </div>
 </section>
 
+<button id="chatBtn" type="button" aria-controls="chat">Ask SolarCast AI</button>
+<section id="chat" role="dialog" aria-label="SolarCast AI chat">
+  <div class="chead"><b>SolarCast AI</b><button id="chatClear" type="button" title="Clear the chat">Clear</button><button id="chatClose" type="button" aria-label="Close">&times;</button></div>
+  <div id="chatStatus">Checking the AI model...</div>
+  <div id="chatLog" aria-live="polite">
+    <div class="msg bot">Hi! Ask me about the data on this dashboard: solar forecasts for the 14 New Zealand regions, the weather, EV charging advice and savings, or how accurate our model is. I answer only from this data and cannot browse the internet. 中文也可以問。</div>
+  </div>
+  <div class="chips" id="chatChips">
+    <button type="button">Which region generates the most solar power next hour?</button>
+    <button type="button">How accurate is the model?</button>
+    <button type="button">Should the workshop charge its EV now?</button>
+    <button type="button">基督城今天可以省多少錢？</button>
+  </div>
+  <div id="chatCtx"></div>
+  <form class="cform" id="chatForm"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Ask about this data..." aria-label="Your question"><button id="chatSend" type="submit">Send</button></form>
+</section>
+
 <footer>
+  AI chat: Qwen3 (Apache-2.0) running locally on the notebook's machine, safety check by Llama Guard 3 (Built with Llama); it answers only from this dashboard's data and may make mistakes.
   Weather: Open-Meteo (CC BY 4.0), reanalysis/forecast model data. PV output derived from irradiance. Prototype; not energy or financial advice.
 </footer>
 
@@ -657,6 +727,69 @@ async function loadModel() {
   prepareAccuracy(); drawLegend();
   if ($('modelView').style.display === 'block') renderModel();
 }
+
+// ---------- SolarCast AI chat ----------
+const chatHistory = [];                 // [{role, content}], kept in this browser tab only
+let chatState = null, chatBusy = false, chatTimer = null;
+function fmtAnswer(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+function addMsg(role, html, cls = '') {
+  const d = document.createElement('div');
+  d.className = `msg ${role} ${cls}`.trim();
+  d.innerHTML = html;
+  $('chatLog').appendChild(d);
+  $('chatLog').scrollTop = $('chatLog').scrollHeight;
+  return d;
+}
+function chatContext() {
+  const when = current === 'live' ? 'Live' : nzString(current);
+  $('chatCtx').textContent = `Answers use the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).` : '.');
+}
+async function pollChat() {
+  clearTimeout(chatTimer);
+  try { chatState = await getJson('/api/chat/status'); } catch (e) { chatState = { state: 'off' }; }
+  const s = chatState.state;
+  if (s === 'off') { $('chatBtn').style.display = 'none'; $('chat').classList.remove('open'); return; }
+  $('chatBtn').style.display = $('chat').classList.contains('open') ? 'none' : 'block';
+  const el = $('chatStatus');
+  el.className = s === 'ready' ? 'ready' : '';
+  el.textContent = s === 'ready' ? `AI model: ${chatState.model || 'local model'} (${chatState.device || 'local'}), offline, answers only from this data.`
+    : s === 'templates' ? 'AI language model not available: answers come from fixed templates built from the data.'
+    : (chatState.detail || 'Starting the AI model...') + ' Until it is ready, answers use fixed templates.';
+  if (!['ready', 'templates'].includes(s)) chatTimer = setTimeout(pollChat, 4000);
+}
+function openChat(open) {
+  $('chat').classList.toggle('open', open);
+  $('chatBtn').style.display = open ? 'none' : 'block';
+  if (open) { chatContext(); pollChat(); $('chatInput').focus(); }
+}
+async function sendChat(q) {
+  q = (q || '').trim();
+  if (!q || chatBusy) return;
+  chatBusy = true; $('chatSend').disabled = true; $('chatInput').value = '';
+  addMsg('user', esc(q));
+  const wait = addMsg('bot', 'Thinking... (a few seconds on a GPU, longer on a CPU)', 'wait');
+  chatContext();
+  try {
+    const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, t: current, region: selected, history: chatHistory.slice(-6) }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
+    const tag = body.mode === 'llm' ? 'AI answer from the dashboard data' : body.mode === 'templates' ? 'template answer'
+      : body.mode === 'refused' ? 'outside what this assistant answers' : '';
+    wait.className = 'msg bot';
+    wait.innerHTML = fmtAnswer(body.answer || '') + (tag ? `<span class="tag">${esc(tag)}</span>` : '');
+    chatHistory.push({ role: 'user', content: q }, { role: 'assistant', content: body.answer || '' });
+  } catch (e) {
+    wait.className = 'msg bot'; wait.textContent = 'Sorry, something went wrong: ' + e.message;
+  }
+  chatBusy = false; $('chatSend').disabled = false; $('chatInput').focus();
+}
+$('chatBtn').onclick = () => openChat(true);
+$('chatClose').onclick = () => openChat(false);
+$('chatClear').onclick = () => { chatHistory.length = 0; [...$('chatLog').children].slice(1).forEach(n => n.remove()); };
+$('chatForm').onsubmit = e => { e.preventDefault(); sendChat($('chatInput').value); };
+[...$('chatChips').children].forEach(b => b.onclick = () => sendChat(b.textContent));
+pollChat();
 
 // ---------- start ----------
 drawLegend();
