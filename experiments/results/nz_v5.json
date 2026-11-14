@@ -1,0 +1,100 @@
+{
+  "v4_val_mae_wm2": 28.979,
+  "bar_wm2": 1.0,
+  "candidates": {
+    "v4 refit (sanity check)": {
+      "val_mae_wm2": 28.979,
+      "val_mae_kw": 1.0863,
+      "features": 34,
+      "params": {
+        "learning_rate": 0.03,
+        "max_iter": 800,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 100,
+        "loss": "absolute_error"
+      },
+      "seconds": 101
+    },
+    "v4 + forecast-error-now": {
+      "val_mae_wm2": 28.95,
+      "val_mae_kw": 1.0855,
+      "features": 40,
+      "params": {
+        "learning_rate": 0.03,
+        "max_iter": 800,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 100,
+        "loss": "absolute_error"
+      },
+      "seconds": 114
+    },
+    "v4 + forecast-error-now + forecast trend": {
+      "val_mae_wm2": 28.859,
+      "val_mae_kw": 1.0823,
+      "features": 42,
+      "params": {
+        "learning_rate": 0.03,
+        "max_iter": 800,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 100,
+        "loss": "absolute_error"
+      },
+      "seconds": 119
+    },
+    "all new inputs, faster learning (lr 0.05, 1000 trees)": {
+      "val_mae_wm2": 28.868,
+      "val_mae_kw": 1.0823,
+      "features": 42,
+      "params": {
+        "learning_rate": 0.05,
+        "max_iter": 1000,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 100,
+        "loss": "absolute_error"
+      },
+      "seconds": 90
+    },
+    "all new inputs, bigger trees (127 leaves, 1500 trees)": {
+      "val_mae_wm2": 28.718,
+      "val_mae_kw": 1.0768,
+      "features": 42,
+      "params": {
+        "learning_rate": 0.03,
+        "max_iter": 1500,
+        "max_leaf_nodes": 127,
+        "min_samples_leaf": 200,
+        "loss": "absolute_error"
+      },
+      "seconds": 154
+    },
+    "all new inputs, more regularised (l2 3, leaf 200)": {
+      "val_mae_wm2": 28.853,
+      "val_mae_kw": 1.0821,
+      "features": 42,
+      "params": {
+        "learning_rate": 0.03,
+        "max_iter": 800,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 200,
+        "loss": "absolute_error",
+        "l2_regularization": 3.0
+      },
+      "seconds": 112
+    }
+  },
+  "best": "all new inputs, bigger trees (127 leaves, 1500 trees)",
+  "raw_weight_search": {
+    "0.2": 28.819,
+    "0.3": 28.747,
+    "0.4": 28.715,
+    "0.5": 28.718,
+    "0.6": 28.761,
+    "0.7": 28.84,
+    "0.8": 28.954
+  },
+  "best_raw_weight": 0.4,
+  "best_val_mae_wm2": 28.715,
+  "gain_wm2": 0.264,
+  "verdict": "NOT PROMOTED: gain on validation below the 1 W/m2 bar; keeping v4",
+  "test_period_read": false
+}

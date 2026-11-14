@@ -82,6 +82,12 @@ v2 more training sites: no gain; v3 day-ahead forecast inputs: small gain (0.71 
 plus the clear-sky-index model averaged with the raw model: 28.98 vs 30.35 W/m2 (gain 1.37), promoted. Details:
 `experiments/results/nz_v2.json`, `nz_v3.json`, `nz_v4.json`. The test period was looked at once, for v4 only.
 
+**Tried after v4 (v5, validation only, same 1 W/m2 bar against v4's 28.98):** inputs that tell the model how wrong the
+day-ahead forecast is right now (forecast vs measured sunlight in the hour that just ended), the forecast's own trend
+around the target hour, and five tuning variants. Best: 28.71 W/m2 (bigger trees), a gain of only 0.26, so **v4 was
+kept**. The model already gets most of this from the current sunlight plus the target-hour forecast. The test period was
+not read for v5. Details: `scripts/train_nz_v5.py`, `experiments/results/nz_v5.json`.
+
 ## Run it on your own computer
 Python 3.10 or newer:
 ```bash
