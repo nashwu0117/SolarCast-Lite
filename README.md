@@ -6,8 +6,9 @@ Next-hour solar power forecasting for New Zealand, with an interactive map dashb
 decision. Veritas AI International High School Hackathon 2026, **AI + Climate** track.
 
 **Judges: start here** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb)
-Runtime > **Run all**. In about two minutes the notebook loads our trained model from this repository, shows how
-accurate it is, and prints a public link (free Cloudflare tunnel) to the live dashboard.
+Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by the AI chat). In about three minutes the
+notebook loads our trained model from this repository, shows how accurate it is, and prints a public link (free
+Cloudflare tunnel) to the live dashboard; the AI chat is ready a few minutes later.
 
 | Notebook | Purpose | English | 繁體中文 |
 |---|---|---|---|
@@ -28,6 +29,12 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
   and the day's savings (kWh, NZD, kg CO2).
 - **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
+- **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese, for example "should the
+  Christchurch workshop charge its EV now?". It runs an open model (Qwen3 8B on Colab's T4 GPU, Qwen3 1.7B on a CPU)
+  **locally on the notebook's machine**: no internet access, no tools, no API keys. The server looks up the numbers with
+  the same code as the map and the model only explains them; a keyword filter, the Llama Guard 3 safety classifier and
+  the system rules refuse off-topic or harmful requests; questions are rate-limited. The forecast itself is our own
+  model; the chat is an interface on top of it.
 
 ## How it works
 - **Data:** Open-Meteo hourly weather for 14 New Zealand centres, 2022 to November 2026 (CC BY 4.0).
@@ -66,10 +73,12 @@ plus the clear-sky-index model averaged with the raw model: 28.98 vs 30.35 W/m2 
 - **Live mode** uses Open-Meteo's forecast service (and its day-ahead forecast of the next hour), a slightly different
   source than the training data, so live accuracy may be a little lower.
 - **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code.
+- **The AI chat can still be wrong.** A small language model can misread the facts, and no safety filter is perfect.
+  Without a GPU it is slow, and if the model cannot load the chat answers with fixed templates.
 
 ## Repository
 ```
-src/solarcast/nz/   config, data, features, ensemble, model, service, webapp, app
+src/solarcast/nz/   config, data, features, ensemble, model, service, webapp, app, assistant, llm_setup
 notebooks/          Judges and Train notebooks, English and 繁體中文
 models/             trained model (nz_model.joblib) and its report (nz_model.json)
 data/nz/            compact replay data for the dashboard (Open-Meteo, CC BY 4.0)
@@ -80,7 +89,8 @@ Team workflow in Colab: [docs/COLAB_GUIDE.md](docs/COLAB_GUIDE.md).
 
 ## Credits
 Weather data: Open-Meteo (CC BY 4.0). Libraries: scikit-learn, pandas, NumPy, Flask. Map: Leaflet and OpenStreetMap
-contributors. Charts: Chart.js. Public link: Cloudflare `cloudflared`. AI tools: Claude Code helped write code, run
+contributors. Charts: Chart.js. Public link: Cloudflare `cloudflared`. Chat: Qwen3 (Apache-2.0) and Llama Guard 3
+(Llama 3.2 Community License; Built with Llama), run with Ollama. AI tools: Claude Code helped write code, run
 experiments on Colab and draft documentation; the team reviewed everything and can explain every part.
 Full list: [NOTICE.md](NOTICE.md).
 

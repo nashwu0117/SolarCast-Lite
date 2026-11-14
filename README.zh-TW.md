@@ -6,8 +6,8 @@
 Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 
 **評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb)
-Runtime > **Run all**。大約兩分鐘內，notebook 會從本 repo 載入我們訓練好的模型、顯示它的準確度，
-並印出儀表板的公開連結（免費的 Cloudflare tunnel）。
+Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI 聊天用）。大約三分鐘內，notebook 會從本 repo 載入
+我們訓練好的模型、顯示它的準確度，並印出儀表板的公開連結（免費的 Cloudflare tunnel）；AI 聊天再過幾分鐘就會準備好。
 
 | Notebook | 用途 | English | 繁體中文 |
 |---|---|---|---|
@@ -27,6 +27,10 @@ Runtime > **Run all**。大約兩分鐘內，notebook 會從本 repo 載入我�
 - **點擊地區**：顯示當天實際與預測的發電曲線、下一小時的電動車充電建議與原因，以及當天省下的電（度）、錢（紐幣）和 CO₂（公斤）。
 - **回放**測試期間的任一個小時，或切換到**即時**（紐西蘭時間；晚上太陽能為 0）。
 - **模型分頁**：我們模型和兩個基準方法的準確度比較、各地區表現、一週範例，以及模型最依賴哪些因素。
+- **Ask SolarCast AI**（右下角）：用中文或英文解釋資料的聊天，例如「基督城的加工店現在該幫電動車充電嗎？」。
+  它使用開源模型（Colab T4 GPU 上跑 Qwen3 8B，只有 CPU 時跑 Qwen3 1.7B），**只在 notebook 那台機器上本機執行**：
+  不能上網、沒有工具、不需要 API 金鑰。伺服器先用和地圖相同的程式查出數字，模型只負責解釋；關鍵字過濾、Llama Guard 3
+  安全分類器和系統規則會拒絕離題或有害的要求；提問也有頻率限制。預測本身是我們自己的模型，聊天只是架在上面的介面。
 
 ## 運作方式
 - **資料**：Open-Meteo 提供的紐西蘭 14 個城市逐時天氣，2022 年到 2026 年 11 月（CC BY 4.0）。
@@ -61,10 +65,12 @@ v2 更多訓練地點：沒有進步；v3 加入前一天預報：小幅進步�
   （再分析）日照資料，並用明確的公式換算發電量。模擬資料比真實情況平滑，真實電廠會比較難預測。
 - **即時模式**使用 Open-Meteo 的預報服務（以及它對下一小時的前一天預報），來源和訓練資料略有不同，即時準確度可能稍低。
 - **加工店和電動車是假設情境**（用電量、充電器、電價、碳排係數），都寫在程式碼裡。
+- **AI 聊天還是可能答錯。** 小型語言模型可能誤讀資料，任何安全過濾器也都不完美。沒有 GPU 時回答很慢；
+  如果模型載入失敗，聊天會改用固定範本回答。
 
 ## Repo 結構
 ```
-src/solarcast/nz/   config、data、features、ensemble、model、service、webapp、app
+src/solarcast/nz/   config、data、features、ensemble、model、service、webapp、app、assistant、llm_setup
 notebooks/          評審用與訓練用 notebook，英文版與繁體中文版
 models/             訓練好的模型（nz_model.joblib）與報告（nz_model.json）
 data/nz/            儀表板用的精簡回放資料（Open-Meteo，CC BY 4.0）
@@ -75,7 +81,8 @@ tests/nz/           pytest 測試（離線）
 
 ## 資料與工具來源
 天氣資料：Open-Meteo（CC BY 4.0）。函式庫：scikit-learn、pandas、NumPy、Flask。地圖：Leaflet 與 OpenStreetMap
-貢獻者。圖表：Chart.js。公開連結：Cloudflare `cloudflared`。AI 工具：Claude Code 協助撰寫程式、在 Colab 上跑實驗
+貢獻者。圖表：Chart.js。公開連結：Cloudflare `cloudflared`。聊天：Qwen3（Apache-2.0）與 Llama Guard 3
+（Llama 3.2 Community License；Built with Llama），用 Ollama 執行。AI 工具：Claude Code 協助撰寫程式、在 Colab 上跑實驗
 與起草文件；團隊已檢查所有內容，並能解釋每個部分。完整清單：[NOTICE.zh-TW.md](NOTICE.zh-TW.md)。
 
 本專案為原型，不構成能源或財務建議。

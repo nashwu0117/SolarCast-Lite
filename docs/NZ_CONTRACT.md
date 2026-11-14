@@ -88,5 +88,17 @@ Data is honest about what it is: modelled reanalysis weather, not measurements f
   predicted next-hour kW; **hover** tooltip with weather and generation; **click** opens a side panel (below on
   narrow screens) with the detail chart (Chart.js via CDN), EV advice and savings. Time control: Replay slider over
   `available_times()` plus a Live button. Footer: data credits and "Prototype; not energy or financial advice."
-- `serve(service, port=8000, tunnel=True) -> str`: runs the app in a background thread; when `tunnel`, downloads
+- `create_app(service, assistant=None)` adds `GET /api/chat/status` and `POST /api/chat` (`{question, t, region,
+  history}` -> `{answer, mode}`, mode = `llm | templates | refused | limit`) and the floating "Ask SolarCast AI" chat.
+- `serve(service, port=8000, tunnel=True, assistant=None) -> str`: runs the app in a background thread; when `tunnel`, downloads
   `cloudflared` (linux-amd64) and returns the `https://*.trycloudflare.com` URL (fallback: localhost URL).
+
+## `nz/assistant.py` and `nz/llm_setup.py` (SolarCast AI chat)
+
+- `Assistant(service, llm=None)`: `ask(question, t, region, history) -> {answer, mode}`. Order of checks: length limit
+  (500 chars) -> harmful keywords -> prompt-injection patterns -> topic check (a region name or a dashboard word, or a
+  short follow-up) -> optional Llama Guard verdict -> the model. The model gets the system rules, a FACTS JSON block built
+  from `service.snapshot/detail` and the model metrics, and at most 6 earlier turns; it has no tools. The reply is checked
+  again. Without a ready model the answer is a fixed template from the same facts. `allow(client)` = 8 questions/minute.
+- `llm_setup.start()`: background thread that installs Ollama (official script), serves it on 127.0.0.1 only, pulls
+  `qwen3:8b` + `llama-guard3:1b` on a GPU (`qwen3:1.7b`, no guard, on a CPU), loads them, and exposes `status()`.
