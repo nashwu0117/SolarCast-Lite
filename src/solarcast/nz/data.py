@@ -30,7 +30,7 @@ def solar_position(times_utc, lat: float, lon: float) -> tuple[np.ndarray, np.nd
     t = pd.DatetimeIndex(times_utc)
     t = t.tz_localize("UTC") if t.tz is None else t.tz_convert("UTC")
     hour = t.hour.to_numpy() + t.minute.to_numpy() / 60 + t.second.to_numpy() / 3600
-    g = 2 * np.pi / 365 * (t.dayofyear.to_numpy() - 1 + (hour - 12) / 24)          # fractional year (rad)
+    g = 2 * np.pi / 365 * (t.day_of_year.to_numpy() - 1 + (hour - 12) / 24)          # fractional year (rad)
     eqtime = 229.18 * (0.000075 + 0.001868 * np.cos(g) - 0.032077 * np.sin(g)
                        - 0.014615 * np.cos(2 * g) - 0.040849 * np.sin(2 * g))     # minutes
     decl = (0.006918 - 0.399912 * np.cos(g) + 0.070257 * np.sin(g) - 0.006758 * np.cos(2 * g)

@@ -1,0 +1,68 @@
+{
+  "test_period": [
+    "2025-07-01",
+    "2026-11-01"
+  ],
+  "daytime_rows": 73746,
+  "mean_daytime_output_kw": 14.27,
+  "errors": {
+    "model": {
+      "mae_wm2": 29.55,
+      "mae_kw": 1.121,
+      "pct_of_capacity": 2.24,
+      "pct_of_mean_output": 7.9
+    },
+    "persistence": {
+      "mae_wm2": 105.44,
+      "mae_kw": 4.034,
+      "pct_of_capacity": 8.07,
+      "pct_of_mean_output": 28.3
+    },
+    "clear_sky": {
+      "mae_wm2": 43.82,
+      "mae_kw": 1.662,
+      "pct_of_capacity": 3.32,
+      "pct_of_mean_output": 11.7
+    },
+    "day_ahead_forecast": {
+      "mae_wm2": 49.25,
+      "mae_kw": 1.878,
+      "pct_of_capacity": 3.76,
+      "pct_of_mean_output": 13.2
+    }
+  },
+  "improvement_pct": {
+    "persistence": 72.2,
+    "clear_sky": 32.6,
+    "day_ahead_forecast": 40.3
+  },
+  "regions_beating_clear_sky": 14,
+  "mae_wm2_by_sky": {
+    "cloud_le_60": 15.8,
+    "cloud_gt_60": 41.1
+  },
+  "ev": {
+    "region_days": 6818,
+    "grid_kwh_per_day": {
+      "arrival": 18.01,
+      "fixed_10_14": 8.46,
+      "persistence": 7.77,
+      "clear_sky": 7.6,
+      "model": 6.96,
+      "perfect": 5.31
+    },
+    "saved_vs_arrival_kwh_per_day": {
+      "fixed_10_14": 9.55,
+      "persistence": 10.24,
+      "clear_sky": 10.41,
+      "model": 11.05,
+      "perfect": 12.7
+    },
+    "model_vs_fixed_10_14": {
+      "kwh_per_day": 1.5,
+      "nzd_per_day": 0.45,
+      "kg_co2_per_day": 0.15
+    },
+    "gap_to_perfect_kwh_per_day": 1.65
+  }
+}

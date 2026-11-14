@@ -22,7 +22,7 @@ def make_long(start="2025-05-01", end="2026-03-01", regions=TEST_REGIONS, seed=0
             cloud[i] = np.clip(cloud[i - 1] + 0.1 * (50 - cloud[i - 1]) + rng.normal(0, 12), 0, 100)
         ghi = clear_sky_ghi(elev) * (1 - 0.75 * (cloud / 100) ** 1.5)
         df = pd.DataFrame({"region": r, "time_utc": idx, "ghi_wm2": ghi, "dni_wm2": ghi * 0.6, "dhi_wm2": ghi * 0.3,
-                           "cloud_cover_pct": cloud, "temp_c": 12 + 8 * np.sin(idx.dayofyear / 58) + rng.normal(0, 1, len(idx)),
+                           "cloud_cover_pct": cloud, "temp_c": 12 + 8 * np.sin(idx.day_of_year / 58) + rng.normal(0, 1, len(idx)),
                            "humidity_pct": rng.uniform(40, 95, len(idx)), "wind_kmh": rng.uniform(0, 30, len(idx)),
                            "precip_mm": 0.0, "is_day": (elev > 0).astype(float),
                            "solar_elevation_deg": elev, "solar_azimuth_deg": azim})

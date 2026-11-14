@@ -70,7 +70,7 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
     f["elev_target"], f["azim_target"], f["cs_target"] = elev, azim, clear_sky_ghi(elev)
     mid = target_time - HALF
     f["hour_sin"], f["hour_cos"] = np.sin(2 * np.pi * mid.hour / 24), np.cos(2 * np.pi * mid.hour / 24)
-    f["doy_sin"], f["doy_cos"] = np.sin(2 * np.pi * mid.dayofyear / 365.25), np.cos(2 * np.pi * mid.dayofyear / 365.25)
+    f["doy_sin"], f["doy_cos"] = np.sin(2 * np.pi * mid.day_of_year / 365.25), np.cos(2 * np.pi * mid.day_of_year / 365.25)
     f["region_id"], f["lat"] = region_id, lat
 
     # Day-ahead forecast for the target stamp (issued ~24 h before t, see module docstring). NaN when unavailable.

@@ -280,6 +280,8 @@ class Assistant:
                                                          "money_saved_nzd": d.get("money_saved_nzd"),
                                                          "co2_avoided_kg": d.get("co2_saved_kg"),
                                                          "estimated": d.get("totals_estimated", False)},
+                "savings_today_vs_always_charging_10_to_14": {"grid_kwh_avoided": d.get("grid_kwh_saved_vs_fixed"),
+                                                              "money_saved_nzd": d.get("money_saved_vs_fixed_nzd")},
                 "model_test_error_here": d.get("metrics") or None,
             }
         return out
@@ -306,7 +308,12 @@ class Assistant:
             "test_period_results_daytime": {"our_model": acc(overall.get("model")),
                                             "persistence_baseline": acc(overall.get("persistence")),
                                             "clear_sky_persistence_baseline": acc(overall.get("clear_sky"))},
-            "accuracy_definition": "100% minus the mean absolute error as a percentage of the 50 kW system",
+            "accuracy_definition": "100% minus the mean absolute error as a percentage of the 50 kW system; the same "
+                                   "error is 7.9% of the mean daytime output (14.3 kW). v4 is 32.6% better than "
+                                   "clear-sky persistence and 40.3% better than Open-Meteo's day-ahead forecast alone",
+            "ev_decision_value_test_period": "the same charging rule driven by the v4 forecast causes 6.96 kWh/day of "
+                                             "grid use vs 8.46 for always charging 10:00-14:00, 18.01 for charging on "
+                                             "arrival and 5.31 with a perfect forecast (6818 region-days)",
             "test_mae_kw_per_region": per_mae,
         }
 

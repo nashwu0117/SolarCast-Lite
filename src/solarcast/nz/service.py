@@ -14,6 +14,7 @@ from solarcast.nz.features import FEATURES, build_features, daytime_mask
 HOUR = pd.Timedelta("1h")
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 LIVE_TTL_S = 600
+FIXED_WINDOW = (10, 14)                      # comparison habit: charge every day 10:00-14:00 local time
 NZ_BOX = (-47.6, -34.0, 165.8, 178.9)        # lat min, lat max, lon min, lon max (main islands and Stewart Island)
 
 
@@ -207,15 +208,20 @@ class Service:
         slot = (local.hour >= config.WORK_START) & (local.hour < config.WORK_END)
         n_slots = config.WORK_END - config.WORK_START
         advice = {"charge_now": False, "reason": "No data for this local day."}
-        saved = {"grid_kwh_saved": 0.0, "money_saved_nzd": 0.0, "co2_saved_kg": 0.0}
+        saved = {"grid_kwh_saved": 0.0, "money_saved_nzd": 0.0, "co2_saved_kg": 0.0, "grid_kwh_saved_vs_fixed": 0.0,
+                 "money_saved_vs_fixed_nzd": 0.0}
         if slot.sum() == n_slots:
             fc = np.nan_to_num(np.asarray(pred_kw)[slot])
             act = np.nan_to_num(np.where(np.isnan(actual_kw), pred_kw, actual_kw)[slot])   # live: estimate the rest
             charges, grid = plan_charging(fc, act)
-            _, grid_arrival = plan_charging(np.full(n_slots, config.WORKSHOP_LOAD_KW + config.CHARGER_KW), act)
+            big = config.WORKSHOP_LOAD_KW + config.CHARGER_KW
+            _, grid_arrival = plan_charging(np.full(n_slots, big), act)
+            noon = np.where((local[slot].hour >= FIXED_WINDOW[0]) & (local[slot].hour < FIXED_WINDOW[1]), big, 0.0)
+            _, grid_fixed = plan_charging(noon, act)               # a stronger habit: always charge 10:00-14:00
             kwh = grid_arrival - grid
             saved = {"grid_kwh_saved": kwh, "money_saved_nzd": kwh * config.GRID_PRICE_NZD,
-                     "co2_saved_kg": kwh * config.GRID_CO2_KG_PER_KWH}
+                     "co2_saved_kg": kwh * config.GRID_CO2_KG_PER_KWH, "grid_kwh_saved_vs_fixed": grid_fixed - grid,
+                     "money_saved_vs_fixed_nzd": (grid_fixed - grid) * config.GRID_PRICE_NZD}
             advice = self._advice(t, local, slot, np.asarray(pred_kw), charges)
         res = {"region": region, "local_date": str(day), "hours": [int(h) for h in local.hour],
                "actual_kw": [_num(v) for v in actual_kw], "predicted_kw": [_num(v) for v in pred_kw],

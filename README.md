@@ -60,14 +60,20 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
 
 ## Results (test period, daytime hours, all 14 regions)
 
-| Method | Average error (50 kW system) | Error as % of capacity |
-|---|---|---|
-| Persistence | 4.03 kW | 8.1% |
-| Clear-sky persistence | 1.66 kW | 3.3% |
-| SolarCast v1 (weather up to now only) | 1.19 kW | 2.4% |
-| **SolarCast v4 (current)** | **1.12 kW** | **2.2%** |
+| Method | Average error (50 kW system) | % of capacity | % of mean daytime output (14.3 kW) |
+|---|---|---|---|
+| Persistence | 4.03 kW | 8.1% | 28.3% |
+| Open-Meteo day-ahead forecast used directly | 1.88 kW | 3.8% | 13.2% |
+| Clear-sky persistence | 1.66 kW | 3.3% | 11.7% |
+| SolarCast v1 (weather up to now only) | 1.19 kW | 2.4% | |
+| **SolarCast v4 (current)** | **1.12 kW** | **2.2%** | **7.9%** |
 
-SolarCast v4 beats both baselines, and v1, in every region. The learning curve (measured for v1) shows the model needs
+**How to read the accuracy.** "97.8% accuracy" means 100% minus the error as a share of the 50 kW capacity. Measured
+against the average daytime output instead, the error is 7.9%. The fairest single number: v4's error is **32.6% lower
+than clear-sky persistence** (the strongest simple baseline), 40.3% lower than Open-Meteo's own day-ahead forecast and
+72.2% lower than persistence. Errors are larger under cloud: 15.8 W/m2 when cloud cover is at most 60%, 41.1 W/m2 above.
+
+SolarCast v4 beats both baselines, and v1, in every region (14/14). The learning curve (measured for v1) shows the model needs
 about six months of history to beat clear-sky persistence and improves little after one year. Full tables:
 `models/nz_model.json`, `experiments/results/nz_learning_curve.md`.
 
@@ -89,6 +95,24 @@ Options: `--ai` uses a local [Ollama](https://ollama.com) model for the chat and
 `ollama pull qwen3:1.7b`, or `--model qwen3:8b` on a strong computer); `--tunnel` also prints a public Cloudflare link
 (needs `cloudflared`); `--no-grid` skips the nationwide grid; `--port 8000`. If the model file does not load, install the
 scikit-learn version named in `models/nz_model.json`. Tests: `pip install -e ".[dev]"` then `pytest tests/nz`.
+
+## Does the forecast improve the decision?
+The same charging rule (`service.plan_charging`) was driven by different forecasts on every region-day of the test
+period (6,818 days) and settled with the actual power. Grid energy caused by the EV, kWh per day (lower is better):
+
+| Strategy | Grid kWh/day | Saved vs charging on arrival |
+|---|---|---|
+| Charge on arrival (08:00) | 18.01 | - |
+| Always charge 10:00-14:00 (a good habit) | 8.46 | 9.55 |
+| Persistence forecast | 7.77 | 10.24 |
+| Clear-sky persistence forecast | 7.60 | 10.41 |
+| **SolarCast v4 forecast** | **6.96** | **11.05** |
+| Perfect forecast (upper bound) | 5.31 | 12.70 |
+
+Against the strong 10:00-14:00 habit, SolarCast saves 1.5 kWh/day (about NZD 0.45 and 0.15 kg CO2 per day per
+workshop); a perfect forecast would save only 1.65 kWh/day more. The dashboard shows today's savings against both
+charging on arrival and the 10:00-14:00 habit. Reproduce: `python experiments/nz_decision_value.py`
+(results in `experiments/results/nz_decision_value.md`).
 
 ## Limitations (please read)
 - **Modelled weather, not real plants.** New Zealand has no public hourly output data for individual solar sites, so

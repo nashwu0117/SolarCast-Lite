@@ -772,6 +772,7 @@ function renderPanel(d, titleHtml, subHtml) {
       <div class="stat"><b>NZD ${num(d.money_saved_nzd, 2)}</b><span>money saved</span></div>
       <div class="stat"><b>${num(d.co2_saved_kg)}</b><span>kg CO2 avoided</span></div>
     </div>
+    ${d.grid_kwh_saved_vs_fixed !== undefined ? `<div class="sub" style="margin-top:6px">Against a tougher habit (always charge 10:00-14:00): ${num(d.grid_kwh_saved_vs_fixed)} kWh, NZD ${num(d.money_saved_vs_fixed_nzd, 2)} saved today. Over the whole test period the forecast saves 1.5 kWh/day vs that habit and 11.1 kWh/day vs charging on arrival.</div>` : ''}
     ${d.assumptions ? `<div class="sub" style="margin-top:6px">Assumptions: ${esc(d.assumptions)}</div>` : ''}
     ${metricsHtml(d.metrics, mlabel)}`;
   drawChart(d);

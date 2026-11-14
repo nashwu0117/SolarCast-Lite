@@ -10,7 +10,7 @@ def make_synthetic_site_df(start="2025-01-01", end="2026-07-01", seed=0) -> pd.D
     rng = np.random.default_rng(seed)
     idx = pd.date_range(start, end, freq="h", tz="UTC", inclusive="left", name="datetime_utc")
     hours = idx.hour.to_numpy() + 0.5
-    doy = idx.dayofyear.to_numpy()
+    doy = idx.day_of_year.to_numpy()
     # crude sun: peaks at 10:30 UTC (~12:30 local), higher in summer
     season = 0.6 + 0.4 * np.sin(2 * np.pi * (doy - 80) / 365.25)
     elev = np.clip(60 * season * np.cos(np.pi * (hours - 10.5) / 14), 0, None)

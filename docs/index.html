@@ -116,8 +116,8 @@
 
 <section><div class="wrap">
   <div class="stats">
-    <div class="stat"><b>97.8%</b><span lang-en>accuracy on the test period (error 1.12 kW of 50 kW)</span><span lang-zh>測試期準確度（50 kW 中誤差 1.12 kW）</span></div>
-    <div class="stat"><b>3.6&times;</b><span lang-en>smaller error than "same as last hour"</span><span lang-zh>誤差只有「和上一小時一樣」的 1/3.6</span></div>
+    <div class="stat"><b>1.12 kW</b><span lang-en>average error on 16 unseen months (2.2% of 50 kW, 7.9% of mean daytime output)</span><span lang-zh>16 個月沒看過的資料上的平均誤差（50 kW 的 2.2%，白天平均發電量的 7.9%）</span></div>
+    <div class="stat"><b>32.6%</b><span lang-en>lower error than clear-sky persistence, the strongest simple baseline</span><span lang-zh>誤差比最強的簡單基準（晴空 Persistence）低</span></div>
     <div class="stat"><b>137</b><span lang-en>land cells covering all of New Zealand</span><span lang-zh>個陸地格子涵蓋全紐西蘭</span></div>
     <div class="stat"><b>:50</b><span lang-en>every hour the whole country is recomputed, before the next hour starts</span><span lang-zh>每小時 50 分重算全國，趕在下一小時開始前</span></div>
   </div>
@@ -147,12 +147,29 @@
   <table>
     <tr><th lang-en>Method</th><th lang-zh>方法</th><th lang-en>Average error</th><th lang-zh>平均誤差</th></tr>
     <tr><td lang-en>Persistence (same as last hour)</td><td lang-zh>Persistence（和上一小時一樣）</td><td>4.03 kW<span class="bar" style="width:120px;opacity:.35"></span></td></tr>
+    <tr><td lang-en>Open-Meteo day-ahead forecast alone</td><td lang-zh>直接用 Open-Meteo 前一天預報</td><td>1.88 kW<span class="bar" style="width:56px;opacity:.45"></span></td></tr>
     <tr><td lang-en>Clear-sky persistence</td><td lang-zh>晴空 Persistence</td><td>1.66 kW<span class="bar" style="width:49px;opacity:.5"></span></td></tr>
     <tr><td lang-en>SolarCast v1 (weather so far)</td><td lang-zh>SolarCast v1（只用目前為止的天氣）</td><td>1.19 kW<span class="bar" style="width:35px;opacity:.7"></span></td></tr>
     <tr class="me"><td lang-en>SolarCast v4 (current)</td><td lang-zh>SolarCast v4（目前版本）</td><td>1.12 kW<span class="bar" style="width:33px"></span></td></tr>
   </table>
   <p class="small" lang-en>v4 beats both baselines in every region. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
   <p class="small" lang-zh>v4 在每一個地區都贏過兩個基準方法。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
+</div></section>
+
+<section id="value"><div class="wrap">
+  <h2><span lang-en>Better forecast, better decision</span><span lang-zh>預測更準，決策更好</span></h2>
+  <p class="sub" lang-en>The same charging rule, driven by different forecasts on 6,818 workshop-days of the test period, settled with the actual sunshine. Grid power the EV causes per day (lower is better).</p>
+  <p class="sub" lang-zh>同一套充電規則，在測試期 6,818 個「加工店日」搭配不同預測，再用實際日照結算。電動車每天造成的電網用電（越少越好）。</p>
+  <table>
+    <tr><th lang-en>Strategy</th><th lang-zh>策略</th><th lang-en>Grid kWh / day</th><th lang-zh>電網 kWh／天</th></tr>
+    <tr><td lang-en>Charge on arrival</td><td lang-zh>到了就充</td><td>18.01<span class="bar" style="width:120px;opacity:.3"></span></td></tr>
+    <tr><td lang-en>Always charge 10:00-14:00</td><td lang-zh>每天固定 10–14 點充</td><td>8.46<span class="bar" style="width:56px;opacity:.45"></span></td></tr>
+    <tr><td lang-en>Clear-sky persistence forecast</td><td lang-zh>晴空 Persistence 預測</td><td>7.60<span class="bar" style="width:51px;opacity:.6"></span></td></tr>
+    <tr class="me"><td lang-en>SolarCast v4 forecast</td><td lang-zh>SolarCast v4 預測</td><td>6.96<span class="bar" style="width:46px"></span></td></tr>
+    <tr><td lang-en>Perfect forecast (upper bound)</td><td lang-zh>完美預測（上限）</td><td>5.31<span class="bar" style="width:35px;opacity:.3"></span></td></tr>
+  </table>
+  <p class="small" lang-en>Even against the good 10:00-14:00 habit, SolarCast saves 1.5 kWh a day per workshop; a perfect forecast would add only 1.65 kWh more.</p>
+  <p class="small" lang-zh>就算和「固定 10–14 點充」這個好習慣比，SolarCast 每間加工店每天還能少用 1.5 kWh；完美預測也只能再多省 1.65 kWh。</p>
 </div></section>
 
 <section id="ai"><div class="wrap two">

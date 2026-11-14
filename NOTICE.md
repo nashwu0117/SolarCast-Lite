@@ -2,7 +2,9 @@
 
 **English** | [繁體中文](NOTICE.zh-TW.md)
 
-SolarCast NZ's own code is open source under the [MIT License](LICENSE). The material below belongs to
+SolarCast NZ's own code, notebooks, documentation and trained model are open source under the [MIT License](LICENSE).
+The MIT License does not cover the third-party material below (the language models are downloaded at run time and are not
+redistributed here). The material below belongs to
 others and is used under its own license. The hackathon rules require crediting every dataset, pretrained model,
 tutorial and AI tool; this file is that list.
 

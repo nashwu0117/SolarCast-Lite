@@ -19,13 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----------------------------------------------------------------------------
-Scope: this license covers the code, notebooks, documentation and the trained
-model file written by the SolarCast NZ team. Third-party data, models and
-libraries are NOT covered and keep their own licenses, listed in NOTICE.md
-(for example Open-Meteo weather data, CC BY 4.0, which requires attribution,
-and the Qwen3 and Llama Guard 3 language models, which the code downloads at
-run time and which are not redistributed here).
-
-This project is a prototype and is not energy or financial advice.
