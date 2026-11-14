@@ -166,3 +166,11 @@ def test_point_route_and_chat_with_point(svc):
     res = client.post("/api/chat", json={"question": "How much power here next hour?", "t": "live",
                                          "point": {"lat": -41.1, "lon": 175.2}})
     assert res.get_json()["mode"] == "llm" and "clicked map point" in llm.calls[0][1]["content"]
+
+
+@pytest.mark.parametrize("verdict,blocked", [("safe", False), ("unsafe\nS1", True), ("unsafe\nS6", False),
+                                             ("unsafe\nS6,S9", True), ("unsafe", True)])
+def test_llama_guard_categories(monkeypatch, verdict, blocked):
+    llm = asst.OllamaLLM("m", guard_model="llama-guard3:1b")
+    monkeypatch.setattr(llm, "_post", lambda path, payload: {"message": {"content": verdict}})
+    assert llm.unsafe("I have 5 kW of panels in Christchurch. How much power will they give next hour?") is blocked

@@ -157,6 +157,9 @@ def in_scope(text: str, history: list | None = None) -> bool:
 # ---------------------------------------------------------------------------------------------------------------
 # Language model backends
 # ---------------------------------------------------------------------------------------------------------------
+GUARD_IGNORED_CATEGORIES = {"S6"}      # Llama Guard 3 "Specialized Advice": false positives on energy questions
+
+
 class OllamaLLM:
     """A local Ollama server (http://127.0.0.1:11434). The model runs on the Colab VM; nothing leaves it."""
 
@@ -180,15 +183,25 @@ class OllamaLLM:
         return re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
 
     def unsafe(self, text: str) -> bool:
-        """Llama Guard verdict for a user message (False when no guard model is configured or it fails)."""
+        """Llama Guard verdict for a user message (False when no guard model is configured or it fails).
+
+        Llama Guard answers "safe" or "unsafe" plus category codes (e.g. "unsafe\nS1"). Categories in
+        GUARD_IGNORED_CATEGORIES do not block: S6 "Specialized Advice" fired on plain questions such as "I have 5 kW
+        of panels in Christchurch, how much power will they give?", and the dashboard only gives energy figures with a
+        not-advice disclaimer. Every other category, or an unsafe verdict without a category, still blocks.
+        """
         if not self.guard_model:
             return False
         try:
             out = self._post("/api/chat", {"model": self.guard_model, "stream": False,
                                            "messages": [{"role": "user", "content": text}]})
-            return out.get("message", {}).get("content", "").strip().lower().startswith("unsafe")
         except Exception:
             return False
+        verdict = out.get("message", {}).get("content", "").strip()
+        if not verdict.lower().startswith("unsafe"):
+            return False
+        cats = set(re.findall(r"\bS\d{1,2}\b", verdict.upper()))
+        return not cats or bool(cats - GUARD_IGNORED_CATEGORIES)
 
 
 # ---------------------------------------------------------------------------------------------------------------
