@@ -105,9 +105,11 @@ Palmerston North、Wellington、Nelson、Christchurch、Queenstown、Dunedin、I
 | Persistence | 105.4 W/m²（4.03 kW） | 91.9% |
 | 晴空 Persistence | 43.8 W/m²（1.66 kW） | 96.7% |
 | v1 | 31.3 W/m²（1.19 kW） | 97.6% |
-| v4 | 換上後請見 `models/nz_model.json`（`version: v4`） | |
+| **v4（目前版本）** | **29.6 W/m²（1.12 kW）** | **97.8%** |
 
-v1 在 14 個地區每一個都贏過兩個基準方法（最準：Christchurch 1.03 kW；最難：Invercargill 1.35 kW）。
+v4 在 14 個地區每一個都贏過 v1 和兩個基準方法（最準：Christchurch 0.96 kW，98.1%；最難：Whangarei 1.27 kW 和
+Invercargill 1.25 kW，97.5%）。v4 在驗證期是 28.98 W/m²、測試期是 29.55 W/m²，代表驗證期的成績在模型完全沒看過的
+資料上也站得住。
 
 ## 8. 哪裡會失準
 

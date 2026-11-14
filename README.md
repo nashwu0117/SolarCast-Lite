@@ -35,7 +35,10 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
   50 kW system. Inputs only use what is known at hour *t*, plus the sun's position (an automated test checks that
   no future data leaks in).
 - **Baselines:** persistence (next hour = this hour) and clear-sky persistence (keep this hour's cloudiness).
-- **Model:** gradient-boosted trees (scikit-learn), one model for all regions, settings chosen on validation only.
+- **Model (v4):** gradient-boosted trees (scikit-learn), one model for all regions, settings chosen on validation only.
+  It averages two models: one predicts sunlight directly, one predicts how cloudy it will be (the clear-sky index, since
+  the sun's path is known exactly). Both also read Open-Meteo's **day-ahead forecast** for the hour being predicted
+  (issued about 24 hours earlier, so there is no leakage; archived from 2024, earlier rows are missing values).
 - **Splits by time:** train 2022-2024, validation Jan-Jun 2025, test Jul 2025-Oct 2026 (reported once).
 
 ## Results (test period, daytime hours, all 14 regions)
@@ -44,23 +47,29 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
 |---|---|---|
 | Persistence | 4.03 kW | 8.1% |
 | Clear-sky persistence | 1.66 kW | 3.3% |
-| **SolarCast model** | **1.19 kW** | **2.4%** |
+| SolarCast v1 (weather up to now only) | 1.19 kW | 2.4% |
+| **SolarCast v4 (current)** | **1.12 kW** | **2.2%** |
 
-SolarCast beats both baselines in every region. The learning curve shows the model needs about six months of history
-to beat clear-sky persistence and improves little after one year. Full tables: `models/nz_model.json`,
-`experiments/results/nz_learning_curve.md`.
+SolarCast v4 beats both baselines, and v1, in every region. The learning curve (measured for v1) shows the model needs
+about six months of history to beat clear-sky persistence and improves little after one year. Full tables:
+`models/nz_model.json`, `experiments/results/nz_learning_curve.md`.
+
+**How v4 was chosen (validation period only, bar fixed in advance: better than v1 by more than 1 W/m2):**
+v2 more training sites: no gain; v3 day-ahead forecast inputs: small gain (0.71 W/m2), not enough; v4 forecast inputs
+plus the clear-sky-index model averaged with the raw model: 28.98 vs 30.35 W/m2 (gain 1.37), promoted. Details:
+`experiments/results/nz_v2.json`, `nz_v3.json`, `nz_v4.json`. The test period was looked at once, for v4 only.
 
 ## Limitations (please read)
 - **Modelled weather, not real plants.** New Zealand has no public hourly output data for individual solar sites, so
   we use Open-Meteo's modelled (reanalysis) sunlight and derive PV output with a stated formula. Modelled weather is
   smoother than reality, so a real plant would be harder to forecast.
-- **Live mode** uses Open-Meteo's forecast service, a slightly different source than the training data, so live
-  accuracy may be a little lower.
+- **Live mode** uses Open-Meteo's forecast service (and its day-ahead forecast of the next hour), a slightly different
+  source than the training data, so live accuracy may be a little lower.
 - **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code.
 
 ## Repository
 ```
-src/solarcast/nz/   config, data, features, model, service, webapp, app
+src/solarcast/nz/   config, data, features, ensemble, model, service, webapp, app
 notebooks/          Judges and Train notebooks, English and 繁體中文
 models/             trained model (nz_model.joblib) and its report (nz_model.json)
 data/nz/            compact replay data for the dashboard (Open-Meteo, CC BY 4.0)

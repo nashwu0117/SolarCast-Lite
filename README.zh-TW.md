@@ -33,7 +33,10 @@ Runtime > **Run all**。大約兩分鐘內，notebook 會從本 repo 載入我�
 - **任務**：在第 *t* 小時結束時，預測第 *t+1* 小時的日照量（GHI），再換算成一套 50 kW 系統的發電量。
   輸入只用第 *t* 小時以前已知的資料，加上太陽位置（有自動測試確保沒有偷看未來）。
 - **基準方法**：Persistence（下一小時 = 這一小時）與晴空 Persistence（維持這一小時的雲量程度）。
-- **模型**：scikit-learn 的梯度提升樹，所有地區共用一個模型，參數只用驗證期挑選。
+- **模型（v4）**：scikit-learn 的梯度提升樹，所有地區共用一個模型，參數只用驗證期挑選。
+  它把兩個模型取平均：一個直接預測日照量，一個預測「雲多不多」（晴空指數，因為太陽的軌跡可以精確算出）。
+  兩個模型也都參考 Open-Meteo 針對被預測那一小時的**前一天預報**（約 24 小時前發布，所以沒有偷看未來；
+  2024 年起才有存檔，更早的資料是缺值）。
 - **依時間切分**：2022–2024 年訓練、2025 年 1–6 月驗證、2025 年 7 月–2026 年 10 月測試（只報告一次）。
 
 ## 結果（測試期、白天時段、全部 14 個地區）
@@ -42,20 +45,26 @@ Runtime > **Run all**。大約兩分鐘內，notebook 會從本 repo 載入我�
 |---|---|---|
 | Persistence | 4.03 kW | 8.1% |
 | 晴空 Persistence | 1.66 kW | 3.3% |
-| **SolarCast 模型** | **1.19 kW** | **2.4%** |
+| SolarCast v1（只用到目前為止的天氣） | 1.19 kW | 2.4% |
+| **SolarCast v4（目前版本）** | **1.12 kW** | **2.2%** |
 
-SolarCast 在每一個地區都贏過兩個基準方法。學習曲線顯示，模型大約需要半年的歷史資料才能贏過晴空 Persistence，
-超過一年後進步就很小。完整數據：`models/nz_model.json`、`experiments/results/nz_learning_curve.md`。
+SolarCast v4 在每一個地區都贏過兩個基準方法，也贏過 v1。學習曲線（針對 v1 量測）顯示，模型大約需要半年的歷史資料
+才能贏過晴空 Persistence，超過一年後進步就很小。完整數據：`models/nz_model.json`、`experiments/results/nz_learning_curve.md`。
+
+**v4 是怎麼選出來的（只看驗證期，門檻事先訂好：要比 v1 好超過 1 W/m2）：**
+v2 更多訓練地點：沒有進步；v3 加入前一天預報：小幅進步（0.71 W/m2），不夠；v4 預報輸入加上晴空指數模型再和原始模型取平均：
+28.98 對 30.35 W/m2（進步 1.37），升級。細節：`experiments/results/nz_v2.json`、`nz_v3.json`、`nz_v4.json`。
+測試期只看了一次，而且只針對 v4。
 
 ## 限制（請務必閱讀）
 - **是模擬天氣，不是真實電廠。** 紐西蘭沒有公開的單一太陽能電廠逐時發電資料，所以我們使用 Open-Meteo 的模擬
   （再分析）日照資料，並用明確的公式換算發電量。模擬資料比真實情況平滑，真實電廠會比較難預測。
-- **即時模式**使用 Open-Meteo 的預報服務，來源和訓練資料略有不同，即時準確度可能稍低。
+- **即時模式**使用 Open-Meteo 的預報服務（以及它對下一小時的前一天預報），來源和訓練資料略有不同，即時準確度可能稍低。
 - **加工店和電動車是假設情境**（用電量、充電器、電價、碳排係數），都寫在程式碼裡。
 
 ## Repo 結構
 ```
-src/solarcast/nz/   config、data、features、model、service、webapp、app
+src/solarcast/nz/   config、data、features、ensemble、model、service、webapp、app
 notebooks/          評審用與訓練用 notebook，英文版與繁體中文版
 models/             訓練好的模型（nz_model.joblib）與報告（nz_model.json）
 data/nz/            儀表板用的精簡回放資料（Open-Meteo，CC BY 4.0）

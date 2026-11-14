@@ -109,9 +109,11 @@ Code: `scripts/train_nz.py`, `src/solarcast/nz/model.py`. Full numbers: `models/
 | Persistence | 105.4 W/m2 (4.03 kW) | 91.9% |
 | Clear-sky persistence | 43.8 W/m2 (1.66 kW) | 96.7% |
 | v1 | 31.3 W/m2 (1.19 kW) | 97.6% |
-| v4 | see `models/nz_model.json` (`version: v4`) once promoted | |
+| **v4 (current)** | **29.6 W/m2 (1.12 kW)** | **97.8%** |
 
-v1 beat both baselines in every one of the 14 regions (best: Christchurch 1.03 kW; hardest: Invercargill 1.35 kW).
+v4 beats v1 and both baselines in every one of the 14 regions (best: Christchurch 0.96 kW, 98.1%; hardest:
+Whangarei 1.27 kW and Invercargill 1.25 kW, 97.5%). On validation v4 scored 28.98 W/m2 and on test 29.55 W/m2,
+so the validation result held up on data the model never saw.
 
 ## 8. Where it fails
 
