@@ -333,6 +333,7 @@ INDEX_HTML = r"""<!doctype html>
 <section id="modelView">
   <div class="grid2">
     <div class="card wide"><h3>How good is our model?</h3><div class="sub" id="mPeriods">Loading...</div></div>
+    <div class="card wide"><h3 id="hVersion">Model version</h3><div id="mVersion" class="sub">Loading...</div></div>
     <div class="card"><h3 id="hOverallKw">Overall error (kW)</h3><div class="sub">Mean absolute error, lower is better</div><div class="chartbox"><canvas id="cOverallKw"></canvas></div></div>
     <div class="card"><h3 id="hOverallWm">Overall error (W/m&sup2;)</h3><div class="sub">Mean absolute error of sunlight, lower is better</div><div class="chartbox"><canvas id="cOverallWm"></canvas></div></div>
     <div class="card wide"><h3>All overall metrics</h3><div id="mTable"></div></div>
@@ -602,6 +603,16 @@ function renderModel() {
   const p = report.periods || {};
   $('mPeriods').innerHTML = Object.entries(p).map(([k, v]) =>
     `<b>${esc(k)}</b>: ${esc(Array.isArray(v) ? v.join(' to ') : v)}`).join(' &nbsp;|&nbsp; ');
+
+  const prev = report.previous;
+  const mv = (o) => o ? `${num(o.mae_kw, 2)} kW (${num(o.mae_wm2, 1)} W/m&sup2;)` : '-';
+  const cur = (report.overall || []).find(o => o.model === 'SolarCast model');
+  $('hVersion').textContent = 'Model version: ' + (report.version || 'unknown');
+  $('mVersion').innerHTML = (report.changes ? `<p>${esc(report.changes)}</p>` : '') +
+    (prev && cur ? `<p><b>Test error, daytime:</b> ${esc(report.version || 'current')} ${mv(cur)} vs ${esc(prev.version)} ${mv(prev.test)}.</p>` : '') +
+    (report.experiments ? '<p><b>How we got here (validation period, bar: ' + num(report.experiments.bar_wm2, 0) + ' W/m&sup2; better than ' +
+      esc((report.previous || {}).version || 'v1') + '):</b></p><ul>' +
+      ['v2', 'v3', 'v4'].filter(k => report.experiments[k]).map(k => `<li><b>${k}</b>: ${esc(report.experiments[k].summary)}</li>`).join('') + '</ul>' : '');
 
   const overall = report.overall || [];
   const names = overall.map(o => o.model);

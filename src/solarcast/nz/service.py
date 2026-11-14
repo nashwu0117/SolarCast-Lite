@@ -176,7 +176,14 @@ class Service:
     def model_report(self) -> dict:
         """Saved at training time in models/nz_model.json; computed from the history if the JSON has no report."""
         if self._report is None:
-            self._report = self.meta.get("report") or self._compute_report()
+            rep = self.meta.get("report") or self._compute_report()
+            extra = {k: self.meta[k] for k in ("version", "changes", "experiments") if self.meta.get(k)}
+            prev = self.meta.get("previous")
+            if prev:                                                   # the model this one replaced, numbers only
+                extra["previous"] = {"version": prev.get("version"), "note": prev.get("note"),
+                                     "val": prev["metrics"]["val"]["overall"]["model"],
+                                     "test": prev["metrics"]["test"]["overall"]["model"]}
+            self._report = {**rep, **extra} if extra else rep
         return self._report
 
     def _compute_report(self) -> dict:

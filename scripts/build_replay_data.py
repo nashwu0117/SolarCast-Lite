@@ -1,7 +1,8 @@
 """Build data/nz/replay.csv.gz: the small slice of Open-Meteo history that the dashboard replays.
 
 It holds the TEST period (config.SPLITS["test"]) plus a few days before it (needed for the lag features),
-for the 14 regions. Solar elevation/azimuth are NOT stored: they are recomputed on load (see nz/app.py).
+for the 14 regions, with the day-ahead forecast columns (fc_*) so the dashboard replay uses the same inputs as the model.
+Solar elevation/azimuth are NOT stored: they are recomputed on load (see nz/app.py).
 
 Usage (run on Colab or any machine with internet):  PYTHONPATH=src python scripts/build_replay_data.py
 Data: Open-Meteo, CC BY 4.0 (https://open-meteo.com).
@@ -17,14 +18,14 @@ from solarcast.nz import config, data          # noqa: E402
 
 OUT = config.ROOT / "data" / "nz" / "replay.csv.gz"
 LEAD_DAYS = 3                                    # history before the test period, for the lag features
-STORED = ["region", "time_utc"] + config.COLUMNS
+STORED = ["region", "time_utc"] + config.COLUMNS + config.FORECAST_COLUMNS
 
 
 def build(start: str, end: str, out: Path = OUT) -> pd.DataFrame:
     df = data.fetch_history(start, end)
     df = df[STORED].copy()
     df["time_utc"] = df["time_utc"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    for c in config.COLUMNS:                    # 1 decimal is the precision Open-Meteo itself gives
+    for c in config.COLUMNS + config.FORECAST_COLUMNS:                    # 1 decimal is the precision Open-Meteo itself gives
         df[c] = df[c].round(1)
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out, index=False, float_format="%g", compression={"method": "gzip", "compresslevel": 9})

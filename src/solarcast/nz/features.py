@@ -4,6 +4,11 @@ Timing. Open-Meteo radiation stamped T is the mean over [T-1h, T). A row is an I
 of hour t and know every stamp <= t. The target is the radiation stamped t+1 = the mean over the NEXT hour [t, t+1).
 Rows are indexed by (region, target_time = t+1h). Anything stamped t+1 or later is never used as an input.
 Sun position and clear-sky values for the target are deterministic (astronomy), so they are allowed.
+
+Day-ahead forecasts (v3/v4). The long frame can carry forecast columns fc_* (data.fetch_forecast_history) stamped at
+the forecast's VALID time. The forecast for the target stamp t+1 is an allowed input even though t+1 is in the
+future: it is Open-Meteo's `*_previous_day1` value, i.e. it was ISSUED about 24 hours earlier, long before t. It is the
+ONLY thing stamped t+1 or later that is ever read. Forecasts for any other stamp are never used.
 """
 import numpy as np
 import pandas as pd
@@ -14,7 +19,7 @@ HOUR = pd.Timedelta("1h")
 HALF = pd.Timedelta("30min")
 CS_MIN = 20.0           # W/m2: below this the clear-sky index is meaningless (dawn/dusk)
 
-FEATURES = [
+V1_FEATURES = [
     "ghi_t", "ghi_lag1", "ghi_lag2", "ghi_lag23", "ghi_roll3", "ghi_roll24", "d_ghi_1h",
     "kt_t", "kt_roll24", "cs_t",
     "dni_t", "dhi_t", "cloud_t", "d_cloud_1h", "temp_t", "d_temp_1h", "humidity_t", "d_humidity_1h",
@@ -22,6 +27,8 @@ FEATURES = [
     "elev_target", "azim_target", "cs_target", "hour_sin", "hour_cos", "doy_sin", "doy_cos",
     "region_id", "lat",
 ]
+FORECAST_FEATURES = ["fc_ghi_target", "fc_cloud_target", "fc_temp_target", "fc_dni_target", "fc_kt_target"]
+FEATURES = V1_FEATURES + FORECAST_FEATURES      # v4 inputs; V1_FEATURES is the original list, kept for reference
 
 
 def clear_sky_ghi(elevation_deg) -> np.ndarray:
@@ -56,6 +63,12 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
     f["hour_sin"], f["hour_cos"] = np.sin(2 * np.pi * mid.hour / 24), np.cos(2 * np.pi * mid.hour / 24)
     f["doy_sin"], f["doy_cos"] = np.sin(2 * np.pi * mid.dayofyear / 365.25), np.cos(2 * np.pi * mid.dayofyear / 365.25)
     f["region_id"], f["lat"] = list(config.REGIONS).index(region), lat
+
+    # Day-ahead forecast for the target stamp (issued ~24 h before t, see module docstring). NaN when unavailable.
+    fc = {c: g[c] if c in g.columns else pd.Series(np.nan, index=g.index) for c in config.FORECAST_COLUMNS}
+    f["fc_ghi_target"], f["fc_cloud_target"] = fc["fc_ghi_wm2"].shift(-1), fc["fc_cloud_pct"].shift(-1)
+    f["fc_temp_target"], f["fc_dni_target"] = fc["fc_temp_c"].shift(-1), fc["fc_dni_wm2"].shift(-1)
+    f["fc_kt_target"] = (f["fc_ghi_target"] / f["cs_target"]).where(f["cs_target"] >= CS_MIN).clip(0, 1.5)
 
     f["target_ghi"] = ghi.shift(-1)
     target_temp = g["temp_c"].shift(-1)

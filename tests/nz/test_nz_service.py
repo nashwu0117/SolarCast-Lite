@@ -77,3 +77,14 @@ def test_model_report_from_saved_meta(long_df):
     saved = {"report": {"periods": {}, "overall": [], "per_region": [], "importance": [], "sample": {}}}
     s = svc.Service(nzmodel.train(build_features(long_df).iloc[:5000], max_iter=5), long_df, meta=saved)
     assert s.model_report() is saved["report"]
+
+
+def test_model_report_adds_version_and_previous(long_df):
+    m = {"mae_kw": 1.0, "mae_wm2": 30.0}
+    prev = {"version": "v1", "note": "n", "metrics": {"val": {"overall": {"model": m}}, "test": {"overall": {"model": m}}}}
+    meta = {"report": {"periods": {}, "overall": [], "per_region": [], "importance": [], "sample": {}},
+            "version": "v4", "changes": "x", "previous": prev, "experiments": {"bar_wm2": 1.0}}
+    s = svc.Service(nzmodel.train(build_features(long_df).iloc[:5000], max_iter=5), long_df, meta=meta)
+    rep = s.model_report()
+    assert rep["version"] == "v4" and rep["previous"]["test"] == m and rep["experiments"] == {"bar_wm2": 1.0}
+    json.dumps(rep)

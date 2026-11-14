@@ -10,10 +10,11 @@ learning curve showed one year of history is already close to the full-history r
 period only; only a gain of more than 1 W/m2 over the saved v1 model would justify one look at the test period.
 
 Usage (run on Colab):  PYTHONPATH=src python scripts/train_nz_v3.py
+(Experiment record: the forecast download and the fc_* features now live in solarcast.nz.data / features, because v4
+promoted them; the numbers in experiments/results/nz_v3.json were produced with the identical logic.)
 """
 import json
 import sys
-import time
 from pathlib import Path
 
 import numpy as np
@@ -22,40 +23,11 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from solarcast.nz import config, data, model as nzmodel          # noqa: E402
-from solarcast.nz.features import FEATURES, build_features, clear_sky_ghi  # noqa: E402
+from solarcast.nz.features import FORECAST_FEATURES as FC_FEATURES, V1_FEATURES as FEATURES, build_features  # noqa: E402
 
-PREV_URL = "https://previous-runs-api.open-meteo.com/v1/forecast"
-FC_VARS = {"shortwave_radiation_previous_day1": "fc_ghi_target", "cloud_cover_previous_day1": "fc_cloud_target",
-           "temperature_2m_previous_day1": "fc_temp_target", "direct_normal_irradiance_previous_day1": "fc_dni_target"}
-FC_FEATURES = list(FC_VARS.values()) + ["fc_kt_target"]
-FC_START = "2024-01-01"
+FC_START = config.FORECAST_START
 V1_PARAMS = dict(learning_rate=0.03, max_iter=800, max_leaf_nodes=63, min_samples_leaf=100, loss="absolute_error")
 MIN_GAIN_WM2 = 1.0
-
-
-def fetch_forecasts(end: str) -> pd.DataFrame:
-    """Day-ahead forecasts, one row per (region, hour stamp). Radiation stamped T = mean over [T-1h, T), as in the archive."""
-    parts = []
-    for name, (lat, lon) in config.REGIONS.items():
-        path = config.RAW_DIR / f"fc_{name.replace(' ', '_')}_{FC_START}_{end}.csv"
-        if not path.exists():
-            j = data._get(PREV_URL, {"latitude": lat, "longitude": lon, "start_date": FC_START, "end_date": end,
-                                     "hourly": ",".join(FC_VARS), "timezone": "UTC"})["hourly"]
-            df = pd.DataFrame({"time_utc": pd.to_datetime(j["time"], utc=True), **{v: j[k] for k, v in FC_VARS.items()}})
-            df.to_csv(path, index=False)
-            time.sleep(2)
-        df = pd.read_csv(path)
-        df["time_utc"] = pd.to_datetime(df["time_utc"], utc=True)
-        parts.append(df.assign(region=name))
-    return pd.concat(parts, ignore_index=True)
-
-
-def add_forecasts(feat: pd.DataFrame, fc: pd.DataFrame) -> pd.DataFrame:
-    """Join the forecast stamped target_time (= the next hour) onto each row."""
-    fc = fc.rename(columns={"time_utc": "target_time"}).set_index(["region", "target_time"])
-    out = feat.join(fc, how="left")
-    out["fc_kt_target"] = (out["fc_ghi_target"] / out["cs_target"]).where(out["cs_target"] >= 20).clip(0, 1.5)
-    return out
 
 
 def fit(feat, cols, params):
@@ -80,9 +52,7 @@ def split(feat, name, start=None):
 def main():
     v1_meta = nzmodel.load_meta()
     end = v1_meta.get("data_end", "2026-11-08")
-    feat = build_features(data.fetch_history(config.HISTORY_START, end))
-    fc = fetch_forecasts(end)
-    feat = add_forecasts(feat, fc)
+    feat = build_features(data.fetch_history(config.HISTORY_START, end))      # includes the fc_* forecast features
     val = split(feat, "val")
     print("forecast coverage on val:", round(val["fc_ghi_target"].notna().mean() * 100, 1), "%", flush=True)
     print("corr(fc_ghi_target, target_ghi) on val daytime:",

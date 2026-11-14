@@ -26,6 +26,11 @@ def make_long(start="2025-05-01", end="2026-03-01", regions=TEST_REGIONS, seed=0
                            "humidity_pct": rng.uniform(40, 95, len(idx)), "wind_kmh": rng.uniform(0, 30, len(idx)),
                            "precip_mm": 0.0, "is_day": (elev > 0).astype(float),
                            "solar_elevation_deg": elev, "solar_azimuth_deg": azim})
+        # day-ahead forecast columns (valid-time stamped): the truth plus noise, like a decent forecast
+        df["fc_ghi_wm2"] = np.clip(ghi + rng.normal(0, 40, len(idx)), 0, None)
+        df["fc_cloud_pct"] = np.clip(cloud + rng.normal(0, 15, len(idx)), 0, 100)
+        df["fc_temp_c"] = df["temp_c"] + rng.normal(0, 1.5, len(idx))
+        df["fc_dni_wm2"] = np.clip(df["dni_wm2"] + rng.normal(0, 40, len(idx)), 0, None)
         parts.append(df)
     return pd.concat(parts, ignore_index=True)
 

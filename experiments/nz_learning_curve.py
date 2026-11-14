@@ -1,4 +1,6 @@
-"""How many days of history give the best model for all of New Zealand?  (validation period only, no test data)
+"""[ARCHIVED experiment, written against the v1 model code (one gradient-boosting model, 29 features); the results are
+in the matching experiments/results file. nzmodel.train now returns the v4 ensemble, so a rerun needs the v1 code.]
+How many days of history give the best model for all of New Zealand?  (validation period only, no test data)
 
 Trains the chosen config on the most recent N days before the val start (14 regions pooled) and scores daytime
 MAE on VAL next to the two baselines. Run after scripts/train_nz.py (needs models/nz_model.json and the cached data):

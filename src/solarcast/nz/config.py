@@ -31,6 +31,13 @@ COLUMNS = ["ghi_wm2", "dni_wm2", "dhi_wm2", "cloud_cover_pct", "temp_c", "humidi
            "precip_mm", "is_day"]
 HISTORY_START = "2022-01-01"
 
+# Day-ahead forecast inputs (v3/v4): Open-Meteo Previous Runs API, `<var>_previous_day1` = the forecast for hour T that
+# was ISSUED about 24 h earlier. Stored in the long frame at their VALID time T (same stamp convention as the weather).
+FORECAST_VARS = {"shortwave_radiation_previous_day1": "fc_ghi_wm2", "cloud_cover_previous_day1": "fc_cloud_pct",
+                 "temperature_2m_previous_day1": "fc_temp_c", "direct_normal_irradiance_previous_day1": "fc_dni_wm2"}
+FORECAST_COLUMNS = list(FORECAST_VARS.values())
+FORECAST_START = "2024-01-01"      # archived day-ahead forecasts exist from here; earlier rows are NaN
+
 # The workshop's rooftop PV system and how power is derived from irradiance (stated in the write-up).
 SYSTEM_KW = 50.0
 PERFORMANCE_RATIO = 0.80

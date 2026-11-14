@@ -7,6 +7,7 @@ ensemble). Inputs: v1 features plus the day-ahead forecast from v3 (train 2022-2
 
 Judged on the VALIDATION period only, against the saved v1 model; a gain above 1 W/m2 is required to promote.
 Usage (run on Colab, after v3 cached the data):  PYTHONPATH=src python scripts/train_nz_v4.py
+(Experiment record: v4 was PROMOTED; scripts/train_nz.py now trains and saves it with solarcast.nz.ensemble.)
 """
 import json
 import sys
@@ -19,8 +20,8 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT / "scripts")]
 from solarcast.nz import config, data, model as nzmodel                 # noqa: E402
-from solarcast.nz.features import FEATURES, build_features              # noqa: E402
-from train_nz_v3 import FC_FEATURES, V1_PARAMS, add_forecasts, fetch_forecasts, fit, predict, split  # noqa: E402
+from solarcast.nz.features import FORECAST_FEATURES as FC_FEATURES, V1_FEATURES as FEATURES, build_features  # noqa: E402
+from train_nz_v3 import V1_PARAMS, fit, predict, split  # noqa: E402
 
 CS_MIN = 20.0   # W/m2: below this (dawn/dusk) the index is unstable, so the raw-GHI model is used
 MIN_GAIN_WM2 = 1.0
@@ -46,7 +47,7 @@ def predict_k(m_k, m_raw, feat, cols_k, cols_raw):
 def main():
     v1_meta = nzmodel.load_meta()
     end = v1_meta.get("data_end", "2026-11-08")
-    feat = add_forecasts(build_features(data.fetch_history(config.HISTORY_START, end)), fetch_forecasts(end))
+    feat = build_features(data.fetch_history(config.HISTORY_START, end))      # includes the fc_* forecast features
     train, val = split(feat, "train"), split(feat, "val")
     cols_fc = FEATURES + FC_FEATURES
     base = {"persistence": nzmodel.persistence(val), "clear_sky": nzmodel.clear_sky_persistence(val)}

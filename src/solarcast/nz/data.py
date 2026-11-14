@@ -13,6 +13,10 @@ from solarcast.nz import config
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+PREVIOUS_RUNS_URL = "https://previous-runs-api.open-meteo.com/v1/forecast"
+# caches written by the v3 experiment used these column names (forecast stamped at the valid time)
+_LEGACY_FC = {"fc_ghi_target": "fc_ghi_wm2", "fc_cloud_target": "fc_cloud_pct", "fc_temp_target": "fc_temp_c",
+              "fc_dni_target": "fc_dni_wm2"}
 RENAME = dict(zip(config.HOURLY_VARS, config.COLUMNS))
 
 
@@ -81,8 +85,47 @@ def _get(url: str, params: dict, tries: int = 6) -> dict:
     raise RuntimeError("unreachable")
 
 
-def fetch_history(start: str, end: str, regions=config.REGIONS) -> pd.DataFrame:
-    """Hourly history [start, end] (dates) for every region, long format. One request per region, cached as CSV."""
+def _forecast_frame(hourly: dict) -> pd.DataFrame:
+    """One Previous Runs `hourly` block -> frame [time_utc, fc_*] stamped at the forecast's valid time."""
+    df = pd.DataFrame({"time_utc": pd.to_datetime(hourly["time"], utc=True),
+                       **{v: hourly[k] for k, v in config.FORECAST_VARS.items()}})
+    return df
+
+
+def fetch_forecast_history(start: str, end: str, regions=config.REGIONS) -> pd.DataFrame:
+    """Day-ahead forecasts (`*_previous_day1`, issued ~24 h before the hour) for [start, end], long format, cached as CSV.
+
+    Columns: region, time_utc, fc_ghi_wm2, fc_cloud_pct, fc_temp_c, fc_dni_wm2. Radiation stamped T is the mean over
+    [T-1h, T), exactly like the archive. The archive only exists from config.FORECAST_START, so `start` is clipped to it.
+    """
+    config.RAW_DIR.mkdir(parents=True, exist_ok=True)
+    start = max(start, config.FORECAST_START)
+    parts = []
+    for name in regions:
+        lat, lon = config.REGIONS[name]
+        path = config.RAW_DIR / f"fc_{name.replace(' ', '_')}_{start}_{end}.csv"
+        if not path.exists():
+            params = {"latitude": lat, "longitude": lon, "start_date": start, "end_date": end,
+                      "hourly": ",".join(config.FORECAST_VARS), "timezone": "UTC"}
+            _forecast_frame(_get(PREVIOUS_RUNS_URL, params)["hourly"]).to_csv(path, index=False)
+            time.sleep(2)
+        df = pd.read_csv(path).rename(columns=_LEGACY_FC)
+        df["time_utc"] = pd.to_datetime(df["time_utc"], utc=True)
+        parts.append(df[["time_utc"] + config.FORECAST_COLUMNS].assign(region=name))
+    return pd.concat(parts, ignore_index=True)[["region", "time_utc"] + config.FORECAST_COLUMNS]
+
+
+def add_forecasts(long_df: pd.DataFrame, fc: pd.DataFrame) -> pd.DataFrame:
+    """Left-join forecast columns onto the long frame at their valid time (rows without a forecast stay NaN)."""
+    base = long_df.drop(columns=[c for c in config.FORECAST_COLUMNS if c in long_df.columns])
+    return base.merge(fc, on=["region", "time_utc"], how="left")
+
+
+def fetch_history(start: str, end: str, regions=config.REGIONS, forecasts: bool = True) -> pd.DataFrame:
+    """Hourly history [start, end] (dates) for every region, long format. One request per region, cached as CSV.
+
+    With forecasts=True the day-ahead forecast columns (fc_*) are added from the Previous Runs API (from 2024 on).
+    """
     config.RAW_DIR.mkdir(parents=True, exist_ok=True)
     parts = []
     for name in regions:
@@ -97,21 +140,36 @@ def fetch_history(start: str, end: str, regions=config.REGIONS) -> pd.DataFrame:
         df.to_csv(path, index=False)
         parts.append(df)
         time.sleep(2)                                              # be polite
-    return pd.concat(parts, ignore_index=True)
+    out = pd.concat(parts, ignore_index=True)
+    if forecasts:
+        out = add_forecasts(out, fetch_forecast_history(start, end, regions))
+    return out
 
 
 def fetch_live(regions=config.REGIONS) -> pd.DataFrame:
-    """Last 48 h plus next 24 h for all regions in ONE request; `is_forecast` marks hours after the current hour."""
+    """Last 48 h plus next 24 h for all regions; `is_forecast` marks hours after the current hour.
+
+    Two requests for all regions: the weather (forecast API) and the day-ahead forecast columns fc_* (Previous Runs API,
+    `*_previous_day1`, which also returns values for the coming hours because that run was issued ~24 h earlier).
+    """
     names = list(regions)
-    params = {"latitude": ",".join(str(config.REGIONS[n][0]) for n in names),
-              "longitude": ",".join(str(config.REGIONS[n][1]) for n in names),
-              "hourly": ",".join(config.HOURLY_VARS), "timezone": "UTC", "past_days": 2, "forecast_days": 2}
-    data = _get(FORECAST_URL, params)
+    loc = {"latitude": ",".join(str(config.REGIONS[n][0]) for n in names),
+           "longitude": ",".join(str(config.REGIONS[n][1]) for n in names), "timezone": "UTC", "past_days": 2, "forecast_days": 2}
+    data = _get(FORECAST_URL, {**loc, "hourly": ",".join(config.HOURLY_VARS)})
     data = data if isinstance(data, list) else [data]
+    try:
+        fcd = _get(PREVIOUS_RUNS_URL, {**loc, "hourly": ",".join(config.FORECAST_VARS)})
+        fcd = fcd if isinstance(fcd, list) else [fcd]
+    except Exception:                                              # forecasts are an extra input: NaN is handled by the model
+        fcd = [None] * len(names)
     now = pd.Timestamp.now(tz="UTC").floor("h")
     parts = []
-    for name, block in zip(names, data):
+    for name, block, fblock in zip(names, data, fcd):
         df = _to_frame(block["hourly"], name, *config.REGIONS[name])
+        if fblock is not None:
+            df = df.merge(_forecast_frame(fblock["hourly"]), on="time_utc", how="left")
+        else:
+            df = df.assign(**{c: np.nan for c in config.FORECAST_COLUMNS})
         df = df[(df["time_utc"] >= now - pd.Timedelta("48h")) & (df["time_utc"] <= now + pd.Timedelta("24h"))]
         parts.append(df.assign(is_forecast=df["time_utc"] > now))
     return pd.concat(parts, ignore_index=True)

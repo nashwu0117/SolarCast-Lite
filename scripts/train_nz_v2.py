@@ -1,4 +1,6 @@
-"""SolarCast NZ v2 experiment: does training on MORE New Zealand locations make a stronger model?
+"""[ARCHIVED experiment, written against the v1 model code (one gradient-boosting model, 29 features); the results are
+in the matching experiments/results file. nzmodel.train now returns the v4 ensemble, so a rerun needs the v1 code.]
+SolarCast NZ v2 experiment: does training on MORE New Zealand locations make a stronger model?
 
 v1 trained on the 14 dashboard regions only, and its learning curve flattened after about a year, so more years of
 the same sites add little. Here we add 16 extra sites spread over both islands as TRAINING data. Everything is

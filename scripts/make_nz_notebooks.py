@@ -17,6 +17,14 @@ MODEL_JSON = json.loads((Path(__file__).resolve().parents[1] / "models" / "nz_mo
 SK = MODEL_JSON["sklearn_version"]
 REPO_URL = "https://github.com/nashwu0117/SolarCast-Lite"
 LANGS = ("en", "zh-TW")
+VER = MODEL_JSON["version"]
+_E = MODEL_JSON["experiments"]
+_c = lambda k: _E[k]["result"]["candidates"]
+N = {"v1": _E["v1_val_mae_wm2"], "bar": _E["bar_wm2"],
+     "v2_14": _c("v2")["v1 config, 14 sites"]["val_mae_wm2"], "v2_30": _c("v2")["v1 config, 30 sites"]["val_mae_wm2"],
+     "v2_best": _c("v2")[_E["v2"]["result"]["best"]]["val_mae_wm2"],
+     "v3": _c("v3")[_E["v3"]["result"]["best"]]["val_mae_wm2"], "g3": _E["v3"]["result"]["gain_wm2"],
+     "v4": _c("v4")[_E["v4"]["result"]["best"]]["val_mae_wm2"], "g4": _E["v4"]["result"]["gain_wm2"]}
 
 # ---------------------------------------------------------------------------------------------------------------
 # Code comments (the only language-dependent part of the code cells)
@@ -27,16 +35,18 @@ CODE_COMMENTS = {
     "sk": {"en": "The saved model needs the same scikit-learn version it was trained with.",
            "zh-TW": "存好的模型必須搭配訓練時相同版本的 scikit-learn 才能載入。"},
     "path": {"en": "Make `import solarcast` work.", "zh-TW": "讓 `import solarcast` 可以運作。"},
-    "load": {"en": "Load the trained model and the replay weather (about 15 months of Open-Meteo data).",
-             "zh-TW": "載入訓練好的模型與回放用的天氣資料（約 15 個月的 Open-Meteo 資料）。"},
+    "load": {"en": "Load the trained model and the replay weather plus day-ahead forecasts (about 15 months of Open-Meteo data).",
+             "zh-TW": "載入訓練好的模型與回放用的天氣資料和前一天的預報（約 15 個月的 Open-Meteo 資料）。"},
     "acc": {"en": "Accuracy as a share of the 50 kW system: 100 - nMAE, where nMAE = MAE / 50 kW.",
             "zh-TW": "以 50 kW 系統為基準的準確度：100 - nMAE，其中 nMAE = MAE / 50 kW。"},
     "overall": {"en": "Overall TEST results (daytime hours, July 2025 - Oct 2026), saved at training time.",
                 "zh-TW": "整體測試集結果（白天時段，2025 年 7 月至 2026 年 10 月），訓練時就已存好。"},
     "perregion": {"en": "Per-region TEST MAE in kW (lower is better).",
                   "zh-TW": "各區域的測試集 MAE（單位 kW，越小越好）。"},
-    "curve": {"en": "Learning curve: how the error falls as the model sees more training days.",
-              "zh-TW": "學習曲線：模型看過越多訓練天數，誤差就越小。"},
+    "version": {"en": "Which model this is, what changed, and the previous model's test numbers for comparison.",
+                "zh-TW": "這是哪一版模型、改了什麼，以及前一版模型的測試集數字作為對照。"},
+    "curve": {"en": "Learning curve (measured for the first model, v1): how the error falls as it sees more training days.",
+              "zh-TW": "學習曲線（針對第一版模型 v1 量測）：模型看過越多訓練天數，誤差就越小。"},
     "sample": {"en": "One sample week: actual power vs. the model vs. the persistence baseline.",
                "zh-TW": "取樣一週：實際發電量、模型預測、以及「持續性」基準線的比較。"},
     "serve": {"en": "Start the dashboard (Flask) and open a free Cloudflare tunnel so anyone can reach it.",
@@ -50,14 +60,16 @@ CODE_COMMENTS = {
                   "zh-TW": "縮小的時間窗：60% 訓練、20% 驗證、20% 測試，依時間先後切分。"},
     "full_cfg": {"en": "Full run: all 14 regions, 2022 to about a week ago.",
                  "zh-TW": "完整執行：14 個區域，從 2022 年到大約一週前。"},
-    "fetch": {"en": "Download hourly history from Open-Meteo (cached on disk, retries on rate limits).",
-              "zh-TW": "從 Open-Meteo 下載每小時歷史資料（會存在硬碟快取，遇到流量限制會自動重試）。"},
+    "fetch": {"en": "Download hourly history and the day-ahead forecasts from Open-Meteo (cached on disk, retries on rate limits).",
+              "zh-TW": "從 Open-Meteo 下載每小時歷史資料與前一天的預報（會存在硬碟快取，遇到流量限制會自動重試）。"},
     "feat": {"en": "Features use only information known at the end of the issue hour (no leakage).",
              "zh-TW": "特徵只使用「發出預測那一刻」已知的資訊（沒有偷看未來）。"},
     "baseline": {"en": "Two baselines every model has to beat: persistence and clear-sky persistence.",
                  "zh-TW": "任何模型都必須打敗的兩個基準線：持續性預測與晴空持續性預測。"},
-    "tune": {"en": "Tune on the VALIDATION period only; the test period is not touched here.",
-             "zh-TW": "只用「驗證集」調參數；這裡完全沒有碰測試集。"},
+    "fit": {"en": "Train v4 on the TRAIN period only (the settings are v1's, tuned earlier); the test period is not touched here.",
+            "zh-TW": "只用「訓練集」訓練 v4（參數沿用先前調好的 v1 設定）；這裡完全沒有碰測試集。"},
+    "gain": {"en": "The promotion bar was fixed in advance: more than 1 W/m2 better than v1 on VALIDATION.",
+             "zh-TW": "升級門檻事先就訂好：在驗證集上要比 v1 好超過 1 W/m2。"},
     "test": {"en": "The ONE look at the test period, with the chosen model.",
              "zh-TW": "只看「一次」測試集，並且只用選定的那個模型。"},
     "lc_old": {"en": "The learning curve was computed earlier and is stored in the JSON of the committed model.",
@@ -115,8 +127,8 @@ from solarcast.nz import app, config, model as nzmodel
 svc = app.load_service()
 meta = svc.meta
 test = meta["metrics"]["test"]
-print(f"{len(svc.regions)} regions | replay hours: {len(svc.available_times())} | "
-      f"model trained on {meta['periods']['train'][0]} to {meta['periods']['train'][1]} | data: {meta['data_source']}")
+print(f"model {meta['version']} | {len(svc.regions)} regions | replay hours: {len(svc.available_times())} | "
+      f"trained on {meta['periods']['train'][0]} to {meta['periods']['train'][1]} | data: {meta['data_source']}")
 '''
 
 JUDGES_OVERALL = '''
@@ -133,6 +145,18 @@ overall = pd.DataFrame(rows).round(2)
 display(overall)
 best, pers = test["overall"]["model"]["mae_kw"], test["overall"]["persistence"]["mae_kw"]
 print(f"The model's error is {100 - best / pers * 100:.0f} % lower than persistence.")
+'''
+
+JUDGES_VERSION = '''
+# @@version@@
+print(f"Model {meta['version']}: {meta['changes']}")
+prev = meta["previous"]
+rows = []
+for name, m in ((f"{prev['version']} (previous)", prev["metrics"]["test"]["overall"]["model"]),
+                (f"{meta['version']} (this model)", test["overall"]["model"])):
+    rows.append({"model": name, "MAE (kW)": m["mae_kw"], "MAE (W/m2)": m["mae_wm2"],
+                 "accuracy (% of 50 kW)": accuracy(m["mae_kw"])})
+display(pd.DataFrame(rows).round(2).set_index("model"))
 '''
 
 JUDGES_REGION = '''
@@ -207,7 +231,7 @@ import numpy as np
 import pandas as pd
 from solarcast.nz import config, data, model as nzmodel
 from solarcast.nz.features import build_features
-import train_nz            # the same helpers (split, GRID) as scripts/train_nz.py
+import train_nz            # the same helpers (split, show, VERSION) as scripts/train_nz.py
 
 end = date.today() - timedelta(days=6)          # the archive lags about 5 days behind real time
 if QUICK:
@@ -215,23 +239,22 @@ if QUICK:
     regions, start = ["Auckland", "Christchurch"], end - timedelta(days=119)
     a, b = start + timedelta(days=72), start + timedelta(days=96)
     config.SPLITS.update(train=(str(start), str(a)), val=(str(a), str(b)), test=(str(b), str(end + timedelta(days=1))))
-    GRID = train_nz.GRID[:2]
     model_path, meta_path = "/content/quick_model.joblib", "/content/quick_model.json"
 else:
     # @@full_cfg@@
     regions, start = list(config.REGIONS), config.HISTORY_START
-    GRID = train_nz.GRID
     model_path = meta_path = None
 from pathlib import Path
 model_path = Path(model_path) if model_path else None
 meta_path = Path(meta_path) if meta_path else None
-print("QUICK" if QUICK else "FULL", "| regions:", len(regions), "|", start, "->", end, "| configs to try:", len(GRID))
+print("QUICK" if QUICK else "FULL", "| regions:", len(regions), "|", start, "->", end)
 '''
 
 TRAIN_FETCH = '''
 # @@fetch@@
 long_df = data.fetch_history(str(start), str(end), regions)
 print(long_df.shape, long_df["time_utc"].min(), "->", long_df["time_utc"].max())
+print("rows with a day-ahead forecast:", round(long_df["fc_ghi_wm2"].notna().mean() * 100, 1), "%  (archived forecasts exist from 2024)")
 long_df.head()
 '''
 
@@ -247,22 +270,21 @@ print("baselines on VAL:", {k: round(float(abs(val["target_ghi"] - p).mean()), 1
 '''
 
 TRAIN_TUNE = '''
-# @@tune@@
-best, tuning = None, []
-for params in GRID:
-    m = nzmodel.train(train, **params)
-    ev = nzmodel.evaluate(val, {"model": nzmodel.predict(m, val), **base})
-    mae = ev["overall"]["model"]["mae_wm2"]
-    tuning.append({**params, "val_mae_wm2": mae})
-    print(f"{params} -> val MAE {mae:.2f} W/m2")
-    if best is None or mae < best[0]:
-        best = (mae, params, m, ev)
-_, params, model, val_ev = best
-train_nz.show("VALIDATION (chosen config)", val_ev)
+# @@fit@@
+model = nzmodel.train(train)
+val_ev = nzmodel.evaluate(val, nzmodel.all_predictions(model, val))
+train_nz.show("VALIDATION", val_ev)
 o = val_ev["overall"]
 beats = o["model"]["mae_wm2"] < min(o["persistence"]["mae_wm2"], o["clear_sky"]["mae_wm2"])
 assert beats or QUICK, "the model must beat both baselines on the validation period"
-print("chosen:", params, "| beats both baselines on VAL:", beats)
+print("beats both baselines on VAL:", beats)
+
+# @@gain@@
+old_meta = nzmodel.load_meta()
+prev = train_nz.previous_model(old_meta)
+gain = prev["metrics"]["val"]["overall"]["model"]["mae_wm2"] - o["model"]["mae_wm2"]
+print(f"val MAE {o['model']['mae_wm2']:.2f} W/m2 vs {prev['version']} {prev['metrics']['val']['overall']['model']['mae_wm2']:.2f}: "
+      f"gain {gain:.2f} (bar {train_nz.MIN_GAIN_WM2}; QUICK windows are not comparable)")
 '''
 
 TRAIN_TEST = '''
@@ -275,7 +297,6 @@ print(f"Test MAE {m['mae_kw']:.2f} kW = {100 - m['mae_kw'] / config.SYSTEM_KW * 
 
 TRAIN_CURVE = '''
 # @@lc_old@@
-old_meta = nzmodel.load_meta()
 curve = old_meta.get("learning_curve")
 if curve:
     lc = pd.DataFrame(curve)
@@ -289,8 +310,9 @@ TRAIN_SAVE = '''
 # @@save@@
 report = nzmodel.build_report(model, val, test)
 nzmodel.save(model, {"val": val_ev, "test": test_ev}, model_path=model_path, meta_path=meta_path,
-             extra={"chosen_params": params, "tuning": tuning, "data_end": str(end), "report": report,
-                    "learning_curve": curve, "data_source": "Open-Meteo (ERA5 reanalysis), CC BY 4.0"})
+             extra={"version": train_nz.VERSION, "changes": train_nz.CHANGES, "chosen_params": nzmodel.V1_PARAMS,
+                    "data_end": str(end), "report": report, "previous": prev, "experiments": train_nz.experiment_chain(),
+                    "learning_curve": curve, "data_source": "Open-Meteo (ERA5 reanalysis + archived day-ahead forecasts), CC BY 4.0"})
 print("saved to", model_path or config.MODEL_PATH, "and", meta_path or config.MODEL_META)
 '''
 
@@ -340,6 +362,9 @@ and carries CO2). So the question is: **how much solar power will we have in the
 **What SolarCast NZ does.** A machine-learning model (gradient boosting, scikit-learn) forecasts the **next hour** of solar
 power for 14 New Zealand regions, and the dashboard turns that forecast into simple EV charging advice.
 
+**The model.** Version **{ver}**: a forecast of the next hour that also reads the weather service's own day-ahead forecast, with two
+models (raw sunlight and "how cloudy") averaged. How we decided to use it is in section 3.
+
 **How to run it:** `Runtime > Run all`. It takes about 2-3 minutes. The **last cell** starts the dashboard and prints a big link.""",
   "zh-TW": """# SolarCast NZ：小型工坊什麼時候該幫電動車充電？
 
@@ -352,11 +377,14 @@ power for 14 New Zealand regions, and the dashboard turns that forecast into sim
 **SolarCast NZ 做了什麼。** 我們用機器學習模型（梯度提升，scikit-learn）預測紐西蘭 14 個區域**下一小時**的太陽能發電量，
 再由儀表板把預測轉成簡單的電動車充電建議。
 
+**模型。** 版本 **{ver}**：預測下一小時時，也參考氣象服務前一天發布的預報，並把兩個模型（原始日射量、「雲量多寡」）取平均。
+我們為什麼採用它，請看第 3 節。
+
 **怎麼執行：** 選 `執行階段 > 全部執行`，大約 2 到 3 分鐘。**最後一個儲存格**會啟動儀表板，並印出很大的連結。"""},
  "setup": {"en": "## 1. Setup\nClone the public repository (shallow), install Flask, and use the same scikit-learn version the model was trained with.",
            "zh-TW": "## 1. 環境設定\n以淺層 clone 取得公開儲存庫、安裝 Flask，並確保 scikit-learn 版本與模型訓練時相同。"},
- "load": {"en": "## 2. Load the model and the replay data\nThe repository ships a small replay file (the test period only), so you do **not** wait for a long weather download.",
-          "zh-TW": "## 2. 載入模型與回放資料\n儲存庫內附一個很小的回放檔（只有測試期間），所以**不需要**等很久的天氣資料下載。"},
+ "load": {"en": "## 2. Load the model and the replay data\nThe repository ships a small replay file (the test period only, with the day-ahead forecasts), so you do **not** wait for a long weather download.",
+          "zh-TW": "## 2. 載入模型與回放資料\n儲存庫內附一個很小的回放檔（只有測試期間，含前一天的預報），所以**不需要**等很久的天氣資料下載。"},
  "report": {"en": """## 3. Model report (test period, never used for training or tuning)
 - **Persistence**: "next hour = this hour". **Clear-sky persistence**: keep the current clear-sky index. Both are baselines the model must beat.
 - **MAE** is the average error in kW (lower is better). **Accuracy as a share of the 50 kW system = 100 - nMAE**, with nMAE = MAE / 50 kW.""",
@@ -364,19 +392,40 @@ power for 14 New Zealand regions, and the dashboard turns that forecast into sim
 - **持續性預測（Persistence）**：「下一小時 = 這一小時」。**晴空持續性預測**：保留目前的晴空指數。這兩個是模型必須打敗的基準線。
 - **MAE** 是平均誤差（單位 kW，越小越好）。**以 50 kW 系統為基準的準確度 = 100 - nMAE**，其中 nMAE = MAE / 50 kW。"""},
  "overall": {"en": "### Overall test results", "zh-TW": "### 整體測試結果"},
+ "version": {"en": "### Model version and what changed\nThe first model (v1) only knew the weather up to now. The current model is compared with it below on the same test period.",
+             "zh-TW": "### 模型版本與改了什麼\n第一版模型（v1）只知道「到現在為止」的天氣。下面把現在的模型和它放在同一段測試期間比較。"},
+ "chain": {
+  "en": """### How we chose this model (an honest chain of experiments)
+Every idea was judged on the **validation period only** (Jan-Jun 2025) against the saved v1 model ({v1:.2f} W/m2), with the bar fixed in advance:
+a new model had to be more than **{bar:g} W/m2** better, and only then did we look at the test period (once).
+- **v2, more sites** (train on 30 locations instead of 14): **no gain** ({v2_30:.2f} vs {v2_14:.2f} W/m2 with the same settings; best {v2_best:.2f}). Not promoted.
+- **v3, day-ahead weather forecast as an input**: a **small gain** ({v3:.2f} W/m2, gain {g3:.2f}), below the bar. Not promoted on its own.
+- **v4, forecast inputs + a model of "how cloudy" (clear-sky index) averaged with the raw model**: **{v4:.2f} W/m2, gain {g4:.2f}**, above the bar. **Promoted.**
+
+The forecast helps a little by itself; most of the extra gain comes from letting one model learn only the clouds (the sun's path is known exactly) and averaging it with the raw model.""",
+  "zh-TW": """### 我們怎麼選出這個模型（誠實的實驗過程）
+每個點子都**只用驗證期間**（2025 年 1 月至 6 月）和已儲存的 v1 模型（{v1:.2f} W/m2）比較，而且門檻事先就訂好：
+新模型必須好超過 **{bar:g} W/m2**，之後才會看測試期間（只看一次）。
+- **v2，更多地點**（用 30 個地點訓練，而不是 14 個）：**沒有進步**（相同參數下 {v2_30:.2f} 對 {v2_14:.2f} W/m2；最好 {v2_best:.2f}）。沒有升級。
+- **v3，加入前一天的天氣預報當輸入**：**小幅進步**（{v3:.2f} W/m2，進步 {g3:.2f}），沒達門檻。單獨使用不升級。
+- **v4，預報輸入 + 預測「雲多不多」（晴空指數）的模型，再和原始模型取平均**：**{v4:.2f} W/m2，進步 {g4:.2f}**，超過門檻。**升級。**
+
+預報本身只帶來一點幫助；更多的進步來自讓一個模型只學「雲」（太陽的軌跡本來就能精確算出），再和原始模型取平均。"""},
  "region": {"en": "### Per region", "zh-TW": "### 各區域結果"},
- "curve": {"en": "### Learning curve\nMore training days means a lower error, and the gain flattens after about a year of data.",
-           "zh-TW": "### 學習曲線\n訓練天數越多，誤差越低；大約一年的資料之後，進步就趨於平緩。"},
+ "curve": {"en": "### Learning curve (measured for v1)\nMore training days means a lower error, and the gain flattens after about a year of data.",
+           "zh-TW": "### 學習曲線（針對 v1 量測）\n訓練天數越多，誤差越低；大約一年的資料之後，進步就趨於平緩。"},
  "sample": {"en": "### One sample week", "zh-TW": "### 取樣一週"},
  "notes": {
   "en": """## 4. Honest notes
 - The weather is **Open-Meteo modelled data (ERA5-based reanalysis)**, not measurements from real solar plants.
 - The PV power is **derived from irradiance** with a stated formula (50 kW x GHI/1000 x 0.80 performance ratio, with a small temperature loss). New Zealand has no public per-site hourly PV output data.
+- The **day-ahead forecast inputs** are Open-Meteo's archived forecast issued about 24 hours earlier (Previous Runs API). They only exist from 2024, so the 2022-2023 training rows have no forecast (the model handles missing values). The forecast for the hour being predicted is allowed as an input because it was issued a day before; nothing else from the future is used.
 - A real plant would be harder: shading, dirt, inverter limits, outages and forecast errors all add noise.
 - This is a **prototype**. It is **not energy or financial advice**.""",
   "zh-TW": """## 4. 誠實說明
 - 天氣資料是 **Open-Meteo 的模型資料（以 ERA5 為基礎的再分析資料）**，不是真實太陽能電廠的量測值。
 - 發電量是用**日射量換算**出來的（50 kW × GHI/1000 × 0.80 系統效率，再扣掉一點高溫損失）。紐西蘭沒有公開的單一電站每小時發電資料。
+- **前一天的預報輸入**是 Open-Meteo 約 24 小時前發布的歷史預報（Previous Runs API），只有 2024 年之後才有，所以 2022 至 2023 年的訓練資料沒有預報（模型能處理缺值）。被預測那一小時的預報可以當輸入，因為它是前一天就發布的；除此之外沒有使用任何未來資料。
 - 真實的電廠會更難預測：遮蔭、灰塵、變流器上限、停機與預報誤差都會增加雜訊。
 - 這只是**原型**，**不是能源或財務建議**。"""},
  "credits": {
@@ -401,27 +450,27 @@ or the Live button). Keep this notebook running while you use the link.""",
  "train_title": {
   "en": """# SolarCast NZ: training notebook
 
-Fetch Open-Meteo history for 14 New Zealand regions, build features, compare with two baselines, **tune on the validation
-period only**, look at the **test period once**, and save the model. {badge}
+Fetch Open-Meteo history for 14 New Zealand regions, build features, compare with two baselines, train the **v4** model (day-ahead forecast inputs; raw-GHI and clear-sky-index models averaged), check it on the **validation
+period**, look at the **test period once**, and save the model. {badge}
 
 Set `QUICK = True` in the config cell for a fast smoke run (2 regions x 120 days, about a minute, and the repository model is not overwritten).
 A full run downloads 5 years of history (it can take about 30 minutes because of Open-Meteo rate limits); judges do not need it: use the Judges notebook.""",
   "zh-TW": """# SolarCast NZ：訓練筆記本
 
-下載紐西蘭 14 個區域的 Open-Meteo 歷史資料、建立特徵、和兩個基準線比較、**只用驗證集調參數**、
+下載紐西蘭 14 個區域的 Open-Meteo 歷史資料、建立特徵、和兩個基準線比較、訓練 **v4** 模型（前一天預報輸入；原始日射量與晴空指數兩個模型取平均）、用**驗證集**檢查、
 **只看一次測試集**，最後儲存模型。{badge}
 
 在設定儲存格把 `QUICK = True`，就能快速跑一次冒煙測試（2 個區域 × 120 天，約一分鐘，而且不會覆蓋儲存庫裡的模型）。
 完整執行要下載 5 年的歷史資料（因為 Open-Meteo 有流量限制，可能要花約 30 分鐘）；評審不需要這個，請直接用 Judges 筆記本。"""},
  "t_setup": {"en": "## 1. Setup", "zh-TW": "## 1. 環境設定"},
  "t_cfg": {"en": "## 2. Config\n`QUICK` is `False` by default (full run).", "zh-TW": "## 2. 設定\n`QUICK` 預設是 `False`（完整執行）。"},
- "t_fetch": {"en": "## 3. Fetch history\nOpen-Meteo radiation at time T is the mean over the **preceding** hour; the code respects that.",
-             "zh-TW": "## 3. 下載歷史資料\nOpen-Meteo 在時間 T 的日射量，是「前一個小時」的平均值；程式碼有遵守這一點。"},
+ "t_fetch": {"en": "## 3. Fetch history and day-ahead forecasts\nOpen-Meteo radiation at time T is the mean over the **preceding** hour; the code respects that.",
+             "zh-TW": "## 3. 下載歷史資料與前一天預報\nOpen-Meteo 在時間 T 的日射量，是「前一個小時」的平均值；程式碼有遵守這一點。"},
  "t_feat": {"en": "## 4. Features and baselines\nThe target is the mean irradiance of the **next** hour.",
             "zh-TW": "## 4. 特徵與基準線\n預測目標是**下一個小時**的平均日射量。"},
- "t_tune": {"en": "## 5. Train and tune (validation only)", "zh-TW": "## 5. 訓練與調參（只用驗證集）"},
+ "t_tune": {"en": "## 5. Train v4 and check on validation", "zh-TW": "## 5. 訓練 v4 並用驗證集檢查"},
  "t_test": {"en": "## 6. Test once", "zh-TW": "## 6. 只測一次"},
- "t_curve": {"en": "## 7. Learning curve summary\nRead from the JSON of the committed model.", "zh-TW": "## 7. 學習曲線摘要\n從已提交模型的 JSON 讀取。"},
+ "t_curve": {"en": "## 7. Learning curve summary\nMeasured for v1; read from the JSON of the committed model.", "zh-TW": "## 7. 學習曲線摘要\n針對 v1 量測；從已提交模型的 JSON 讀取。"},
  "t_save": {"en": "## 8. Save the model", "zh-TW": "## 8. 儲存模型"},
  "t_backup": {
   "en": """## 9. Back up the model to GitHub (optional)
@@ -453,10 +502,12 @@ def build(lang: str) -> dict:
     suffix = "" if lang == "en" else ".zh-TW"
     C = lambda s: ("code", code(s, lang))
     judges = [
-        md("judges_title", lang, badge=BADGE.format(url=colab_url(f"SolarCast_NZ_Judges{suffix}.ipynb"))),
+        md("judges_title", lang, badge=BADGE.format(url=colab_url(f"SolarCast_NZ_Judges{suffix}.ipynb")), ver=VER),
         md("setup", lang), C(JUDGES_SETUP),
         md("load", lang), C(JUDGES_LOAD),
         md("report", lang), md("overall", lang), C(JUDGES_OVERALL),
+        md("version", lang), C(JUDGES_VERSION),
+        md("chain", lang, **N),
         md("region", lang), C(JUDGES_REGION),
         md("curve", lang), C(JUDGES_CURVE),
         md("sample", lang), C(JUDGES_SAMPLE),

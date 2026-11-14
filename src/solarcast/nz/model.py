@@ -1,4 +1,4 @@
-"""Baselines, the pooled gradient-boosting model, metrics, and saving/loading."""
+"""Baselines, the SolarCast model (v4: raw-GHI + clear-sky-index gradient boosting, averaged), metrics, saving/loading."""
 import json
 import warnings
 from datetime import datetime, timezone
@@ -7,11 +7,11 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.inspection import permutation_importance
 
 from solarcast.nz import config
 from solarcast.nz.data import pv_power_kw
+from solarcast.nz.ensemble import DEFAULT_PARAMS, SolarEnsemble      # noqa: F401  (DEFAULT_PARAMS re-exported)
 from solarcast.nz.features import FEATURES, daytime_mask
 
 MODEL_NAMES = {"model": "SolarCast model", "persistence": "Persistence", "clear_sky": "Clear-sky persistence"}
@@ -33,22 +33,18 @@ def clear_sky_persistence(feat: pd.DataFrame) -> pd.Series:
 
 
 # ---------- model ----------
-DEFAULT_PARAMS = {"learning_rate": 0.08, "max_iter": 300, "max_leaf_nodes": 31, "min_samples_leaf": 50,
-                  "l2_regularization": 1.0, "loss": "squared_error"}
+V1_PARAMS = {"learning_rate": 0.03, "max_iter": 800, "max_leaf_nodes": 63, "min_samples_leaf": 100,
+             "loss": "absolute_error"}          # the tuned v1 settings, reused unchanged by v4 (loss applies to the raw model)
 
 
-def train(feat_train: pd.DataFrame, **params) -> HistGradientBoostingRegressor:
-    """Fit one model for all regions. Night rows (sun below the horizon) are skipped: their GHI is 0."""
-    rows = feat_train[(feat_train["elev_target"] > 0) & feat_train["target_ghi"].notna()]
-    model = HistGradientBoostingRegressor(categorical_features=[FEATURES.index("region_id")], random_state=0,
-                                          **{**DEFAULT_PARAMS, **params})
-    return model.fit(rows[FEATURES], rows["target_ghi"])
+def train(feat_train: pd.DataFrame, **params) -> SolarEnsemble:
+    """Fit the v4 model (one pooled ensemble for all regions) on a feature frame. Night rows are skipped: GHI is 0."""
+    return SolarEnsemble(FEATURES, {**V1_PARAMS, **params}).fit(feat_train)
 
 
 def predict(model, feat: pd.DataFrame) -> pd.Series:
     """Next-hour GHI in W/m2, clipped at 0; exactly 0 when the sun is down."""
-    ghi = np.clip(model.predict(feat[FEATURES]), 0, None)
-    ghi = np.where(feat["elev_target"] > 0, ghi, 0.0)
+    ghi = np.where(feat["elev_target"] > 0, np.clip(model.predict(feat[FEATURES]), 0, None), 0.0)
     return pd.Series(ghi, index=feat.index, name="predicted_ghi")
 
 
