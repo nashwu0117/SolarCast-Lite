@@ -160,8 +160,8 @@
   </table>
   <p class="small" lang-en>v4 is 32.6% better than clear-sky persistence, 40.3% better than Open-Meteo's own day-ahead forecast, and beats both baselines in every region (14/14). The same error is 7.9% of the average daytime output. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
   <p class="small" lang-zh>v4 比晴空 Persistence 好 32.6%、比 Open-Meteo 自己的前一天預報好 40.3%，並在每一個地區都贏過兩個基準方法（14/14）。同樣的誤差是白天平均發電量的 7.9%。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
-  <p class="small" lang-en><b>Can it get better?</b> We tried (v5, judged on the validation period only, with a bar set in advance: at least 1 W/m&sup2; better than v4): inputs for how wrong the day-ahead forecast is right now, the forecast's trend, and five tuning variants. The best gained only 0.26 W/m&sup2; (28.98 &rarr; 28.71), so v4 stays and the test period was not looked at again.</p>
-  <p class="small" lang-zh><b>還能更準嗎？</b>我們試過（v5，只看驗證期，門檻事先訂好：要比 v4 好至少 1 W/m&sup2;）：加入「前一天預報現在錯了多少」、預報的變化趨勢，以及五組參數調整。最好的只進步 0.26 W/m&sup2;（28.98 &rarr; 28.71），所以保留 v4，也沒有再去看測試期。</p>
+  <p class="small" lang-en><b>Can it get better?</b> We tried (v5, judged on the validation period only, with a bar set in advance: at least 1 W/m&sup2; better than v4): inputs for how wrong the day-ahead forecast is right now, the forecast's trend, and five tuning variants. The best gained only 0.26 W/m&sup2; (28.98 &rarr; 28.71), so v4 stays and the test period was not looked at again. Then v6 used the GPU: XGBoost trained on a Colab T4, 48 settings plus a blend with v4. Best 28.56 W/m&sup2; (gain 0.42), still below the bar. The error left seems to come from the weather data itself, not the model.</p>
+  <p class="small" lang-zh><b>還能更準嗎？</b>我們試過（v5，只看驗證期，門檻事先訂好：要比 v4 好至少 1 W/m&sup2;）：加入「前一天預報現在錯了多少」、預報的變化趨勢，以及五組參數調整。最好的只進步 0.26 W/m&sup2;（28.98 &rarr; 28.71），所以保留 v4，也沒有再去看測試期。接著 v6 改用 GPU：在 Colab T4 上訓練 XGBoost，試了 48 組設定，再和 v4 混合。最好是 28.56 W/m&sup2;（進步 0.42），還是沒過門檻。剩下的誤差看起來主要來自天氣資料本身，而不是模型。</p>
 </div></section>
 
 <section id="value"><div class="wrap">

@@ -99,6 +99,12 @@ around the target hour, and five tuning variants. Best: 28.71 W/m2 (bigger trees
 kept**. The model already gets most of this from the current sunlight plus the target-hour forecast. The test period was
 not read for v5. Details: `scripts/train_nz_v5.py`, `experiments/results/nz_v5.json`.
 
+**v6 (GPU, validation only, same bar):** the same two-model design with XGBoost trained on a Colab T4 GPU (scikit-learn's
+model only trains on the CPU), 48 settings of tree depth, learning rate, trees and leaf size on the v4 and v5 inputs
+(11-82 s each on the GPU vs 97 s for one v4 fit on the CPU), then blended with v4. Best XGBoost 28.63 W/m2; best blend
+(0.7 XGBoost + 0.3 v4) 28.56, a gain of 0.42, so **v4 was kept** again. With v5 this suggests the error left is mostly
+in the weather data itself, not in the model. Details: `scripts/train_nz_v6.py`, `experiments/results/nz_v6.json`.
+
 ## Run it on your own computer
 Python 3.10 or newer:
 ```bash
