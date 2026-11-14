@@ -23,7 +23,6 @@ dependencies = [
 solarcast-nz = "solarcast.nz.__main__:main"
 
 [project.optional-dependencies]
-demo = ["gradio>=4.0"]
 dev = ["pytest>=7", "jupyterlab", "ipykernel", "nbconvert", "nbformat"]
 
 [tool.setuptools.packages.find]

@@ -7,7 +7,6 @@ from solarcast.nz import config, data
 def test_regions_are_new_zealand_only():
     assert len(config.REGIONS) == 14
     assert all(-48 < lat < -34 and 166 < lon < 179 for lat, lon in config.REGIONS.values())
-    assert "romania" not in str(config.REGIONS).lower()
 
 
 def test_solar_position_summer_noon_auckland():

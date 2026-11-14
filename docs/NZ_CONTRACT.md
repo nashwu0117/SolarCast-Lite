@@ -1,8 +1,7 @@
 # SolarCast NZ: module contract
 
 The submission is **New Zealand only**. Everything judges see (notebook, model, web app) uses New Zealand data.
-Modules live in `src/solarcast/nz/`. Shared helpers from the older Romania work (`evaluate.regression_metrics`,
-`charging.simulate_day`) may be reused; nothing Romanian may appear in NZ outputs.
+Modules live in `src/solarcast/nz/`; the package has no other forecasting code.
 
 ## Data source
 
@@ -53,7 +52,7 @@ Data is honest about what it is: modelled reanalysis weather, not measurements f
   stamped at the TARGET hour t+1 (allowed although t+1 is in the future: it was issued ~24 h before t) and the forecast clear-sky
   index. It is the only thing stamped t+1 or later that is read. `V1_FEATURES` is the original list, `FEATURES = V1_FEATURES + FORECAST_FEATURES`.
 - `FEATURES: list[str]`, `build_features(long_df) -> pd.DataFrame` indexed by (`region`, `target_time`), with
-  `target_ghi`, `target_kw`, and `meta_*` columns (never model inputs). Includes a leakage test like the Romania one.
+  `target_ghi`, `target_kw`, and `meta_*` columns (never model inputs). Includes a leakage test.
 
 ## `nz/model.py`
 
