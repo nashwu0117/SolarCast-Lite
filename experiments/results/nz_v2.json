@@ -1,0 +1,22 @@
+{
+  "v1_val_mae_wm2": 30.352190341995232,
+  "candidates": {
+    "v1 config, 14 sites": {
+      "val_mae_wm2": 30.352,
+      "val_mae_kw": 1.1373
+    },
+    "v1 config, 30 sites": {
+      "val_mae_wm2": 30.36,
+      "val_mae_kw": 1.1375
+    },
+    "deeper, 30 sites": {
+      "val_mae_wm2": 30.035,
+      "val_mae_kw": 1.1252
+    },
+    "faster lr, 30 sites": {
+      "val_mae_wm2": 30.181,
+      "val_mae_kw": 1.1312
+    }
+  },
+  "best": "deeper, 30 sites"
+}
