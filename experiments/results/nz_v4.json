@@ -1,0 +1,28 @@
+{
+  "v1_val_mae_wm2": 30.352190341995232,
+  "candidates": {
+    "raw GHI, v1 features (= v1)": {
+      "val_mae_wm2": 30.352,
+      "val_mae_kw": 1.1373
+    },
+    "raw GHI, + forecast (= v3 best)": {
+      "val_mae_wm2": 29.644,
+      "val_mae_kw": 1.1111
+    },
+    "clear-sky index, v1 features": {
+      "val_mae_wm2": 30.027,
+      "val_mae_kw": 1.1232
+    },
+    "clear-sky index, + forecast": {
+      "val_mae_wm2": 29.238,
+      "val_mae_kw": 1.0957
+    },
+    "average of raw + k, + forecast": {
+      "val_mae_wm2": 28.979,
+      "val_mae_kw": 1.0863
+    }
+  },
+  "best": "average of raw + k, + forecast",
+  "gain_wm2": 1.373,
+  "verdict": "PROMOTE"
+}
