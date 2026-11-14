@@ -69,6 +69,8 @@
   th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); }
   th { font-size: 13px; color: var(--muted); font-weight: 600; }
   td:not(:first-child), th:not(:first-child) { text-align: right; }
+  td[lang-zh], th[lang-zh] { text-align: left !important; }
+  @media (max-width: 600px) { th, td { padding: 10px 8px; font-size: 14px; } .bar { display: none; } }
   tr.me td { font-weight: 600; background: color-mix(in srgb, var(--sun) 10%, transparent); }
   .bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--sun); vertical-align: middle; margin-left: 10px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -142,18 +144,20 @@
 
 <section id="results"><div class="wrap">
   <h2><span lang-en>Results</span><span lang-zh>成果</span></h2>
-  <p class="sub" lang-en>Test period July 2025 to October 2026, daytime hours, all 14 regions. Average error for a 50 kW system (lower is better).</p>
-  <p class="sub" lang-zh>測試期 2025 年 7 月到 2026 年 10 月，白天時段，全部 14 個地區。50 kW 系統的平均誤差（越小越好）。</p>
+  <p class="sub" lang-en>Test period July 2025 to October 2026 (16 months the model never saw), daytime hours, all 14 regions. Average error of the next-hour forecast, lower is better. Output scales with panel size, so the error as a share of capacity is the same for a 5 kW home and a 50 kW business.</p>
+  <p class="sub" lang-zh>測試期 2025 年 7 月到 2026 年 10 月（模型沒看過的 16 個月），白天時段，全部 14 個地區。下一小時預測的平均誤差，越小越好。發電量和板子大小成正比，所以「誤差佔容量的比例」對家用 5 kW 和商用 50 kW 都一樣。</p>
   <table>
-    <tr><th lang-en>Method</th><th lang-zh>方法</th><th lang-en>Average error</th><th lang-zh>平均誤差</th></tr>
-    <tr><td lang-en>Persistence (same as last hour)</td><td lang-zh>Persistence（和上一小時一樣）</td><td>4.03 kW<span class="bar" style="width:120px;opacity:.35"></span></td></tr>
-    <tr><td lang-en>Open-Meteo day-ahead forecast alone</td><td lang-zh>直接用 Open-Meteo 前一天預報</td><td>1.88 kW<span class="bar" style="width:56px;opacity:.45"></span></td></tr>
-    <tr><td lang-en>Clear-sky persistence</td><td lang-zh>晴空 Persistence</td><td>1.66 kW<span class="bar" style="width:49px;opacity:.5"></span></td></tr>
-    <tr><td lang-en>SolarCast v1 (weather so far)</td><td lang-zh>SolarCast v1（只用目前為止的天氣）</td><td>1.19 kW<span class="bar" style="width:35px;opacity:.7"></span></td></tr>
-    <tr class="me"><td lang-en>SolarCast v4 (current)</td><td lang-zh>SolarCast v4（目前版本）</td><td>1.12 kW<span class="bar" style="width:33px"></span></td></tr>
+    <tr><th lang-en>Method</th><th lang-zh>方法</th><th lang-en>50 kW business</th><th lang-zh>商用 50 kW</th><th lang-en>5 kW home</th><th lang-zh>家用 5 kW</th><th lang-en>% of capacity</th><th lang-zh>佔容量</th></tr>
+    <tr><td lang-en>Persistence (same as last hour)</td><td lang-zh>Persistence（和上一小時一樣）</td><td>4.03 kW</td><td>0.40 kW</td><td>8.1%<span class="bar" style="width:120px;opacity:0.35"></span></td></tr>
+    <tr><td lang-en>Open-Meteo day-ahead forecast alone</td><td lang-zh>直接用 Open-Meteo 前一天預報</td><td>1.88 kW</td><td>0.19 kW</td><td>3.8%<span class="bar" style="width:56px;opacity:0.45"></span></td></tr>
+    <tr><td lang-en>Clear-sky persistence</td><td lang-zh>晴空 Persistence</td><td>1.66 kW</td><td>0.17 kW</td><td>3.3%<span class="bar" style="width:49px;opacity:0.5"></span></td></tr>
+    <tr><td lang-en>SolarCast v1 (weather so far)</td><td lang-zh>SolarCast v1（只用目前為止的天氣）</td><td>1.19 kW</td><td>0.12 kW</td><td>2.4%<span class="bar" style="width:36px;opacity:0.7"></span></td></tr>
+    <tr class="me"><td lang-en>SolarCast v4 (current)</td><td lang-zh>SolarCast v4（目前版本）</td><td>1.12 kW</td><td>0.11 kW</td><td>2.2%<span class="bar" style="width:33px"></span></td></tr>
   </table>
-  <p class="small" lang-en>v4 beats both baselines in every region. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
-  <p class="small" lang-zh>v4 在每一個地區都贏過兩個基準方法。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
+  <p class="small" lang-en>v4 is 32.6% better than clear-sky persistence, 40.3% better than Open-Meteo's own day-ahead forecast, and beats both baselines in every region (14/14). The same error is 7.9% of the average daytime output. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
+  <p class="small" lang-zh>v4 比晴空 Persistence 好 32.6%、比 Open-Meteo 自己的前一天預報好 40.3%，並在每一個地區都贏過兩個基準方法（14/14）。同樣的誤差是白天平均發電量的 7.9%。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
+  <p class="small" lang-en><b>Can it get better?</b> We tried (v5, judged on the validation period only, with a bar set in advance: at least 1 W/m&sup2; better than v4): inputs for how wrong the day-ahead forecast is right now, the forecast's trend, and five tuning variants. The best gained only 0.26 W/m&sup2; (28.98 &rarr; 28.71), so v4 stays and the test period was not looked at again.</p>
+  <p class="small" lang-zh><b>還能更準嗎？</b>我們試過（v5，只看驗證期，門檻事先訂好：要比 v4 好至少 1 W/m&sup2;）：加入「前一天預報現在錯了多少」、預報的變化趨勢，以及五組參數調整。最好的只進步 0.26 W/m&sup2;（28.98 &rarr; 28.71），所以保留 v4，也沒有再去看測試期。</p>
 </div></section>
 
 <section id="value"><div class="wrap">
@@ -185,6 +189,8 @@
     <li lang-zh>離線：不能上網、沒有工具、不需要 API 金鑰。</li>
     <li lang-en>Guarded: keyword and injection filters, the Llama Guard 3 safety classifier, topic rules and rate limits.</li>
     <li lang-zh>有防護：關鍵字與提示注入過濾、Llama Guard 3 安全分類器、主題限制和頻率限制。</li>
+    <li lang-en>Size-aware: every number is already scaled to your panel size before the model sees it. Tested on a T4: a 5 kW home in Christchurch gets 3.36 kW next hour, the 50 kW workshop example 33.6 kW.</li>
+    <li lang-zh>依系統大小：交給模型的每個數字都已換算成你的系統大小。在 T4 上實測：基督城家用 5 kW 下一小時 3.36 kW，50 kW 加工店範例 33.6 kW。</li>
     <li lang-en>Honest: in replay mode it says the hour is in the past, and the page always shows which answers came from the AI.</li>
     <li lang-zh>誠實：回放模式下會說明那是過去的時段，網頁也會標示哪些回答來自 AI。</li>
   </ul>
