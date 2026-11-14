@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SolarCast NZ</title>
+<meta name="description" content="Next-hour solar power forecasts for all of New Zealand, with a live map, EV charging advice and a local AI assistant. Veritas AI Hackathon 2026, AI + Climate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #17202b; --muted: #5b6776; --line: #e3e0d8; --paper: #fbf8f2; --card: #ffffff;
+    --sun: #f59e0b; --sun-deep: #c2410c; --leaf: #15803d; --night: #1e293b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #eef1f5; --muted: #9aa6b4; --line: #2a3340; --paper: #11161d; --card: #18202a; }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  [lang-zh] { display: none; }
+  body.zh [lang-zh] { display: revert; }
+  body.zh [lang-en] { display: none; }
+
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--paper) 82%, transparent); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 18px; height: 58px; }
+  .logo { font: 700 19px Fraunces, serif; text-decoration: none; letter-spacing: -.3px; }
+  .logo b { color: var(--sun); }
+  nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  nav .links a { text-decoration: none; } nav .links a:hover { color: var(--ink); }
+  .lang { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: 500 13px Inter, sans-serif; cursor: pointer; }
+  @media (max-width: 720px) { nav .links { display: none; } .lang { margin-left: auto; } }
+
+  header.hero { position: relative; overflow: hidden; padding: 72px 0 56px; }
+  header.hero::before { content: ""; position: absolute; width: 760px; height: 760px; right: -220px; top: -300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,.38), rgba(245,158,11,.10) 45%, transparent 70%); pointer-events: none; }
+  .hero .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; position: relative; }
+  @media (max-width: 860px) { .hero .grid { grid-template-columns: 1fr; } }
+  .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--sun-deep); }
+  h1 { font: 700 clamp(38px, 6vw, 64px)/1.03 Fraunces, serif; letter-spacing: -1.2px; margin: 12px 0 18px; }
+  h1 em { font-style: normal; color: var(--sun); }
+  .lead { font-size: 19px; color: var(--muted); max-width: 560px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); background: var(--card); }
+  .btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .btn:hover { transform: translateY(-1px); }
+  .small { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  #nzmap { width: 100%; max-width: 380px; justify-self: center; }
+  #nzmap rect { transition: opacity .3s; }
+
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  h2 { font: 700 clamp(28px, 3.6vw, 40px)/1.15 Fraunces, serif; letter-spacing: -.6px; margin: 0 0 12px; }
+  .sub { color: var(--muted); max-width: 680px; margin: 0 0 32px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .stat b { display: block; font: 700 34px Fraunces, serif; letter-spacing: -.5px; }
+  .stat span { color: var(--muted); font-size: 14px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sun); color: #fff; font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; font-variant-numeric: tabular-nums; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  td:not(:first-child), th:not(:first-child) { text-align: right; }
+  tr.me td { font-weight: 600; background: color-mix(in srgb, var(--sun) 10%, transparent); }
+  .bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--sun); vertical-align: middle; margin-left: 10px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+  pre { background: var(--night); color: #e2e8f0; padding: 16px 18px; border-radius: 12px; overflow-x: auto; font: 13.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 10px 0 0; }
+  ul.tick { padding-left: 0; list-style: none; margin: 0; }
+  ul.tick li { padding-left: 26px; position: relative; margin: 8px 0; color: var(--muted); }
+  ul.tick li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); }
+  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="#">SolarCast <b>NZ</b></a>
+  <div class="links">
+    <a href="#how"><span lang-en>How it works</span><span lang-zh>運作方式</span></a>
+    <a href="#results"><span lang-en>Results</span><span lang-zh>成果</span></a>
+    <a href="#ai"><span lang-en>AI</span><span lang-zh>AI</span></a>
+    <a href="#run"><span lang-en>Run it</span><span lang-zh>如何執行</span></a>
+    <a href="https://github.com/nashwu0117/SolarCast-Lite">GitHub</a>
+  </div>
+  <button class="lang" id="lang" type="button">中文</button>
+</div></nav>
+
+<header class="hero"><div class="wrap grid">
+  <div>
+    <div class="eyebrow">Veritas AI Hackathon 2026 &middot; AI + Climate</div>
+    <h1 lang-en>When can your own <em>sunshine</em> charge your EV?</h1>
+    <h1 lang-zh>你家屋頂的<em>陽光</em>，什麼時候能幫電動車充電？</h1>
+    <p class="lead" lang-en>SolarCast forecasts next-hour solar power for every corner of New Zealand and turns it into one decision for a small business: charge the EV now, or wait for more sun.</p>
+    <p class="lead" lang-zh>SolarCast 預測紐西蘭每個角落下一小時的太陽能發電量，並把它變成小店家每小時的一個決定：現在幫電動車充電，還是等更多陽光？</p>
+    <div class="cta">
+      <a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">
+        <span lang-en>Open the live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
+      <a class="btn" href="https://github.com/nashwu0117/SolarCast-Lite"><span lang-en>Source code</span><span lang-zh>原始碼</span></a>
+    </div>
+    <p class="small" lang-en>The interactive dashboard runs inside the notebook (Runtime &gt; Run all) and gives you a public link in about three minutes. This page is a static overview.</p>
+    <p class="small" lang-zh>互動儀表板在 notebook 裡執行（Runtime &gt; Run all），大約三分鐘後會給你一個公開連結。這一頁是靜態介紹。</p>
+  </div>
+  <figure style="margin:0;justify-self:center;text-align:center">
+    <svg id="nzmap" viewBox="0 0 300 330" role="img" aria-label="The land cells of New Zealand that SolarCast forecasts"></svg>
+    <figcaption class="small"><span lang-en>The 137 land cells the model forecasts every hour (colours on the live map show predicted power).</span><span lang-zh>模型每小時預測的 137 個陸地格子（即時地圖上的顏色代表預測發電量）。</span></figcaption>
+  </figure>
+</div></header>
+
+<section><div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>97.8%</b><span lang-en>accuracy on the test period (error 1.12 kW of 50 kW)</span><span lang-zh>測試期準確度（50 kW 中誤差 1.12 kW）</span></div>
+    <div class="stat"><b>3.6&times;</b><span lang-en>smaller error than "same as last hour"</span><span lang-zh>誤差只有「和上一小時一樣」的 1/3.6</span></div>
+    <div class="stat"><b>137</b><span lang-en>land cells covering all of New Zealand</span><span lang-zh>個陸地格子涵蓋全紐西蘭</span></div>
+    <div class="stat"><b>:50</b><span lang-en>every hour the whole country is recomputed, before the next hour starts</span><span lang-zh>每小時 50 分重算全國，趕在下一小時開始前</span></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2><span lang-en>How it works</span><span lang-zh>運作方式</span></h2>
+  <p class="sub" lang-en>Our own machine-learning model makes every forecast. It only uses what is known at the end of the current hour, and it was tested once, on 16 months it had never seen.</p>
+  <p class="sub" lang-zh>每一個預測都來自我們自己的機器學習模型。它只用「這一小時結束時」已知的資訊，並且只在它從沒看過的 16 個月資料上測試一次。</p>
+  <div class="cards">
+    <div class="card"><div class="num">1</div><h3 lang-en>Weather in</h3><h3 lang-zh>輸入天氣</h3>
+      <p lang-en>Hourly sunlight, cloud, temperature and wind from Open-Meteo, plus its day-ahead forecast for the next hour (issued 24 hours earlier, so no peeking at the future).</p>
+      <p lang-zh>Open-Meteo 的逐時日照、雲量、氣溫和風，加上它對下一小時的前一天預報（24 小時前就發布，所以沒有偷看未來）。</p></div>
+    <div class="card"><div class="num">2</div><h3 lang-en>Forecast</h3><h3 lang-zh>預測</h3>
+      <p lang-en>Two gradient-boosted tree models, one for sunlight and one for cloudiness (the clear-sky index), averaged. Trained 2022-2024, tuned on early 2025.</p>
+      <p lang-zh>兩個梯度提升樹模型，一個預測日照、一個預測雲量（晴空指數），再取平均。用 2022–2024 年訓練，2025 年上半年調參。</p></div>
+    <div class="card"><div class="num">3</div><h3 lang-en>Decision</h3><h3 lang-zh>決策</h3>
+      <p lang-en>Predicted power of a 50 kW rooftop system becomes advice: charge the EV when solar covers the workshop and the car, and how much grid power, money and CO2 that saves.</p>
+      <p lang-zh>把 50 kW 屋頂系統的預測發電量變成建議：太陽能夠供應店裡和車子時就充電，並算出省下多少電網用電、錢和 CO2。</p></div>
+  </div>
+</div></section>
+
+<section id="results"><div class="wrap">
+  <h2><span lang-en>Results</span><span lang-zh>成果</span></h2>
+  <p class="sub" lang-en>Test period July 2025 to October 2026, daytime hours, all 14 regions. Average error for a 50 kW system (lower is better).</p>
+  <p class="sub" lang-zh>測試期 2025 年 7 月到 2026 年 10 月，白天時段，全部 14 個地區。50 kW 系統的平均誤差（越小越好）。</p>
+  <table>
+    <tr><th lang-en>Method</th><th lang-zh>方法</th><th lang-en>Average error</th><th lang-zh>平均誤差</th></tr>
+    <tr><td lang-en>Persistence (same as last hour)</td><td lang-zh>Persistence（和上一小時一樣）</td><td>4.03 kW<span class="bar" style="width:120px;opacity:.35"></span></td></tr>
+    <tr><td lang-en>Clear-sky persistence</td><td lang-zh>晴空 Persistence</td><td>1.66 kW<span class="bar" style="width:49px;opacity:.5"></span></td></tr>
+    <tr><td lang-en>SolarCast v1 (weather so far)</td><td lang-zh>SolarCast v1（只用目前為止的天氣）</td><td>1.19 kW<span class="bar" style="width:35px;opacity:.7"></span></td></tr>
+    <tr class="me"><td lang-en>SolarCast v4 (current)</td><td lang-zh>SolarCast v4（目前版本）</td><td>1.12 kW<span class="bar" style="width:33px"></span></td></tr>
+  </table>
+  <p class="small" lang-en>v4 beats both baselines in every region. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
+  <p class="small" lang-zh>v4 在每一個地區都贏過兩個基準方法。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
+</div></section>
+
+<section id="ai"><div class="wrap two">
+  <div>
+    <h2><span lang-en>AI you can trust with the numbers</span><span lang-zh>不亂編數字的 AI</span></h2>
+    <p class="sub" lang-en>On top of the forecast, an open language model (Qwen3) runs on the notebook's own machine. It writes a national briefing every hour and answers questions in English or Chinese, but it never computes or invents numbers.</p>
+    <p class="sub" lang-zh>在預測之上，開源語言模型（Qwen3）直接在 notebook 那台機器上執行。它每小時寫一段全國摘要，也用中英文回答問題，但它從不自己算數字或編數字。</p>
+  </div>
+  <ul class="tick">
+    <li lang-en>Grounded: the server looks up the facts with the same code as the map; the model only explains them.</li>
+    <li lang-zh>有根據：伺服器用和地圖相同的程式查出數據，模型只負責解釋。</li>
+    <li lang-en>Offline: no internet, no tools, no API keys.</li>
+    <li lang-zh>離線：不能上網、沒有工具、不需要 API 金鑰。</li>
+    <li lang-en>Guarded: keyword and injection filters, the Llama Guard 3 safety classifier, topic rules and rate limits.</li>
+    <li lang-zh>有防護：關鍵字與提示注入過濾、Llama Guard 3 安全分類器、主題限制和頻率限制。</li>
+    <li lang-en>Honest: in replay mode it says the hour is in the past, and the page always shows which answers came from the AI.</li>
+    <li lang-zh>誠實：回放模式下會說明那是過去的時段，網頁也會標示哪些回答來自 AI。</li>
+  </ul>
+</div></section>
+
+<section id="run"><div class="wrap">
+  <h2><span lang-en>Run it</span><span lang-zh>如何執行</span></h2>
+  <div class="two">
+    <div class="card">
+      <h3 lang-en>In Google Colab (one click)</h3><h3 lang-zh>在 Google Colab（一鍵）</h3>
+      <p lang-en>Open the judges notebook and choose Runtime &gt; Run all. It asks for a free T4 GPU (used only by the AI chat) and prints a public link to the dashboard.</p>
+      <p lang-zh>打開評審用 notebook，選 Runtime &gt; Run all。它會要求免費的 T4 GPU（只給 AI 聊天用），並印出儀表板的公開連結。</p>
+      <div class="cta"><a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">Open in Colab &rarr;</a></div>
+    </div>
+    <div class="card">
+      <h3 lang-en>On your own computer</h3><h3 lang-zh>在你自己的電腦</h3>
+      <p lang-en>Python 3.10 or newer. Open http://127.0.0.1:8000 when it is ready.</p>
+      <p lang-zh>需要 Python 3.10 以上。準備好後打開 http://127.0.0.1:8000。</p>
+<pre>git clone https://github.com/nashwu0117/SolarCast-Lite.git
+cd SolarCast-Lite
+python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e .
+python -m solarcast.nz</pre>
+      <p class="small" lang-en>Optional AI: install <a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:1.7b</code>, then <code>python -m solarcast.nz --ai</code>.</p>
+      <p class="small" lang-zh>選用 AI：安裝 <a href="https://ollama.com">Ollama</a>，執行 <code>ollama pull qwen3:1.7b</code>，再執行 <code>python -m solarcast.nz --ai</code>。</p>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p lang-en>Open source under the <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT License</a>. Weather data by <a href="https://open-meteo.com">Open-Meteo.com</a> (CC BY 4.0). Chat models: Qwen3 (Apache-2.0) and Llama Guard 3 (Llama 3.2 Community License; Built with Llama). Full credits in <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.md">NOTICE.md</a>. A high-school hackathon prototype; not energy or financial advice.</p>
+  <p lang-zh>以 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT 授權</a>開源。天氣資料來自 <a href="https://open-meteo.com">Open-Meteo.com</a>（CC BY 4.0）。聊天模型：Qwen3（Apache-2.0）與 Llama Guard 3（Llama 3.2 Community License；Built with Llama）。完整來源見 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.zh-TW.md">NOTICE.zh-TW.md</a>。高中黑客松原型，不構成能源或財務建議。</p>
+</div></footer>
+
+<script>
+// Language toggle (remembered in this browser only).
+const btn = document.getElementById('lang');
+function setLang(zh) {
+  document.body.classList.toggle('zh', zh);
+  document.documentElement.lang = zh ? 'zh-Hant' : 'en';
+  btn.textContent = zh ? 'English' : '中文';
+  try { localStorage.setItem('lang', zh ? 'zh' : 'en'); } catch (e) {}
+}
+btn.onclick = () => setLang(!document.body.classList.contains('zh'));
+let saved = null;
+try { saved = localStorage.getItem('lang'); } catch (e) {}
+setLang(saved ? saved === 'zh' : /^zh/i.test(navigator.language || ''));
+
+// Draw the real grid cells (the land cells the model forecasts every hour) from the repository.
+(async function () {
+  const svg = document.getElementById('nzmap');
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/nashwu0117/SolarCast-Lite/main/data/nz/grid_cells.json');
+    const spec = await res.json(), s = spec.step;
+    const x = lon => (lon - 165.8) / (178.9 - 165.8) * 300, y = lat => (-34.0 - lat) / (47.6 - 34.0) * 330;
+    const w = s / (178.9 - 165.8) * 300, h = s / (47.6 - 34.0) * 330;
+    spec.cells.forEach((c, i) => {
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', x(c.lon - s / 2) + .6); r.setAttribute('y', y(c.lat + s / 2) + .6);
+      r.setAttribute('width', w - 1.2); r.setAttribute('height', h - 1.2); r.setAttribute('rx', 2);
+      r.setAttribute('fill', '#f59e0b'); r.setAttribute('opacity', .75);
+      svg.appendChild(r);
+    });
+    const rects = [...svg.querySelectorAll('rect')];
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      rects.forEach((r, i) => setTimeout(() => r.setAttribute('opacity', 1), 8 * i));   // a sweep, not data
+    }
+  } catch (e) { svg.style.display = 'none'; }
+})();
+</script>
+</body>
+</html>

@@ -5,6 +5,8 @@
 Next-hour solar power forecasting for New Zealand, with an interactive map dashboard and a smart EV-charging
 decision. Veritas AI International High School Hackathon 2026, **AI + Climate** track.
 
+**Website:** [https://nashwu0117.github.io/SolarCast-Lite/](https://nashwu0117.github.io/SolarCast-Lite/) &middot; **License:** MIT (open source)
+
 **Judges: start here** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb)
 Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by the AI chat). In about three minutes the
 notebook loads our trained model from this repository, shows how accurate it is, and prints a public link (free
@@ -24,6 +26,12 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
 
 ## The dashboard
 - **Map of New Zealand** with 14 regions, coloured by the predicted solar power for the next hour.
+- **Nationwide grid:** the same model runs for 137 land cells (0.5 degrees, about 50 km) covering the whole country, shown
+  as a heat map. It is computed before the page opens and recomputed every hour at :50, so the next hour is ready before
+  it starts; Live mode refreshes by itself.
+- **AI national briefing** above the map: two or three sentences written by the local AI model from the grid numbers
+  only (where it is sunniest, North vs South Island, what it means for EV charging), with a fixed template until the
+  model is ready.
 - **Hover** a region: current weather and whether (and how much) solar power it is generating.
 - **Click anywhere in New Zealand** (not only the 14 circles): a blue pin downloads that exact spot's weather from
   Open-Meteo and runs the same model (it borrows the nearest region's climate id; its accuracy is shown for that region).
@@ -68,6 +76,20 @@ v2 more training sites: no gain; v3 day-ahead forecast inputs: small gain (0.71 
 plus the clear-sky-index model averaged with the raw model: 28.98 vs 30.35 W/m2 (gain 1.37), promoted. Details:
 `experiments/results/nz_v2.json`, `nz_v3.json`, `nz_v4.json`. The test period was looked at once, for v4 only.
 
+## Run it on your own computer
+Python 3.10 or newer:
+```bash
+git clone https://github.com/nashwu0117/SolarCast-Lite.git
+cd SolarCast-Lite
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e .
+python -m solarcast.nz                                 # open http://127.0.0.1:8000
+```
+Options: `--ai` uses a local [Ollama](https://ollama.com) model for the chat and briefing (first run
+`ollama pull qwen3:1.7b`, or `--model qwen3:8b` on a strong computer); `--tunnel` also prints a public Cloudflare link
+(needs `cloudflared`); `--no-grid` skips the nationwide grid; `--port 8000`. If the model file does not load, install the
+scikit-learn version named in `models/nz_model.json`. Tests: `pip install -e ".[dev]"` then `pytest tests/nz`.
+
 ## Limitations (please read)
 - **Modelled weather, not real plants.** New Zealand has no public hourly output data for individual solar sites, so
   we use Open-Meteo's modelled (reanalysis) sunlight and derive PV output with a stated formula. Modelled weather is
@@ -75,16 +97,20 @@ plus the clear-sky-index model averaged with the raw model: 28.98 vs 30.35 W/m2 
 - **Live mode** uses Open-Meteo's forecast service (and its day-ahead forecast of the next hour), a slightly different
   source than the training data, so live accuracy may be a little lower.
 - **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code.
+- **The nationwide grid** borrows the nearest region's climate id for each cell, and its accuracy was measured only
+  at the 14 regions; each refresh uses about 270 free Open-Meteo calls, so other replay days are limited per hour.
 - **The AI chat can still be wrong.** A small language model can misread the facts, and no safety filter is perfect.
   Without a GPU it is slow, and if the model cannot load the chat answers with fixed templates.
 
 ## Repository
 ```
-src/solarcast/nz/   config, data, features, ensemble, model, service, webapp, app, assistant, llm_setup
+src/solarcast/nz/   config, data, features, ensemble, model, service, grid, webapp, app, assistant, llm_setup, __main__
 notebooks/          Judges and Train notebooks, English and 繁體中文
 models/             trained model (nz_model.joblib) and its report (nz_model.json)
 data/nz/            compact replay data for the dashboard (Open-Meteo, CC BY 4.0)
-scripts/            train_nz.py, build_replay_data.py, make_nz_notebooks.py
+data/nz/grid_cells.json  the 137 land cells of the nationwide grid
+docs/index.html     the project website (GitHub Pages)
+scripts/            train_nz.py, build_replay_data.py, build_grid_cells.py, make_nz_notebooks.py
 tests/nz/           pytest suite (offline)
 ```
 Team workflow in Colab: [docs/COLAB_GUIDE.md](docs/COLAB_GUIDE.md).
@@ -99,5 +125,6 @@ Full list: [NOTICE.md](NOTICE.md).
 This project is a prototype and is not energy or financial advice.
 
 ## License
-All rights reserved; viewing and running for hackathon evaluation is permitted. See [LICENSE](LICENSE). Third-party
-data and libraries keep their own licenses; see [NOTICE.md](NOTICE.md).
+[MIT License](LICENSE): you may use, copy, modify and share the code, notebooks, docs and trained model, keeping the
+copyright notice. Third-party data, models and libraries keep their own licenses (for example Open-Meteo data is
+CC BY 4.0 and needs attribution); see [NOTICE.md](NOTICE.md).

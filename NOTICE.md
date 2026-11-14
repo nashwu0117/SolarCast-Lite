@@ -2,7 +2,7 @@
 
 **English** | [繁體中文](NOTICE.zh-TW.md)
 
-SolarCast NZ's own code is covered by [LICENSE](LICENSE) (all rights reserved). The material below belongs to
+SolarCast NZ's own code is open source under the [MIT License](LICENSE). The material below belongs to
 others and is used under its own license. The hackathon rules require crediting every dataset, pretrained model,
 tutorial and AI tool; this file is that list.
 
@@ -12,7 +12,8 @@ tutorial and AI tool; this file is that list.
 |---|---|---|---|
 | Open-Meteo Historical Weather API (ERA5 reanalysis) | https://open-meteo.com/en/docs/historical-weather-api | CC BY 4.0 | Hourly weather for 14 New Zealand centres, 2022 to Nov 2026: training, validation, test. |
 | Open-Meteo Previous Runs API (archived day-ahead forecasts) | https://open-meteo.com/en/docs/previous-runs-api | CC BY 4.0 | Day-ahead forecast inputs of model v4 (from 2024). |
-| Open-Meteo Forecast API | https://open-meteo.com/en/docs | CC BY 4.0 | Live mode of the dashboard. |
+| Open-Meteo Forecast API | https://open-meteo.com/en/docs | CC BY 4.0 | Live mode of the dashboard and the nationwide grid. |
+| Open-Meteo Elevation API (Copernicus DEM) | https://open-meteo.com/en/docs/elevation-api | CC BY 4.0 (DEM: Copernicus, (c) DLR/ESA) | Choosing the land cells of the nationwide grid once (`data/nz/grid_cells.json`). |
 | `data/nz/replay.csv.gz` | a subset of the Open-Meteo data above | CC BY 4.0 | Replay data for the dashboard (test period only). |
 
 Attribution required by CC BY 4.0: *Weather data by Open-Meteo.com (https://open-meteo.com), licensed under CC BY 4.0

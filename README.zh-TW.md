@@ -5,6 +5,8 @@
 紐西蘭下一小時太陽能發電預測，附互動地圖儀表板與電動車智慧充電決策。
 Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 
+**網站：** [https://nashwu0117.github.io/SolarCast-Lite/](https://nashwu0117.github.io/SolarCast-Lite/) &middot; **授權：** MIT（開源）
+
 **評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb)
 Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI 聊天用）。大約三分鐘內，notebook 會從本 repo 載入
 我們訓練好的模型、顯示它的準確度，並印出儀表板的公開連結（免費的 Cloudflare tunnel）；AI 聊天再過幾分鐘就會準備好。
@@ -23,6 +25,10 @@ Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI 聊天用
 
 ## 儀表板
 - **紐西蘭地圖**：14 個地區，依「下一小時預測發電量」上色。
+- **全國格子**：同一個模型跑涵蓋全國的 137 個陸地格子（0.5 度，約 50 公里），用熱力圖顯示。網頁打開前就算好，
+  之後每小時 :50 分重算，讓下一個小時開始前就準備好；即時模式會自己更新。
+- **AI 全國摘要**（地圖上方）：本機 AI 模型只根據格子數字寫兩三句話（哪裡最晴朗、北島和南島比較、對電動車充電的意義）；
+  模型準備好之前先顯示固定範本。
 - **滑鼠移到地區上**：顯示當下天氣，以及有沒有在發電、發多少。
 - **點紐西蘭任何地方**（不只 14 個圓點）：會放一個藍色圖釘，下載那個地點的 Open-Meteo 天氣並用同一個模型預測
   （模型借用最近地區的氣候代號；準確度顯示的是那個地區的測試結果）。
@@ -62,21 +68,39 @@ v2 更多訓練地點：沒有進步；v3 加入前一天預報：小幅進步�
 28.98 對 30.35 W/m2（進步 1.37），升級。細節：`experiments/results/nz_v2.json`、`nz_v3.json`、`nz_v4.json`。
 測試期只看了一次，而且只針對 v4。
 
+## 在你自己的電腦上執行
+需要 Python 3.10 以上：
+```bash
+git clone https://github.com/nashwu0117/SolarCast-Lite.git
+cd SolarCast-Lite
+python -m venv .venv && source .venv/bin/activate      # Windows：.venv\Scripts\activate
+pip install -e .
+python -m solarcast.nz                                 # 打開 http://127.0.0.1:8000
+```
+選項：`--ai` 用本機的 [Ollama](https://ollama.com) 模型來聊天和寫摘要（先執行 `ollama pull qwen3:1.7b`；電腦夠強可用
+`--model qwen3:8b`）；`--tunnel` 另外印出公開的 Cloudflare 連結（需要 `cloudflared`）；`--no-grid` 不算全國格子；
+`--port 8000`。如果模型檔載入失敗，請安裝 `models/nz_model.json` 裡寫的 scikit-learn 版本。
+測試：`pip install -e ".[dev]"` 後執行 `pytest tests/nz`。
+
 ## 限制（請務必閱讀）
 - **是模擬天氣，不是真實電廠。** 紐西蘭沒有公開的單一太陽能電廠逐時發電資料，所以我們使用 Open-Meteo 的模擬
   （再分析）日照資料，並用明確的公式換算發電量。模擬資料比真實情況平滑，真實電廠會比較難預測。
 - **即時模式**使用 Open-Meteo 的預報服務（以及它對下一小時的前一天預報），來源和訓練資料略有不同，即時準確度可能稍低。
 - **加工店和電動車是假設情境**（用電量、充電器、電價、碳排係數），都寫在程式碼裡。
+- **全國格子**的每一格借用最近地區的氣候代號，準確度只在 14 個地區量測過；每次更新約用掉 270 次免費的 Open-Meteo
+  呼叫，所以回放其他日子每小時有次數限制。
 - **AI 聊天還是可能答錯。** 小型語言模型可能誤讀資料，任何安全過濾器也都不完美。沒有 GPU 時回答很慢；
   如果模型載入失敗，聊天會改用固定範本回答。
 
 ## Repo 結構
 ```
-src/solarcast/nz/   config、data、features、ensemble、model、service、webapp、app、assistant、llm_setup
+src/solarcast/nz/   config、data、features、ensemble、model、service、grid、webapp、app、assistant、llm_setup、__main__
 notebooks/          評審用與訓練用 notebook，英文版與繁體中文版
 models/             訓練好的模型（nz_model.joblib）與報告（nz_model.json）
 data/nz/            儀表板用的精簡回放資料（Open-Meteo，CC BY 4.0）
-scripts/            train_nz.py、build_replay_data.py、make_nz_notebooks.py
+data/nz/grid_cells.json  全國格子的 137 個陸地格
+docs/index.html     專案網站（GitHub Pages）
+scripts/            train_nz.py、build_replay_data.py、build_grid_cells.py、make_nz_notebooks.py
 tests/nz/           pytest 測試（離線）
 ```
 團隊 Colab 操作說明：[docs/COLAB_GUIDE.zh-TW.md](docs/COLAB_GUIDE.zh-TW.md)。
@@ -90,5 +114,5 @@ tests/nz/           pytest 測試（離線）
 本專案為原型，不構成能源或財務建議。
 
 ## 授權
-保留所有權利；允許為黑客松評審而檢視與執行。詳見 [LICENSE](LICENSE)。第三方資料與函式庫依其各自授權，
-詳見 [NOTICE.zh-TW.md](NOTICE.zh-TW.md)。
+[MIT 授權](LICENSE)：可以使用、複製、修改和分享程式碼、notebook、文件與訓練好的模型，只要保留版權聲明。
+第三方資料、模型與函式庫依各自的授權（例如 Open-Meteo 資料是 CC BY 4.0，需要標示來源），詳見 [NOTICE.zh-TW.md](NOTICE.zh-TW.md)。

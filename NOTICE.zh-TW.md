@@ -2,7 +2,7 @@
 
 [English](NOTICE.md) | **繁體中文**
 
-SolarCast NZ 自己的程式碼適用 [LICENSE](LICENSE)（保留所有權利）。以下內容屬於其他人，依各自的授權使用。
+SolarCast NZ 自己的程式碼以 [MIT 授權](LICENSE)開源。以下內容屬於其他人，依各自的授權使用。
 黑客松規則要求列出所有使用到的資料集、預訓練模型、教學與 AI 工具，這份檔案就是那份清單。
 
 ## 資料
@@ -11,7 +11,8 @@ SolarCast NZ 自己的程式碼適用 [LICENSE](LICENSE)（保留所有權利）
 |---|---|---|---|
 | Open-Meteo 歷史天氣 API（ERA5 再分析資料） | https://open-meteo.com/en/docs/historical-weather-api | CC BY 4.0 | 紐西蘭 14 個城市 2022 年到 2026 年 11 月的逐時天氣：訓練、驗證、測試。 |
 | Open-Meteo 歷史預報 API（前一天預報存檔） | https://open-meteo.com/en/docs/previous-runs-api | CC BY 4.0 | v4 模型的前一天預報輸入（2024 年起）。 |
-| Open-Meteo 預報 API | https://open-meteo.com/en/docs | CC BY 4.0 | 儀表板的即時模式。 |
+| Open-Meteo 預報 API | https://open-meteo.com/en/docs | CC BY 4.0 | 儀表板的即時模式與全國格子。 |
+| Open-Meteo 海拔 API（Copernicus DEM） | https://open-meteo.com/en/docs/elevation-api | CC BY 4.0（DEM：Copernicus，(c) DLR/ESA） | 只用一次，挑出全國格子的陸地格（`data/nz/grid_cells.json`）。 |
 | `data/nz/replay.csv.gz` | 上述 Open-Meteo 資料的一部分 | CC BY 4.0 | 儀表板的回放資料（只有測試期）。 |
 
 CC BY 4.0 要求的姓名標示：*天氣資料來自 Open-Meteo.com（https://open-meteo.com），以 CC BY 4.0 授權
