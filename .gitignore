@@ -5,6 +5,7 @@ __pycache__/
 data/raw/
 *.env
 .env
-models/
-*.joblib
+models/*
+!models/nz_model.joblib
+!models/nz_model.json
 *.egg-info/
