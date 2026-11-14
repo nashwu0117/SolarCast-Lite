@@ -103,3 +103,6 @@ uv venv --python 3.12 && uv pip install -e ".[demo,dev]"
 - AI 工具：Claude Code。
 
 本專案為原型（prototype）。
+
+## 授權
+保留所有權利；允許為黑客松評審而檢視與執行。詳見 [LICENSE](LICENSE)。第三方資料與函式庫依其各自授權，詳見 [NOTICE.zh-TW.md](NOTICE.zh-TW.md)。

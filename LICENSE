@@ -1,0 +1,22 @@
+SolarCast Lite
+Copyright (c) 2026 the SolarCast Lite team (repository owner: nashwu0117). All rights reserved.
+
+This repository is published only so that it can be viewed, run and evaluated as an entry in the Veritas AI
+International High School Hackathon 2026.
+
+Permission is granted, free of charge, to:
+  1. view the source code, notebooks and documentation in this repository; and
+  2. run the notebooks and code, unmodified or with local changes, solely to review, judge or evaluate this
+     hackathon entry (including by the hackathon organizers and judges).
+
+No other rights are granted. In particular, without prior written permission from the copyright holders you
+may not copy, modify, merge, publish, distribute, sublicense, sell, or submit this work or any substantial part
+of it, in whole or in part, as or within your own project, competition entry, coursework or product.
+
+Third-party material in or used by this repository (datasets, libraries, tools) is NOT covered by this license
+and remains under its own terms; see NOTICE.md.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR ITS USE. THIS PROJECT IS A PROTOTYPE AND IS NOT FINANCIAL OR ENERGY ADVICE.

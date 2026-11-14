@@ -107,3 +107,6 @@ error by sky condition; cross-site result).
 - AI tools: Claude Code.
 
 This project is a prototype.
+
+## License
+All rights reserved; viewing and running for hackathon evaluation is permitted. See [LICENSE](LICENSE). Third-party data and libraries keep their own licenses; see [NOTICE.md](NOTICE.md).
