@@ -1,5 +1,7 @@
 # Colab guide for the team
 
+**English** | [繁體中文](COLAB_GUIDE.zh-TW.md)
+
 Everyone works in Google Colab. The code lives in the GitHub repo
 `nashwu0117/SolarCast-Lite` (currently **private**). Read this once, then keep it open.
 
@@ -44,7 +46,9 @@ Do not save a notebook someone else owns without asking first.
 
 1. Open the file browser (folder icon on the left) and go to `/content/SolarCast-Lite/src/solarcast`.
 2. Double-click a file to edit it in Colab. Save with Ctrl/Cmd+S.
-3. Autoreload is on, so the next time you run a cell that uses it, the new code is used. If something looks stale, Runtime, Restart session, and re-run the setup cell.
+3. The setup cell tries to turn on autoreload so the next cell uses the new code. Colab's current IPython cannot load
+   autoreload on Python 3.12+; the setup cell then prints "autoreload unavailable". In that case use Runtime,
+   **Restart session**, and re-run the setup cell after each edit.
 
 ### Push your edits to GitHub
 
@@ -70,7 +74,7 @@ def git(*args, hide=True):
 
 git("config", "user.name", NAME)
 git("config", "user.email", EMAIL)
-git("add", "src", "tests", "docs", "README.md", "notebooks", "scripts")
+git("add", "src", "tests", "docs", "README.md", "README.zh-TW.md", "notebooks", "scripts")
 git("commit", "-m", MESSAGE)
 git("pull", "--rebase", url, "main")
 git("push", url, "HEAD:main")
@@ -102,10 +106,11 @@ Golden rule: **never tune on the test split.** Train on `train`, choose on `val`
 
 ```python
 !pip -q install pytest
-!cd /content/SolarCast-Lite && python -m pytest -q
+!cd /content/SolarCast-Lite && PYTHONPATH=src python -m pytest -q
 ```
 
-(If the second line fails on the path, run `%cd /content/SolarCast-Lite` first, then `!python -m pytest -q`.)
+`PYTHONPATH=src` is needed because the package is used from `src/` directly, not pip-installed. All 30 tests
+should pass in about 10 seconds.
 
 ## 8. Before submitting
 
