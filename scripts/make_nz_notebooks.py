@@ -61,6 +61,10 @@ CODE_COMMENTS = {
     "wait": {"en": "Wait (up to about 10 minutes) for the AI model, then ask it two test questions. The dashboard link above already works.",
              "zh-TW": "等待 AI 模型準備好（最多約 10 分鐘），再問它兩個測試問題。上面的儀表板連結已經可以用了。"},
     "ask": {"en": "One normal question and one it must refuse.", "zh-TW": "一個正常問題，和一個它必須拒絕的問題。"},
+    "grid": {"en": "Nationwide grid: run the model for every land cell of New Zealand now (live hours and the default replay day), so the map opens fully computed.",
+             "zh-TW": "全國格子：現在就幫紐西蘭每一個陸地格子跑模型（即時的時段和預設的回放日），讓地圖一打開就全部算好。"},
+    "hourly": {"en": "Recompute the live grid every hour at :50 in the background, so the next hour is ready before it starts; the AI writes a new national briefing each time.",
+               "zh-TW": "背景每小時 :50 分重算一次即時格子，讓下一個小時開始前就準備好；AI 每次都會寫一段新的全國摘要。"},
     # ----- train notebook -----
     "quick": {"en": "QUICK = True runs a fast smoke test: 2 regions x 120 days (the repo model is NOT touched).",
               "zh-TW": "QUICK = True 會跑快速冒煙測試：2 個區域 × 120 天（不會動到儲存庫裡的模型）。"},
@@ -218,9 +222,16 @@ JUDGES_SERVE = '''
 # @@serve@@
 from solarcast.nz import webapp
 from solarcast.nz.assistant import Assistant
+from solarcast.nz.grid import NationalGrid
+# @@grid@@
+grid = NationalGrid(svc)
+print(grid.precompute(svc.default_time()))
 # @@chat@@
-assistant = Assistant(svc, llm)
-url = webapp.serve(svc, port=8000, tunnel=True, assistant=assistant)
+assistant = Assistant(svc, llm, grid=grid)
+grid.summarizer = assistant.summarize
+# @@hourly@@
+grid.start_hourly()
+url = webapp.serve(svc, port=8000, tunnel=True, assistant=assistant, grid=grid)
 
 # @@big@@
 display(HTML(f"""
@@ -515,11 +526,15 @@ AI 工具：Claude Code（Anthropic）協助撰寫與測試程式。"""},
   "en": """## 5. FINAL STEP: start the dashboard
 Run the cell below. It prints a **big link** to the SolarCast NZ dashboard (map of New Zealand: hover a region for weather and
 generation, click it for the day chart, EV advice and savings; the Model tab shows the report above; use the Replay slider
-or the Live button; **Ask SolarCast AI** at the bottom right opens the chat). Keep this notebook running while you use the link.""",
+or the Live button; **Ask SolarCast AI** at the bottom right opens the chat). Before the link appears, the cell runs the model
+for about 120 grid cells covering **all of New Zealand** (the coloured squares), and it keeps them fresh by recomputing the live
+grid every hour at :50; the banner above the map is a national briefing written by the AI from those numbers.
+Keep this notebook running while you use the link.""",
   "zh-TW": """## 5. 最後一步：啟動儀表板
 執行下面的儲存格，會印出一個**很大的連結**，連到 SolarCast NZ 儀表板（紐西蘭地圖：滑鼠移到區域上看天氣與發電量，
 點擊區域看當天圖表、電動車建議與節省金額；Model 分頁有上面的模型報告；可以用 Replay 滑桿或 Live 按鈕；
-右下角的 **Ask SolarCast AI** 可以打開聊天）。
+右下角的 **Ask SolarCast AI** 可以打開聊天）。連結出現前，這個儲存格會先幫涵蓋**全紐西蘭**的約 120 個格子跑模型
+（地圖上的彩色方格），之後每小時 :50 分重算一次即時格子；地圖上方的橫幅是 AI 根據這些數字寫的全國摘要。
 使用連結的時候，請讓這個筆記本保持在執行狀態。"""},
  # ----- train -----
  "train_title": {

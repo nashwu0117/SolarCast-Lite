@@ -68,7 +68,9 @@ class Service:
         return {"feat": feat, "raw": raw}
 
     def _live_state(self) -> dict:
-        if self._live is None or time.time() - self._live_at > LIVE_TTL_S:
+        new_hour = self._live is not None and pd.Timestamp.now(tz="UTC").floor("h") > self._live["now"] \
+            and time.time() - self._live_at > 120
+        if self._live is None or time.time() - self._live_at > LIVE_TTL_S or new_hour:
             live = data.fetch_live(self.regions)
             state = self._prepare(live)
             fc = live[live["is_forecast"]]["time_utc"]

@@ -175,6 +175,53 @@ def fetch_point(lat: float, lon: float, name: str, start: str | None = None, end
     return df.reset_index(drop=True)
 
 
+def fetch_points(points, names, start: str | None = None, end: str | None = None, batch: int = 50,
+                 tries: int = 3) -> pd.DataFrame:
+    """Weather + day-ahead forecasts for MANY points (the nationwide grid), long format like fetch_point.
+
+    `points` is a list of (lat, lon), `names` their row names. Open-Meteo answers several locations in one request,
+    so this sends one weather and one forecast request per `batch` points. With start/end: the archive (replay);
+    without: live, the last 48 h plus the next 24 h with `is_forecast`.
+    """
+    points, names = list(points), list(names)
+    parts = []
+    for i in range(0, len(points), batch):
+        chunk, cn = points[i:i + batch], names[i:i + batch]
+        loc = {"latitude": ",".join(f"{p[0]:.4f}" for p in chunk),
+               "longitude": ",".join(f"{p[1]:.4f}" for p in chunk), "timezone": "UTC"}
+        if start:
+            weather = _get(ARCHIVE_URL, {**loc, "start_date": start, "end_date": end,
+                                         "hourly": ",".join(config.HOURLY_VARS)}, tries=tries)
+            fc_params = {**loc, "start_date": max(start, config.FORECAST_START), "end_date": end}
+        else:
+            span = {"past_days": 2, "forecast_days": 2}
+            weather = _get(FORECAST_URL, {**loc, **span, "hourly": ",".join(config.HOURLY_VARS)}, tries=tries)
+            fc_params = {**loc, **span}
+        weather = weather if isinstance(weather, list) else [weather]
+        try:
+            if end and end < config.FORECAST_START:
+                raise ValueError("no archived forecasts before FORECAST_START")
+            fcd = _get(PREVIOUS_RUNS_URL, {**fc_params, "hourly": ",".join(config.FORECAST_VARS)}, tries=tries)
+            fcd = fcd if isinstance(fcd, list) else [fcd]
+        except Exception:                                          # forecasts are an extra input: NaN is handled
+            fcd = [None] * len(chunk)
+        for name, (lat, lon), block, fblock in zip(cn, chunk, weather, fcd):
+            df = _to_frame(block["hourly"], name, lat, lon)
+            if fblock is not None:
+                df = df.merge(_forecast_frame(fblock["hourly"]), on="time_utc", how="left")
+            else:
+                df = df.assign(**{c: np.nan for c in config.FORECAST_COLUMNS})
+            parts.append(df)
+        if i + batch < len(points):
+            time.sleep(1)                                          # be polite between batches
+    out = pd.concat(parts, ignore_index=True)
+    if not start:
+        now = pd.Timestamp.now(tz="UTC").floor("h")
+        out = out[(out["time_utc"] >= now - pd.Timedelta("48h")) & (out["time_utc"] <= now + pd.Timedelta("24h"))]
+        out = out.assign(is_forecast=out["time_utc"] > now)
+    return out.reset_index(drop=True)
+
+
 def fetch_live(regions=config.REGIONS) -> pd.DataFrame:
     """Last 48 h plus next 24 h for all regions; `is_forecast` marks hours after the current hour.
 

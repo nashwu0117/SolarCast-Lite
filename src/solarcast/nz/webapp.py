@@ -63,8 +63,8 @@ def _json(payload, status=200) -> Response:
 # ----------------------------------------------------------------------------------------------------------
 # Flask app
 # ----------------------------------------------------------------------------------------------------------
-def create_app(service, assistant=None) -> Flask:
-    """Build the Flask app around a service object (and, optionally, the SolarCast AI assistant)."""
+def create_app(service, assistant=None, grid=None) -> Flask:
+    """Build the Flask app around a service object (optionally the SolarCast AI assistant and the nationwide grid)."""
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024          # chat requests are small; refuse huge bodies
 
@@ -135,6 +135,20 @@ def create_app(service, assistant=None) -> Flask:
             return _json({"error": str(exc)}, 400)
         except Exception as exc:  # e.g. Open-Meteo unreachable or rate-limited
             return _json({"error": f"could not get this point's weather ({type(exc).__name__}); try again"}, 502)
+
+    # ----- nationwide grid (precomputed; refreshed every hour at :50) -----
+    @app.get("/api/grid")
+    def api_grid():
+        if grid is None:
+            return _json({"error": "The nationwide grid is not enabled."}, 404)
+        t = request.args.get("t") or service.default_time()
+        try:
+            return _json(grid.snapshot(t))
+        except (ValueError, KeyError) as exc:
+            return _json({"error": f"bad time: {exc}"}, 400)
+        except Exception as exc:  # live download failed, or the replay-day budget is used up
+            return _json({"error": str(exc) if isinstance(exc, RuntimeError) else
+                          f"grid failed ({type(exc).__name__})"}, 502)
 
     # ----- SolarCast AI chat (optional; templates only when no language model is loaded) -----
     @app.get("/api/chat/status")
@@ -235,7 +249,7 @@ def _start_tunnel(port: int) -> tuple[subprocess.Popen | None, str | None]:
     return proc, found["url"]
 
 
-def serve(service, port: int = 8000, tunnel: bool = True, assistant=None) -> str:
+def serve(service, port: int = 8000, tunnel: bool = True, assistant=None, grid=None) -> str:
     """Run the web app in a background thread; return the public tunnel URL (or the local URL).
 
     Safe to call twice: a second call reuses the running server and tunnel and returns the same URL.
@@ -243,7 +257,7 @@ def serve(service, port: int = 8000, tunnel: bool = True, assistant=None) -> str
     with _LOCK:
         local_url = f"http://127.0.0.1:{port}"
         if _STATE["server"] is None:
-            _STATE["server"], _STATE["thread"] = _start_server(create_app(service, assistant), port)
+            _STATE["server"], _STATE["thread"] = _start_server(create_app(service, assistant, grid), port)
             _STATE["port"] = port
             time.sleep(0.3)
         local_url = f"http://127.0.0.1:{_STATE['port']}"
@@ -348,6 +362,15 @@ INDEX_HTML = r"""<!doctype html>
     .clock { text-align: left; }
     .chartbox { height: 230px; }
   }
+  /* ----- nationwide grid and AI briefing ----- */
+  .brief { padding: 10px 12px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, #fff8ec, #ffffff); }
+  .brief .bhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .brief .ai { background: var(--ink); color: #fff; border-radius: 999px; padding: 1px 9px; font-weight: 600; font-size: 11px; letter-spacing: .3px; }
+  .brief .ai.tpl { background: #8a96a3; }
+  #briefText { font-size: 14px; }
+  #briefStats { font-size: 12px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .brief.err #briefText { color: #8a1f1f; font-size: 13px; }
+  .maptools .gt { margin-left: auto; display: flex; align-items: center; gap: 5px; cursor: pointer; }
   /* ----- SolarCast AI chat ----- */
   #chatBtn { position: fixed; right: 18px; bottom: 18px; z-index: 1001; background: var(--ink); color: #fff; border: 0;
              padding: 12px 18px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.25); display: none; }
@@ -402,8 +425,14 @@ INDEX_HTML = r"""<!doctype html>
 
 <main id="mapView">
   <div class="mapwrap">
+    <div class="brief" id="brief" hidden>
+      <div class="bhead"><span class="ai" id="briefTag">AI briefing</span><span id="briefMeta"></span></div>
+      <div id="briefText"></div>
+      <div id="briefStats"></div>
+    </div>
     <div class="maptools"><label for="colorMode">Colour circles by</label>
-      <select id="colorMode"><option value="power">Predicted next-hour power</option><option value="accuracy">Model accuracy (error)</option></select></div>
+      <select id="colorMode"><option value="power">Predicted next-hour power</option><option value="accuracy">Model accuracy (error)</option></select>
+      <label class="gt" id="gridTool"><input type="checkbox" id="gridOn" checked> Nationwide grid</label></div>
     <div id="map"></div>
     <div class="legend" id="legend"></div>
   </div>
@@ -433,6 +462,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="msg bot">Hi! Ask me about the data on this dashboard: solar forecasts for the 14 New Zealand regions, the weather, EV charging advice and savings, or how accurate our model is. I answer only from this data and cannot browse the internet. 中文也可以問。</div>
   </div>
   <div class="chips" id="chatChips">
+    <button type="button">Where in New Zealand is it sunniest next hour?</button>
     <button type="button">Which region generates the most solar power next hour?</button>
     <button type="button">How accurate is the model?</button>
     <button type="button">Should the workshop charge its EV now?</button>
@@ -548,6 +578,71 @@ function drawRegions(regions) {
   });
 }
 
+// ---------- nationwide grid (about 120 land cells, precomputed on the server, refreshed at :50 every hour) ----------
+map.createPane('gridPane'); map.getPane('gridPane').style.zIndex = 350;      // under the region circles
+const gridRenderer = L.svg({ pane: 'gridPane' });
+const NZ_HM = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit', hour12: false });
+const hm = iso => { const d = new Date(iso); return iso && !isNaN(d) ? NZ_HM.format(d) : '--'; };
+let gridLayer = null, gridReq = 0, gridTimer = null, gridAvailable = true, lastGrid = null;
+
+function drawGrid(g) {
+  if (gridLayer) { map.removeLayer(gridLayer); gridLayer = null; }
+  if (!g || !$('gridOn').checked) return;
+  const h = g.step / 2;
+  gridLayer = L.layerGroup((g.cells || []).map(c => {
+    const on = c.kw >= 1;
+    return L.rectangle([[c.lat - h, c.lon - h], [c.lat + h, c.lon + h]], { renderer: gridRenderer, color: '#ffffff', weight: 0.6,
+        opacity: 0.7, fillColor: colorFor(c.kw), fillOpacity: on ? 0.55 : 0.2 })
+      .bindTooltip(`<b>Around ${esc(c.near)}</b> &middot; cell ${num(c.lat, 2)}, ${num(c.lon, 2)}<br>` +
+        `<b class="${on ? 'gen' : 'nogen'}">${num(c.kw)} kW expected next hour</b>` +
+        (c.actual !== null && c.actual !== undefined ? `<br>Actual ${num(c.actual)} kW (derived from weather data)` : '') +
+        `<br>Cloud ${num(c.cloud, 0)}% &middot; click for this spot's hourly detail`, { sticky: true, className: 'tip' });
+  })).addTo(map);
+}
+
+function renderBrief(g) {
+  const s = g.stats || {}, b = g.briefing || {}, el = $('brief');
+  el.hidden = false; el.classList.remove('err');
+  const ai = b.mode === 'llm';
+  $('briefTag').textContent = ai ? 'AI briefing' : 'Briefing';
+  $('briefTag').className = 'ai' + (ai ? '' : ' tpl');
+  $('briefMeta').textContent = ai ? `written by ${b.model || 'the local AI model'} from the grid numbers below`
+    : g.briefing_pending ? 'the AI model is writing a briefing...' : 'fixed template (the AI model is not ready)';
+  $('briefText').textContent = b.text || '';
+  const parts = [`${g.local_time} NZ, next hour`, `${s.cells || 0} cells`, `NZ average ${num(s.mean_kw)} kW`,
+                 `${s.share_generating_pct ?? '--'}% generating`];
+  if (s.mean_abs_error_kw !== undefined) parts.push(`grid error this hour ${num(s.mean_abs_error_kw, 2)} kW`);
+  if (g.live) parts.push(`computed ${hm(g.updated_at)}, next update ${hm(g.next_update)} (every hour at :${g.refresh_minute})`);
+  $('briefStats').textContent = parts.join(' \u00b7 ');
+}
+
+async function loadGrid() {
+  if (!gridAvailable) return;
+  const id = ++gridReq;
+  clearTimeout(gridTimer);
+  try {
+    const g = await getJson('/api/grid?t=' + encodeURIComponent(current));
+    if (id !== gridReq) return;
+    const hourChanged = lastGrid && lastGrid.live && g.live && lastGrid.time !== g.time;
+    lastGrid = g; drawGrid(g); renderBrief(g);
+    if (g.briefing_pending) gridTimer = setTimeout(loadGrid, 4000);
+    if (hourChanged) { if (selected) loadDetail(selected); else if (selectedPoint) loadPoint(); }
+  } catch (e) {
+    if (id !== gridReq) return;
+    if (/not enabled/.test(e.message)) { gridAvailable = false; $('gridTool').style.display = 'none'; $('brief').hidden = true; return; }
+    lastGrid = null; drawGrid(null);
+    $('brief').hidden = false; $('brief').classList.add('err');
+    $('briefTag').textContent = 'Nationwide grid'; $('briefTag').className = 'ai tpl'; $('briefMeta').textContent = '';
+    $('briefText').textContent = e.message; $('briefStats').textContent = '';
+  }
+}
+$('gridOn').onchange = () => drawGrid(lastGrid);
+
+// Live mode refreshes itself: the map is checked every minute and switches when the server's new hour is ready.
+setInterval(() => {
+  if (current === 'live' && document.visibilityState === 'visible') loadSnapshot({ panel: false });
+}, 60000);
+
 // ---------- header: clock, mode, note ----------
 function setNote(text, kind) {
   const n = $('note');
@@ -577,8 +672,9 @@ async function getJson(url) {
   return body;
 }
 
-async function loadSnapshot() {
+async function loadSnapshot(opts = {}) {
   const id = ++reqId;
+  loadGrid();
   try {
     const data = await getJson('/api/snapshot?t=' + encodeURIComponent(current));
     if (id !== reqId) return;                       // a newer request already replaced this one
@@ -587,6 +683,7 @@ async function loadSnapshot() {
   } catch (e) {
     if (id === reqId) setNote('Could not load data: ' + e.message, 'error');
   }
+  if (opts.panel === false) return;
   if (selected) loadDetail(selected);
   else if (selectedPoint) loadPoint();
 }
@@ -805,7 +902,7 @@ function addMsg(role, html, cls = '') {
   return d;
 }
 function chatContext() {
-  const when = current === 'live' ? 'Live' : nzString(current);
+  const when = current === 'live' ? 'Live' : nzString(current) + ' - a replay of a past hour, not now; press Live for the current hour';
   $('chatCtx').textContent = `Answers use the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).`
     : selectedPoint ? ` and the clicked point (${selectedPoint.lat.toFixed(2)}, ${selectedPoint.lon.toFixed(2)}).` : '.');
 }
