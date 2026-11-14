@@ -70,7 +70,10 @@
   th { font-size: 13px; color: var(--muted); font-weight: 600; }
   td:not(:first-child), th:not(:first-child) { text-align: right; }
   td[lang-zh], th[lang-zh] { text-align: left !important; }
-  @media (max-width: 600px) { th, td { padding: 10px 8px; font-size: 14px; } .bar { display: none; } }
+  @media (max-width: 600px) { th, td { padding: 10px 8px; font-size: 14px; } .bar { display: none; }
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); } .stat { padding: 14px; min-width: 0; }
+    .stat b { font-size: 28px; } }
   tr.me td { font-weight: 600; background: color-mix(in srgb, var(--sun) 10%, transparent); }
   .bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--sun); vertical-align: middle; margin-left: 10px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
