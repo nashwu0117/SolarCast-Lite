@@ -33,6 +33,8 @@ from pathlib import Path
 
 from flask import Flask, Response, request
 
+from solarcast.nz import config
+
 CLOUDFLARED_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
 TUNNEL_URL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 TUNNEL_TIMEOUT_S = 60
@@ -74,7 +76,8 @@ def create_app(service, assistant=None, grid=None) -> Flask:
 
     @app.get("/api/times")
     def api_times():
-        return _json({"times": list(service.available_times()), "default": service.default_time()})
+        return _json({"times": list(service.available_times()), "default": service.default_time(),
+                      "reference_kw": config.SYSTEM_KW, "grid_price_nzd": config.GRID_PRICE_NZD})
 
     @app.get("/api/snapshot")
     def api_snapshot():
@@ -172,8 +175,12 @@ def create_app(service, assistant=None, grid=None) -> Flask:
         except (KeyError, TypeError, ValueError):
             point = None
         try:
+            system_kw = min(max(float(body.get("system_kw") or config.SYSTEM_KW), 0.5), 1000.0)
+        except (TypeError, ValueError):
+            system_kw = config.SYSTEM_KW
+        try:
             res = assistant.ask(str(body.get("question", ""))[:2000], str(body.get("t") or "live"),
-                                body.get("region") or None, history, point=point)
+                                body.get("region") or None, history, point=point, system_kw=system_kw)
         except Exception as exc:
             return _json({"error": f"chat failed: {exc}"}, 502)
         return _json(res)
@@ -306,6 +313,10 @@ INDEX_HTML = r"""<!doctype html>
   .clock .mode { font-size: 12px; color: var(--muted); }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 10px; }
   .controls label { font-size: 13px; color: var(--muted); }
+  #sizeSel { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .yours { background: #fff8e8; border: 1px solid #f3d9a4; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
+  .yours .big { font-size: 28px; font-weight: 700; color: #b45309; line-height: 1.1; }
+  .yours .big small { font-size: 14px; font-weight: 500; color: var(--muted); }
   #slider { flex: 1 1 260px; min-width: 180px; accent-color: var(--accent); }
   button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
   button:hover { border-color: var(--accent); }
@@ -404,7 +415,7 @@ INDEX_HTML = r"""<!doctype html>
   <div class="top">
     <div>
       <h1>SolarCast <span>NZ</span></h1>
-      <div class="tagline">Next-hour solar forecast and EV charging advice for New Zealand regions</div>
+      <div class="tagline">How much power your solar panels will give next hour, anywhere in New Zealand</div>
     </div>
     <div class="clock">
       <div class="nz" id="nzTime">--</div>
@@ -415,6 +426,14 @@ INDEX_HTML = r"""<!doctype html>
     <label for="slider">Replay</label>
     <input type="range" id="slider" min="0" max="0" value="0" aria-label="Replay time">
     <button id="liveBtn" type="button">Live</button>
+    <label for="sizeSel">Your panels</label>
+    <select id="sizeSel" aria-label="Your solar system size">
+      <option value="3">3 kW (small home)</option>
+      <option value="5" selected>5 kW (typical home)</option>
+      <option value="10">10 kW (large home / farm house)</option>
+      <option value="50">50 kW (business / school)</option>
+      <option value="100">100 kW (large roof)</option>
+    </select>
   </div>
   <div class="tabs">
     <button id="tabMap" type="button" class="on">Map</button>
@@ -431,13 +450,13 @@ INDEX_HTML = r"""<!doctype html>
       <div id="briefStats"></div>
     </div>
     <div class="maptools"><label for="colorMode">Colour circles by</label>
-      <select id="colorMode"><option value="power">Predicted next-hour power</option><option value="accuracy">Model accuracy (error)</option></select>
+      <select id="colorMode"><option value="power">Predicted next-hour power (your panels)</option><option value="accuracy">Model accuracy (error)</option></select>
       <label class="gt" id="gridTool"><input type="checkbox" id="gridOn" checked> Nationwide grid</label></div>
     <div id="map"></div>
     <div class="legend" id="legend"></div>
   </div>
   <aside class="panel" id="panel">
-    <div class="empty">Click a region circle, or <b>anywhere in New Zealand</b>, to see its hourly chart, EV charging advice and savings.</div>
+    <div class="empty">Click a region circle, or <b>anywhere in New Zealand</b>, to see how much power your panels will give there: next hour, the hourly chart for the day, and an example use (charging an EV from solar).</div>
   </aside>
 </main>
 
@@ -459,14 +478,14 @@ INDEX_HTML = r"""<!doctype html>
   <div class="chead"><b>SolarCast AI</b><button id="chatClear" type="button" title="Clear the chat">Clear</button><button id="chatClose" type="button" aria-label="Close">&times;</button></div>
   <div id="chatStatus">Checking the AI model...</div>
   <div id="chatLog" aria-live="polite">
-    <div class="msg bot">Hi! Ask me about the data on this dashboard: solar forecasts for the 14 New Zealand regions, the weather, EV charging advice and savings, or how accurate our model is. I answer only from this data and cannot browse the internet. 中文也可以問。</div>
+    <div class="msg bot">Hi! Ask me how much power solar panels will give next hour anywhere in New Zealand (I use the panel size you picked), the weather, the EV charging example, or how accurate our model is. I answer only from this data and cannot browse the internet. 中文也可以問。</div>
   </div>
   <div class="chips" id="chatChips">
     <button type="button">Where in New Zealand is it sunniest next hour?</button>
-    <button type="button">Which region generates the most solar power next hour?</button>
+    <button type="button">How much will my panels make next hour in Christchurch?</button>
     <button type="button">How accurate is the model?</button>
     <button type="button">Should the workshop charge its EV now?</button>
-    <button type="button">基督城今天可以省多少錢？</button>
+    <button type="button">我的太陽能板今天在奧克蘭能發多少電？</button>
   </div>
   <div id="chatCtx"></div>
   <form class="cform" id="chatForm"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Ask about this data..." aria-label="Your question"><button id="chatSend" type="submit">Send</button></form>
@@ -474,20 +493,31 @@ INDEX_HTML = r"""<!doctype html>
 
 <footer>
   AI chat: Qwen3 (Apache-2.0) running locally on the notebook's machine, safety check by Llama Guard 3 (Built with Llama); it answers only from this dashboard's data and may make mistakes.
-  Weather: Open-Meteo (CC BY 4.0), reanalysis/forecast model data. PV output derived from irradiance. Prototype; not energy or financial advice.
+  Weather: Open-Meteo (CC BY 4.0), reanalysis/forecast model data. PV output derived from irradiance and scaled to the panel size you pick. Prototype; not energy or financial advice.
 </footer>
 
 <script>
 // ---------- colours: predicted next-hour kW -> circle colour ----------
+// The server forecasts a 50 kW reference system; output scales linearly with panel size, so every kW shown is
+// multiplied by SIZE / REF. Colours use the share of rated power, which is the same for any size.
+let SIZE = 5, REF = 50, PRICE = 0.30;
+try { const v = +localStorage.getItem('solarcastSize'); if (v > 0) SIZE = v; } catch (e) {}
+const S = v => (v === null || v === undefined || Number.isNaN(+v)) ? v : +v * SIZE / REF;
+const kwd = () => SIZE < 20 ? 2 : 1;                        // decimals for kW at this size
 const BINS = [
-  { max: 1,        color: '#9aa5b1', label: 'Not generating (night or heavy cloud)' },
-  { max: 10,       color: '#fde68a', label: '1 - 10 kW' },
-  { max: 20,       color: '#fbbf24', label: '10 - 20 kW' },
-  { max: 30,       color: '#f97316', label: '20 - 30 kW' },
-  { max: 40,       color: '#dc2626', label: '30 - 40 kW' },
-  { max: Infinity, color: '#7f1d1d', label: '40 - 50 kW' },
+  { max: 0.02,     color: '#9aa5b1' },
+  { max: 0.2,      color: '#fde68a' },
+  { max: 0.4,      color: '#fbbf24' },
+  { max: 0.6,      color: '#f97316' },
+  { max: 0.8,      color: '#dc2626' },
+  { max: Infinity, color: '#7f1d1d' },
 ];
-function colorFor(kw) { return (BINS.find(b => kw < b.max) || BINS[BINS.length - 1]).color; }
+function binLabel(i) {
+  if (i === 0) return 'Not generating (night or heavy cloud)';
+  const lo = BINS[i - 1].max * SIZE, hi = (BINS[i].max === Infinity ? 1 : BINS[i].max) * SIZE;
+  return `${num(lo, lo < 10 ? 1 : 0)} - ${num(hi, hi < 10 ? 1 : 0)} kW`;
+}
+function colorFor(kw) { return (BINS.find(b => kw / REF < b.max) || BINS[BINS.length - 1]).color; }
 
 // ---------- small helpers ----------
 const $ = id => document.getElementById(id);
@@ -512,10 +542,10 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 function tooltipHtml(r) {
   const gen = r.generating
-    ? `<b class="gen">Generating: ${num(r.predicted_kw_next)} kW expected next hour</b>`
-    : `<b class="nogen">Not generating${r.is_day ? ' (too cloudy)' : ' (night)'}: ${num(r.predicted_kw_next)} kW expected</b>`;
+    ? `<b class="gen">Your ${SIZE} kW panels: ${num(S(r.predicted_kw_next), kwd())} kW expected next hour</b>`
+    : `<b class="nogen">Not generating${r.is_day ? ' (too cloudy)' : ' (night)'}: ${num(S(r.predicted_kw_next), kwd())} kW expected</b>`;
   const acc = (regionMae[r.name] !== undefined && $('colorMode').value === 'accuracy')
-    ? `Model error here: ${num(regionMae[r.name], 2)} kW (MAE)<br>` : '';
+    ? `Model error here: ${num(S(regionMae[r.name]), 2)} kW (MAE, your ${SIZE} kW system)<br>` : '';
   return `<b>${esc(r.name)}</b> &middot; ${esc(r.local_time)}<br>${acc}${gen}<br>` +
     `Cloud ${num(r.cloud_cover_pct, 0)}% &middot; ${num(r.temp_c)} &deg;C &middot; wind ${num(r.wind_kmh, 0)} km/h<br>` +
     `Sunlight now ${num(r.ghi_now_wm2, 0)} W/m&sup2; &middot; ${r.is_day ? 'daytime' : 'night'}`;
@@ -547,12 +577,12 @@ function accColor(name) {
 function fillFor(r) { return $('colorMode').value === 'accuracy' ? accColor(r.name) : colorFor(r.predicted_kw_next); }
 function drawLegend() {
   if ($('colorMode').value === 'accuracy') {
-    $('legend').innerHTML = '<b>Model error (MAE, kW)</b>' + (accBins.length
-      ? accBins.map(b => `<div><span class="dot" style="background:${b.color}"></span>${num(b.from, 2)} - ${num(b.to, 2)}</div>`).join('')
+    $('legend').innerHTML = `<b>Model error (MAE, kW, ${SIZE} kW system)</b>` + (accBins.length
+      ? accBins.map(b => `<div><span class="dot" style="background:${b.color}"></span>${num(S(b.from), 2)} - ${num(S(b.to), 2)}</div>`).join('')
       : '<div>Model report not loaded</div>');
   } else {
-    $('legend').innerHTML = '<b>Predicted next-hour power</b>' +
-      BINS.map(b => `<div><span class="dot" style="background:${b.color}"></span>${b.label}</div>`).join('');
+    $('legend').innerHTML = `<b>Your ${SIZE} kW panels, next hour</b>` +
+      BINS.map((b, i) => `<div><span class="dot" style="background:${b.color}"></span>${binLabel(i)}</div>`).join('');
   }
 }
 $('colorMode').onchange = () => { drawLegend(); drawRegions(lastRegions); };
@@ -590,12 +620,12 @@ function drawGrid(g) {
   if (!g || !$('gridOn').checked) return;
   const h = g.step / 2;
   gridLayer = L.layerGroup((g.cells || []).map(c => {
-    const on = c.kw >= 1;
+    const on = c.kw / REF >= 0.02;
     return L.rectangle([[c.lat - h, c.lon - h], [c.lat + h, c.lon + h]], { renderer: gridRenderer, color: '#ffffff', weight: 0.6,
         opacity: 0.7, fillColor: colorFor(c.kw), fillOpacity: on ? 0.55 : 0.2 })
       .bindTooltip(`<b>Around ${esc(c.near)}</b> &middot; cell ${num(c.lat, 2)}, ${num(c.lon, 2)}<br>` +
-        `<b class="${on ? 'gen' : 'nogen'}">${num(c.kw)} kW expected next hour</b>` +
-        (c.actual !== null && c.actual !== undefined ? `<br>Actual ${num(c.actual)} kW (derived from weather data)` : '') +
+        `<b class="${on ? 'gen' : 'nogen'}">Your ${SIZE} kW panels: ${num(S(c.kw), kwd())} kW next hour</b>` +
+        (c.actual !== null && c.actual !== undefined ? `<br>Actual ${num(S(c.actual), kwd())} kW (derived from weather data)` : '') +
         `<br>Cloud ${num(c.cloud, 0)}% &middot; click for this spot's hourly detail`, { sticky: true, className: 'tip' });
   })).addTo(map);
 }
@@ -609,9 +639,10 @@ function renderBrief(g) {
   $('briefMeta').textContent = ai ? `written by ${b.model || 'the local AI model'} from the grid numbers below`
     : g.briefing_pending ? 'the AI model is writing a briefing...' : 'fixed template (the AI model is not ready)';
   $('briefText').textContent = b.text || '';
-  const parts = [`${g.local_time} NZ, next hour`, `${s.cells || 0} cells`, `NZ average ${num(s.mean_kw)} kW`,
+  const parts = [`${g.local_time} NZ, next hour`, `${s.cells || 0} cells`,
+                 `your ${SIZE} kW panels: NZ average ${num(S(s.mean_kw), kwd())} kW, best ${num(S(s.max_kw), kwd())} kW`,
                  `${s.share_generating_pct ?? '--'}% generating`];
-  if (s.mean_abs_error_kw !== undefined) parts.push(`grid error this hour ${num(s.mean_abs_error_kw, 2)} kW`);
+  if (s.mean_abs_error_kw !== undefined) parts.push(`grid error this hour ${num(S(s.mean_abs_error_kw), 2)} kW`);
   if (g.live) parts.push(`computed ${hm(g.updated_at)}, next update ${hm(g.next_update)} (every hour at :${g.refresh_minute})`);
   $('briefStats').textContent = parts.join(' \u00b7 ');
 }
@@ -715,8 +746,9 @@ function hourLabel(h) { return (typeof h === 'number') ? String(h).padStart(2, '
 function metricsHtml(m, label) {
   if (!m || typeof m !== 'object') return '';
   const rows = Object.entries(m).filter(([, v]) => typeof v === 'number')
-    .map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, ' '))}</td><td>${num(v, 2)}</td></tr>`).join('');
-  return rows ? `<h3>${label || 'Model accuracy in this region (test period)'}</h3><table class="m">${rows}</table>` : '';
+    .map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, ' '))}</td><td>${num(/_kw$/.test(k) ? S(v) : v, 2)}</td></tr>`).join('');
+  return rows ? `<h3>${label || 'Model accuracy in this region (test period)'}</h3><table class="m">${rows}</table>` +
+    `<div class="sub">kW errors are scaled to your ${SIZE} kW system (the error is the same share of capacity at any size).</div>` : '';
 }
 
 async function loadDetail(name) {
@@ -727,7 +759,7 @@ async function loadDetail(name) {
   try { d = await getJson('/api/detail?region=' + encodeURIComponent(name) + '&t=' + encodeURIComponent(current)); }
   catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load ${esc(name)}: ${esc(e.message)}</div>`; return; }
   if (id !== detailId) return;
-  renderPanel(d, esc(name), 'Local day, hourly power of the rooftop system');
+  renderPanel(d, esc(name), `Local day, hourly power of your ${SIZE} kW rooftop system`);
 }
 
 // ---------- any point in New Zealand ----------
@@ -739,8 +771,8 @@ async function loadPoint() {
   try { d = await getJson(`/api/point?lat=${p.lat}&lon=${p.lon}&t=` + encodeURIComponent(current)); }
   catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load this point: ${esc(e.message)}</div>`; return; }
   if (id !== detailId) return;
-  const gen = d.generating ? `<b style="color:var(--good)">Generating: ${num(d.predicted_kw_next)} kW expected next hour</b>`
-                           : `<b>Not generating: ${num(d.predicted_kw_next)} kW expected next hour</b>`;
+  const gen = d.generating ? `<b style="color:var(--good)">Your ${SIZE} kW panels: ${num(S(d.predicted_kw_next), kwd())} kW expected next hour</b>`
+                           : `<b>Not generating: ${num(S(d.predicted_kw_next), kwd())} kW expected next hour</b>`;
   pin.setTooltipContent(`<b>${num(d.lat, 2)}, ${num(d.lon, 2)}</b><br>${gen}`);
   renderPanel(d, `Point ${num(d.lat, 2)}, ${num(d.lon, 2)}`,
     `${esc(d.local_time)} NZ &middot; ${gen}<br>Cloud ${num(d.cloud_now_pct, 0)}% &middot; ${num(d.temp_c)} &deg;C &middot; wind ${num(d.wind_kmh, 0)} km/h &middot; sunlight now ${num(d.ghi_now_wm2, 0)} W/m&sup2;<br>` +
@@ -757,15 +789,30 @@ function selectPoint(lat, lon) {
 }
 map.on('click', e => selectPoint(e.latlng.lat, e.latlng.lng));
 
+let lastPanel = null;
+function yoursHtml(d) {
+  const sum = a => (a || []).reduce((t, v) => t + (typeof v === 'number' ? v : 0), 0);
+  const day = S(sum(d.predicted_kw)), done = (d.actual_kw || []).some(v => typeof v === 'number') ? S(sum(d.actual_kw)) : null;
+  return `<div class="yours"><div class="sub">Your ${SIZE} kW panels, next hour</div>
+    <div class="big">${num(S(d.predicted_kw_next), kwd())} kW <small>&asymp; ${num(S(d.predicted_kw_next), kwd())} kWh over the hour</small></div>
+    <div class="stats" style="margin-top:8px">
+      <div class="stat"><b>${num(day)}</b><span>kWh forecast for this day</span></div>
+      <div class="stat"><b>NZD ${num(day * PRICE, 2)}</b><span>worth at NZD ${num(PRICE, 2)}/kWh</span></div>
+      <div class="stat"><b>${done === null ? '--' : num(done)}</b><span>kWh actual (from weather data)</span></div>
+    </div></div>`;
+}
 function renderPanel(d, titleHtml, subHtml) {
+  lastPanel = [d, titleHtml, subHtml];
   const panel = $('panel');
   const yes = !!d.charge_now;
   const mlabel = d.is_point ? `Model accuracy in the nearest region (${esc(d.nearest_region)}, test period)` : null;
   panel.innerHTML = `
     <h2>${titleHtml}</h2>
     <div class="sub">${subHtml}</div>
+    ${yoursHtml(d)}
     <div class="chartbox"><canvas id="chart"></canvas></div>
-    <h3>EV charging advice for the next hour</h3>
+    <h3>Example use: should a workshop charge its EV now?</h3>
+    <div class="sub" style="margin-bottom:6px">One way to use the forecast. This example is fixed: a workshop with ${REF} kW of panels, a 6 kW load and an 11 kW EV charger.</div>
     <div class="advice ${yes ? 'yes' : 'no'}"><strong>${yes ? 'Charge now' : 'Wait'}</strong><br>${esc(d.reason || '')}</div>
     <h3>Savings today vs charging on arrival</h3>
     <div class="stats">
@@ -786,9 +833,9 @@ function drawChart(d) {
     data: {
       labels,
       datasets: [
-        { type: 'line', label: 'Actual (derived from weather data)', data: d.actual_kw || [], borderColor: '#1f8f4d', backgroundColor: '#1f8f4d', borderWidth: 2.5, pointRadius: 0, tension: 0.25, spanGaps: false, order: 1 },
-        { type: 'line', label: 'Predicted (model)', data: d.predicted_kw || [], borderColor: '#e8890c', backgroundColor: '#e8890c', borderWidth: 2.5, borderDash: [6, 4], pointRadius: 0, tension: 0.25, order: 2 },
-        { type: 'line', label: 'Persistence (same as last hour)', data: d.persistence_kw || [], borderColor: '#6b7684', backgroundColor: '#6b7684', borderWidth: 1.5, borderDash: [2, 3], pointRadius: 0, tension: 0.25, order: 3 },
+        { type: 'line', label: 'Actual (derived from weather data)', data: (d.actual_kw || []).map(S), borderColor: '#1f8f4d', backgroundColor: '#1f8f4d', borderWidth: 2.5, pointRadius: 0, tension: 0.25, spanGaps: false, order: 1 },
+        { type: 'line', label: 'Predicted (model)', data: (d.predicted_kw || []).map(S), borderColor: '#e8890c', backgroundColor: '#e8890c', borderWidth: 2.5, borderDash: [6, 4], pointRadius: 0, tension: 0.25, order: 2 },
+        { type: 'line', label: 'Persistence (same as last hour)', data: (d.persistence_kw || []).map(S), borderColor: '#6b7684', backgroundColor: '#6b7684', borderWidth: 1.5, borderDash: [2, 3], pointRadius: 0, tension: 0.25, order: 3 },
         { type: 'bar', label: 'Cloud cover (%)', data: d.cloud_cover_pct || [], yAxisID: 'y2', backgroundColor: 'rgba(93,107,122,.15)', order: 4 },
       ],
     },
@@ -796,7 +843,7 @@ function drawChart(d) {
       responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 11 } } } },
       scales: {
-        y: { title: { display: true, text: 'kW' }, beginAtZero: true, suggestedMax: 10 },
+        y: { title: { display: true, text: `kW (your ${SIZE} kW system)` }, beginAtZero: true, suggestedMax: SIZE / 5 },
         y2: { position: 'right', min: 0, max: 100, display: false },
         x: { ticks: { maxTicksLimit: 8, font: { size: 11 } } },
       },
@@ -835,7 +882,8 @@ function renderModel() {
   if (!report) { $('mPeriods').textContent = 'Model report not available.'; return; }
   const p = report.periods || {};
   $('mPeriods').innerHTML = Object.entries(p).map(([k, v]) =>
-    `<b>${esc(k)}</b>: ${esc(Array.isArray(v) ? v.join(' to ') : v)}`).join(' &nbsp;|&nbsp; ');
+    `<b>${esc(k)}</b>: ${esc(Array.isArray(v) ? v.join(' to ') : v)}`).join(' &nbsp;|&nbsp; ') +
+    `<br>kW numbers on this tab are for the ${REF} kW reference system. Errors scale with panel size: divide by ${REF / SIZE} for your ${SIZE} kW system (2.2% of capacity at any size).`;
 
   const prev = report.previous;
   const mv = (o) => o ? `${num(o.mae_kw, 2)} kW (${num(o.mae_wm2, 1)} W/m&sup2;)` : '-';
@@ -905,7 +953,7 @@ function addMsg(role, html, cls = '') {
 }
 function chatContext() {
   const when = current === 'live' ? 'Live' : nzString(current) + ' - a replay of a past hour, not now; press Live for the current hour';
-  $('chatCtx').textContent = `Answers use the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).`
+  $('chatCtx').textContent = `Answers use your ${SIZE} kW panels and the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).`
     : selectedPoint ? ` and the clicked point (${selectedPoint.lat.toFixed(2)}, ${selectedPoint.lon.toFixed(2)}).` : '.');
 }
 async function pollChat() {
@@ -935,7 +983,7 @@ async function sendChat(q) {
   chatContext();
   try {
     const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, t: current, region: selected, point: selectedPoint, history: chatHistory.slice(-6) }) });
+      body: JSON.stringify({ question: q, t: current, region: selected, point: selectedPoint, system_kw: SIZE, history: chatHistory.slice(-6) }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
     const tag = body.mode === 'llm' ? 'AI answer from the dashboard data' : body.mode === 'templates' ? 'template answer'
@@ -955,6 +1003,19 @@ $('chatForm').onsubmit = e => { e.preventDefault(); sendChat($('chatInput').valu
 [...$('chatChips').children].forEach(b => b.onclick = () => sendChat(b.textContent));
 pollChat();
 
+// ---------- panel size ----------
+$('sizeSel').value = String(SIZE);
+if ($('sizeSel').value !== String(SIZE)) { SIZE = 5; $('sizeSel').value = '5'; }
+$('sizeSel').onchange = () => {
+  SIZE = +$('sizeSel').value;
+  try { localStorage.setItem('solarcastSize', String(SIZE)); } catch (e) {}
+  drawLegend(); drawRegions(lastRegions); drawGrid(lastGrid); if (lastGrid) renderBrief(lastGrid);
+  if (selectedPoint && !selected) loadPoint();
+  else if (lastPanel && selected) renderPanel(lastPanel[0], lastPanel[1], `Local day, hourly power of your ${SIZE} kW rooftop system`);
+  if ($('modelView').style.display === 'block') renderModel();
+  chatContext();
+};
+
 // ---------- start ----------
 drawLegend();
 loadModel();
@@ -962,6 +1023,8 @@ loadModel();
   try {
     const info = await getJson('/api/times');
     times = info.times || [];
+    if (info.reference_kw) REF = info.reference_kw;
+    if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
     $('slider').max = Math.max(0, times.length - 1);
     const i = times.indexOf(info.default);
     setTime(i >= 0 ? info.default : (times[0] || 'live'));

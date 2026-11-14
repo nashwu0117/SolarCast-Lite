@@ -79,16 +79,34 @@ def template_summary(stats: dict, local_time: str) -> str:
         return "No grid data for this hour."
     if stats["max_kw"] <= 1:
         return (f"For the hour after {local_time} (NZ time) no part of New Zealand is generating solar power "
-                f"(night or heavy cloud). EV charging would come from the grid.")
+                f"(night or heavy cloud); every rooftop system would give about zero.")
     isl = stats.get("island_mean_kw", {})
     b = stats["best_area"]
-    parts = [f"For the hour after {local_time} (NZ time) the sunniest area is around {b['near']}: a 50 kW system there "
-             f"would make about {b['kw']:.1f} kW.",
-             f"Average over New Zealand: {stats['mean_kw']:.1f} kW"
-             + (f" (North Island {isl['North']:.1f} kW, South Island {isl['South']:.1f} kW)." if len(isl) == 2 else "."),
-             f"{stats['share_above_workshop_load_pct']}% of the country makes more than the "
-             f"{config.WORKSHOP_LOAD_KW:.0f} kW workshop load, where a workshop could charge its EV from its own solar."]
+    pct = lambda kw: kw / config.SYSTEM_KW * 100
+    parts = [f"For the hour after {local_time} (NZ time) the sunniest area is around {b['near']}: solar panels there give "
+             f"about {pct(b['kw']):.0f}% of their rated power (a 5 kW home system about {b['kw'] / 10:.1f} kW, a 50 kW "
+             f"business system about {b['kw']:.1f} kW).",
+             f"New Zealand average: {pct(stats['mean_kw']):.0f}% of rated power"
+             + (f" (North Island {pct(isl['North']):.0f}%, South Island {pct(isl['South']):.0f}%)." if len(isl) == 2 else "."),
+             f"Panels are generating in {stats['share_generating_pct']}% of the country."]
     return " ".join(parts)
+
+
+def _percent(stats: dict) -> dict:
+    """Best / mean / per-island output as a percent of rated power: the same for a 5 kW home or a 50 kW business."""
+    if not stats:
+        return {}
+    pct = lambda kw: round(kw / config.SYSTEM_KW * 100)
+    return {"best_area": pct(stats["best_area"]["kw"]), "new_zealand_mean": pct(stats["mean_kw"]),
+            **{f"{k.lower()}_island_mean": pct(v) for k, v in stats.get("island_mean_kw", {}).items()}}
+
+
+def _scaled(stats: dict, size_kw: float) -> dict:
+    """The same numbers for a system of size_kw (output scales linearly with panel size)."""
+    if not stats:
+        return {}
+    f = size_kw / config.SYSTEM_KW
+    return {"best_area_kw": round(stats["best_area"]["kw"] * f, 2), "new_zealand_mean_kw": round(stats["mean_kw"] * f, 2)}
 
 
 class NationalGrid:
@@ -296,6 +314,9 @@ class NationalGrid:
     def facts(self, snap: dict) -> dict:
         return {"nz_local_time": snap["local_time"], "mode": "live" if snap["live"] else "replay of a past hour",
                 "forecast_for": "the hour after this time", "system_kw": config.SYSTEM_KW,
+                "kw_values_are_for": f"a {config.SYSTEM_KW:g} kW reference system; percent_of_rated_power works for any size",
+                "percent_of_rated_power": _percent(snap["stats"]),
+                "home_5kw_system_kw": _scaled(snap["stats"], 5.0),
                 "workshop_load_kw": config.WORKSHOP_LOAD_KW, "grid_cell_size_deg": snap["step"], **snap["stats"]}
 
     def _summarize(self, snap: dict) -> None:

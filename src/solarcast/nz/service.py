@@ -194,6 +194,8 @@ class Service:
 
     def _day_detail(self, f: pd.DataFrame, region: str, t, live: bool, metrics: dict) -> dict:
         """The local day of one location (feature rows indexed by target_time) -> chart lists, EV advice, savings."""
+        nxt = f.loc[t + HOUR] if t + HOUR in f.index else None     # the next hour, shown first in the panel
+        next_kw = None if nxt is None else float(nzmodel.to_kw(nxt["pred_ghi"], nxt["temp_t"]))
         start = f.index - HOUR                                     # the hour each row forecasts: [start, start+1h)
         local = start.tz_convert(config.LOCAL_TZ)
         day = t.tz_convert(config.LOCAL_TZ).date()                 # local day of the NEXT hour is t's local day
@@ -226,7 +228,7 @@ class Service:
         res = {"region": region, "local_date": str(day), "hours": [int(h) for h in local.hour],
                "actual_kw": [_num(v) for v in actual_kw], "predicted_kw": [_num(v) for v in pred_kw],
                "persistence_kw": [_num(v) for v in pers_kw], "cloud_cover_pct": [_num(v, 0) for v in f["cloud_t"]],
-               "totals_estimated": bool(live), **advice,
+               "predicted_kw_next": _num(next_kw), "totals_estimated": bool(live), **advice,
                **{k: round(float(v), 2) for k, v in saved.items()},
                "metrics": metrics}
         return res

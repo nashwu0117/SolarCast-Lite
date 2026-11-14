@@ -55,7 +55,7 @@ def test_national_stats_and_template():
     assert s["island_mean_kw"] == {"North": 10.0, "South": 20.2} and s["share_generating_pct"] == 67
     assert s["areas_best"][0]["around"] == "Christchurch" and "mean_abs_error_kw" not in s
     text = nzgrid.template_summary(s, "2026-01-10 12:00")
-    assert "Christchurch" in text and "North Island 10.0" in text
+    assert "Christchurch" in text and "North Island 20%" in text and "5 kW home" in text
     night = nzgrid.national_stats([dict(c, kw=0.0) for c in cells])
     assert "no part of New Zealand" in nzgrid.template_summary(night, "2026-01-10 23:00")
 

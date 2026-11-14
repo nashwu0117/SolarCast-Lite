@@ -98,6 +98,7 @@ class FakeService:
                   if charge else f"Predicted solar only {nxt['kw']:.1f} kW; waiting for a sunnier hour saves grid power.")
         kwh = sum(x for x in pred[8:18]) * 0.5
         return {"region": region, "hours": hours, "actual_kw": actual, "predicted_kw": pred, "persistence_kw": pers,
+                "predicted_kw_next": nxt["kw"],
                 "cloud_cover_pct": cloud, "charge_now": charge, "reason": reason,
                 "grid_kwh_saved": kwh, "money_saved_nzd": kwh * 0.30, "co2_saved_kg": kwh * 0.10,
                 "assumptions": "price NZD 0.30/kWh, grid 0.10 kg CO2/kWh, EV 40 kWh/day, 11 kW charger, 08:00-18:00 local",

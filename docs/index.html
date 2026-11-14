@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SolarCast NZ</title>
-<meta name="description" content="Next-hour solar power forecasts for all of New Zealand, with a live map, EV charging advice and a local AI assistant. Veritas AI Hackathon 2026, AI + Climate.">
+<meta name="description" content="How much power will your solar panels give next hour? Machine-learning forecasts for any spot and any panel size in New Zealand, with a live map, a worked EV-charging example and a local AI assistant. Veritas AI Hackathon 2026, AI + Climate.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -96,10 +96,10 @@
 <header class="hero"><div class="wrap grid">
   <div>
     <div class="eyebrow">Veritas AI Hackathon 2026 &middot; AI + Climate</div>
-    <h1 lang-en>When can your own <em>sunshine</em> charge your EV?</h1>
-    <h1 lang-zh>你家屋頂的<em>陽光</em>，什麼時候能幫電動車充電？</h1>
-    <p class="lead" lang-en>SolarCast forecasts next-hour solar power for every corner of New Zealand and turns it into one decision for a small business: charge the EV now, or wait for more sun.</p>
-    <p class="lead" lang-zh>SolarCast 預測紐西蘭每個角落下一小時的太陽能發電量，並把它變成小店家每小時的一個決定：現在幫電動車充電，還是等更多陽光？</p>
+    <h1 lang-en>How much power will your <em>panels</em> give next hour?</h1>
+    <h1 lang-zh>你的<em>太陽能板</em>，下一小時能發多少電？</h1>
+    <p class="lead" lang-en>SolarCast forecasts the next hour of solar power for any spot in New Zealand and any panel size, from a 5 kW home to a 50 kW business, so you can run the EV charger, hot water or machines on your own sunshine instead of the grid.</p>
+    <p class="lead" lang-zh>SolarCast 預測紐西蘭任何地點、任何大小的太陽能系統（從家用 5 kW 到商用 50 kW）下一小時能發多少電，讓你把電動車充電、熱水器或機器排在自家陽光最多的時候，而不是向電網買電。</p>
     <div class="cta">
       <a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">
         <span lang-en>Open the live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
@@ -116,7 +116,7 @@
 
 <section><div class="wrap">
   <div class="stats">
-    <div class="stat"><b>1.12 kW</b><span lang-en>average error on 16 unseen months (2.2% of 50 kW, 7.9% of mean daytime output)</span><span lang-zh>16 個月沒看過的資料上的平均誤差（50 kW 的 2.2%，白天平均發電量的 7.9%）</span></div>
+    <div class="stat"><b>1.12 kW</b><span lang-en>average error for a 50 kW system on 16 unseen months: 2.2% of capacity at any size (0.11 kW for a 5 kW home)</span><span lang-zh>50 kW 系統在 16 個月沒看過的資料上的平均誤差：任何大小都是容量的 2.2%（家用 5 kW 約 0.11 kW）</span></div>
     <div class="stat"><b>32.6%</b><span lang-en>lower error than clear-sky persistence, the strongest simple baseline</span><span lang-zh>誤差比最強的簡單基準（晴空 Persistence）低</span></div>
     <div class="stat"><b>137</b><span lang-en>land cells covering all of New Zealand</span><span lang-zh>個陸地格子涵蓋全紐西蘭</span></div>
     <div class="stat"><b>:50</b><span lang-en>every hour the whole country is recomputed, before the next hour starts</span><span lang-zh>每小時 50 分重算全國，趕在下一小時開始前</span></div>
@@ -134,9 +134,9 @@
     <div class="card"><div class="num">2</div><h3 lang-en>Forecast</h3><h3 lang-zh>預測</h3>
       <p lang-en>Two gradient-boosted tree models, one for sunlight and one for cloudiness (the clear-sky index), averaged. Trained 2022-2024, tuned on early 2025.</p>
       <p lang-zh>兩個梯度提升樹模型，一個預測日照、一個預測雲量（晴空指數），再取平均。用 2022–2024 年訓練，2025 年上半年調參。</p></div>
-    <div class="card"><div class="num">3</div><h3 lang-en>Decision</h3><h3 lang-zh>決策</h3>
-      <p lang-en>Predicted power of a 50 kW rooftop system becomes advice: charge the EV when solar covers the workshop and the car, and how much grid power, money and CO2 that saves.</p>
-      <p lang-zh>把 50 kW 屋頂系統的預測發電量變成建議：太陽能夠供應店裡和車子時就充電，並算出省下多少電網用電、錢和 CO2。</p></div>
+    <div class="card"><div class="num">3</div><h3 lang-en>Your panels</h3><h3 lang-zh>你的太陽能板</h3>
+      <p lang-en>Sunlight becomes power for the panel size you choose (3 to 100 kW): next hour in kW, the day in kWh and what it is worth. Worked example: a workshop charges its EV when solar covers the load and the car.</p>
+      <p lang-zh>把日照換算成你選的系統大小（3 到 100 kW）的發電量：下一小時幾 kW、整天幾度電、值多少錢。應用範例：太陽能夠供應店裡和車子時，加工店就幫電動車充電。</p></div>
   </div>
 </div></section>
 
@@ -157,7 +157,7 @@
 </div></section>
 
 <section id="value"><div class="wrap">
-  <h2><span lang-en>Better forecast, better decision</span><span lang-zh>預測更準，決策更好</span></h2>
+  <h2><span lang-en>Worked example: better forecast, better decision</span><span lang-zh>應用範例：預測更準，決策更好</span></h2>
   <p class="sub" lang-en>The same charging rule, driven by different forecasts on 6,818 workshop-days of the test period, settled with the actual sunshine. Grid power the EV causes per day (lower is better).</p>
   <p class="sub" lang-zh>同一套充電規則，在測試期 6,818 個「加工店日」搭配不同預測，再用實際日照結算。電動車每天造成的電網用電（越少越好）。</p>
   <table>

@@ -2,8 +2,10 @@
 
 **English** | [繁體中文](README.zh-TW.md)
 
-Next-hour solar power forecasting for New Zealand, with an interactive map dashboard and a smart EV-charging
-decision. Veritas AI International High School Hackathon 2026, **AI + Climate** track.
+How much power will your solar panels give in the next hour, anywhere in New Zealand? SolarCast NZ forecasts it with
+machine learning and shows it on an interactive map for any panel size (a 5 kW home or a 50 kW business), with smart EV
+charging as a worked example of using the forecast. Veritas AI International High School Hackathon 2026,
+**AI + Climate** track.
 
 **Website:** [https://nashwu0117.github.io/SolarCast-Lite/](https://nashwu0117.github.io/SolarCast-Lite/) &middot; **License:** MIT (open source)
 
@@ -18,29 +20,38 @@ Cloudflare tunnel) to the live dashboard; the AI chat is ready a few minutes lat
 | Train | Fetch data, train and evaluate the model, back it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) |
 
 ## The user and the decision
-A small New Zealand workshop has a 50 kW rooftop solar system and an electric vehicle that needs about 40 kWh every
-working day. Every hour the owner asks: *charge the EV now, or wait for more sun?* Charging when the panels produce
-a surplus uses free, clean power; charging at the wrong time buys electricity from the grid.
+Anyone with rooftop solar in New Zealand, from a family with 5 kW of panels to a school or business with 50 kW, gets the
+most from their panels by running big loads (an EV charger, a hot-water cylinder, a heat pump, a dishwasher, a
+workshop machine) in the hours when the sun is actually there. Clouds make that hard to guess. SolarCast answers one
+question for any spot in the country: **how many kW will my panels give next hour?**
 
-**One-sentence pitch:** *SolarCast tells a New Zealand business when its own sunshine can charge its EV.*
+**One-sentence pitch:** *SolarCast tells anyone in New Zealand how much power their solar panels will give next hour,
+so they use their own sunshine instead of buying from the grid.*
+
+**Worked example (measured):** a workshop with 50 kW of panels and an EV that needs about 40 kWh every working day.
+Letting the forecast decide when to charge cuts the grid power the EV uses (see "Does the forecast improve the
+decision?" below).
 
 ## The dashboard
-- **Map of New Zealand** with 14 regions, coloured by the predicted solar power for the next hour.
+- **Your panel size** (3, 5, 10, 50 or 100 kW): every kW and kWh on the page is shown for your system. Output scales
+  linearly with panel size; the model forecasts sunlight, and power is derived for the chosen size.
+- **Map of New Zealand** with 14 regions, coloured by the power your panels would give next hour.
 - **Nationwide grid:** the same model runs for 137 land cells (0.5 degrees, about 50 km) covering the whole country, shown
   as a heat map. It is computed before the page opens and recomputed every hour at :50, so the next hour is ready before
   it starts; Live mode refreshes by itself.
 - **AI national briefing** above the map: two or three sentences written by the local AI model from the grid numbers
-  only (where it is sunniest, North vs South Island, what it means for EV charging), with a fixed template until the
+  only (where it is sunniest, North vs South Island, what a 5 kW home system would give), with a fixed template until the
   model is ready.
 - **Hover** a region: current weather and whether (and how much) solar power it is generating.
 - **Click anywhere in New Zealand** (not only the 14 circles): a blue pin downloads that exact spot's weather from
   Open-Meteo and runs the same model (it borrows the nearest region's climate id; its accuracy is shown for that region).
-- **Click** a region: the day's actual vs predicted power, the EV advice for the next hour with its reason,
-  and the day's savings (kWh, NZD, kg CO2).
+- **Click** a region: your panels' power next hour, the day's forecast in kWh and what it is worth at the grid price,
+  the day's actual vs predicted power, and the worked example (EV advice for the next hour with its reason and the day's
+  savings in kWh, NZD, kg CO2).
 - **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
-- **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese, for example "should the
-  Christchurch workshop charge its EV now?". It runs an open model (Qwen3 8B on Colab's T4 GPU, Qwen3 1.7B on a CPU)
+- **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese for your panel size, for example "how much
+  will my panels make next hour in Christchurch?". It runs an open model (Qwen3 8B on Colab's T4 GPU, Qwen3 1.7B on a CPU)
   **locally on the notebook's machine**: no internet access, no tools, no API keys. The server looks up the numbers with
   the same code as the map and the model only explains them; a keyword filter, the Llama Guard 3 safety classifier and
   the system rules refuse off-topic or harmful requests; questions are rate-limited. The forecast itself is our own
@@ -49,7 +60,7 @@ a surplus uses free, clean power; charging at the wrong time buys electricity fr
 ## How it works
 - **Data:** Open-Meteo hourly weather for 14 New Zealand centres, 2022 to November 2026 (CC BY 4.0).
 - **Task:** at the end of hour *t*, predict sunlight (GHI) for hour *t+1*, then convert it to the output of a
-  50 kW system. Inputs only use what is known at hour *t*, plus the sun's position (an automated test checks that
+  50 kW reference system (any other size is a linear rescale; errors are also reported as % of capacity). Inputs only use what is known at hour *t*, plus the sun's position (an automated test checks that
   no future data leaks in).
 - **Baselines:** persistence (next hour = this hour) and clear-sky persistence (keep this hour's cloudiness).
 - **Model (v4):** gradient-boosted trees (scikit-learn), one model for all regions, settings chosen on validation only.

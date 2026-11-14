@@ -404,17 +404,17 @@ def colab_url(name: str) -> str:
 
 MD = {
  "judges_title": {
-  "en": """# SolarCast NZ: when should a small workshop charge its EV?
+  "en": """# SolarCast NZ: how much power will your solar panels give next hour?
 
 **Veritas AI High School Hackathon 2026, AI + Climate.** {badge}
 
-**The story.** A small workshop in New Zealand has a **50 kW rooftop solar system** and an **electric vehicle** that needs
-about 40 kWh a day. Solar power changes hour by hour with the clouds. If the EV charges while the sun is strong, the
-workshop uses its own clean, free power; if it charges when the sun is weak, it pulls power from the grid (it costs money
-and carries CO2). So the question is: **how much solar power will we have in the next hour, and should we charge now?**
+**The story.** Anyone in New Zealand with rooftop solar, from a family with **5 kW** of panels to a business with **50 kW**,
+saves money and CO2 by running big loads (an EV charger, hot water, a heat pump, machines) when the sun is actually there.
+Solar power changes hour by hour with the clouds, so the question is: **how much power will my panels give in the next hour?**
 
 **What SolarCast NZ does.** A machine-learning model (gradient boosting, scikit-learn) forecasts the **next hour** of solar
-power for 14 New Zealand regions, and the dashboard turns that forecast into simple EV charging advice.
+power for any spot in New Zealand, and the dashboard shows it for the panel size you pick (3 to 100 kW). As a worked example,
+it turns the forecast into EV charging advice for a workshop with 50 kW of panels and an EV that needs about 40 kWh a day.
 
 **The model.** Version **{ver}**: a forecast of the next hour that also reads the weather service's own day-ahead forecast, with two
 models (raw sunlight and "how cloudy") averaged. How we decided to use it is in section 3.
@@ -422,16 +422,17 @@ models (raw sunlight and "how cloudy") averaged. How we decided to use it is in 
 **How to run it:** `Runtime > Run all` (the notebook asks for a free **T4 GPU**; if Colab has none, accept the CPU runtime and
 everything except the speed of the AI chat still works). The big dashboard link appears in section 5 after about 2-3 minutes; the
 **SolarCast AI** chat on the dashboard is ready a few minutes later (section 6 waits for it and tests it).""",
-  "zh-TW": """# SolarCast NZ：小型工坊什麼時候該幫電動車充電？
+  "zh-TW": """# SolarCast NZ：你的太陽能板下一小時能發多少電？
 
 **Veritas AI 高中黑客松 2026，主題 AI + 氣候。** {badge}
 
-**情境故事。** 紐西蘭有一間小型工坊，屋頂裝了 **50 kW 的太陽能系統**，還有一輛每天大約需要 40 kWh 的**電動車**。
-太陽能發電量會隨著雲層一小時一小時地變化。如果電動車在太陽很大的時候充電，工坊就能用自己乾淨又免費的電；
-如果在太陽很弱時充電，就得向電網買電（要花錢，也會產生 CO2）。所以問題是：**下一個小時會有多少太陽能？現在該不該充電？**
+**情境故事。** 紐西蘭任何裝了屋頂太陽能的人，從裝 **5 kW** 的家庭到裝 **50 kW** 的店家，只要在太陽真的出來時使用大電器
+（電動車充電、熱水器、熱泵、機器），就能省錢又減碳。但太陽能發電量會隨著雲層一小時一小時地變化，所以問題是：
+**我的太陽能板下一個小時能發多少電？**
 
-**SolarCast NZ 做了什麼。** 我們用機器學習模型（梯度提升，scikit-learn）預測紐西蘭 14 個區域**下一小時**的太陽能發電量，
-再由儀表板把預測轉成簡單的電動車充電建議。
+**SolarCast NZ 做了什麼。** 我們用機器學習模型（梯度提升，scikit-learn）預測紐西蘭任何地點**下一小時**的太陽能發電量，
+儀表板再依你選的系統大小（3 到 100 kW）顯示。應用範例：替一間屋頂有 50 kW 太陽能板、電動車每天要充約 40 kWh 的工坊，
+把預測轉成電動車充電建議。
 
 **模型。** 版本 **{ver}**：預測下一小時時，也參考氣象服務前一天發布的預報，並把兩個模型（原始日射量、「雲量多寡」）取平均。
 我們為什麼採用它，請看第 3 節。
@@ -524,15 +525,15 @@ AI tool: Claude Code (Anthropic) helped write and test the code.""",
 AI 工具：Claude Code（Anthropic）協助撰寫與測試程式。"""},
  "final": {
   "en": """## 5. FINAL STEP: start the dashboard
-Run the cell below. It prints a **big link** to the SolarCast NZ dashboard (map of New Zealand: hover a region for weather and
-generation, click it for the day chart, EV advice and savings; the Model tab shows the report above; use the Replay slider
+Run the cell below. It prints a **big link** to the SolarCast NZ dashboard (map of New Zealand: pick your panel size at the top, hover a region
+for weather and generation, click it for your panels' next hour, the day chart and the EV example; the Model tab shows the report above; use the Replay slider
 or the Live button; **Ask SolarCast AI** at the bottom right opens the chat). Before the link appears, the cell runs the model
 for about 120 grid cells covering **all of New Zealand** (the coloured squares), and it keeps them fresh by recomputing the live
 grid every hour at :50; the banner above the map is a national briefing written by the AI from those numbers.
 Keep this notebook running while you use the link.""",
   "zh-TW": """## 5. 最後一步：啟動儀表板
-執行下面的儲存格，會印出一個**很大的連結**，連到 SolarCast NZ 儀表板（紐西蘭地圖：滑鼠移到區域上看天氣與發電量，
-點擊區域看當天圖表、電動車建議與節省金額；Model 分頁有上面的模型報告；可以用 Replay 滑桿或 Live 按鈕；
+執行下面的儲存格，會印出一個**很大的連結**，連到 SolarCast NZ 儀表板（紐西蘭地圖：先在上方選你的系統大小，滑鼠移到區域上看天氣與發電量，
+點擊區域看你的太陽能板下一小時發電量、當天圖表和電動車範例；Model 分頁有上面的模型報告；可以用 Replay 滑桿或 Live 按鈕；
 右下角的 **Ask SolarCast AI** 可以打開聊天）。連結出現前，這個儲存格會先幫涵蓋**全紐西蘭**的約 120 個格子跑模型
 （地圖上的彩色方格），之後每小時 :50 分重算一次即時格子；地圖上方的橫幅是 AI 根據這些數字寫的全國摘要。
 使用連結的時候，請讓這個筆記本保持在執行狀態。"""},

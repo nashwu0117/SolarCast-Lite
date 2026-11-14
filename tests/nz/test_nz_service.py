@@ -41,6 +41,7 @@ def test_detail_replay(service):
     n = len(d["hours"])
     assert n >= 23 and all(len(d[k]) == n for k in ("actual_kw", "predicted_kw", "persistence_kw", "cloud_cover_pct"))
     assert isinstance(d["charge_now"], bool) and isinstance(d["reason"], str) and d["reason"]
+    assert d["predicted_kw_next"] == service.snapshot(service.default_time())[[r["name"] for r in service.snapshot(service.default_time())].index("Auckland")]["predicted_kw_next"]
     assert {"grid_kwh_saved", "money_saved_nzd", "co2_saved_kg", "metrics", "grid_kwh_saved_vs_fixed"} <= set(d)
     assert d["money_saved_vs_fixed_nzd"] == pytest.approx(d["grid_kwh_saved_vs_fixed"] * config.GRID_PRICE_NZD, abs=0.01)
     assert d["money_saved_nzd"] == pytest.approx(d["grid_kwh_saved"] * config.GRID_PRICE_NZD, abs=0.01)
