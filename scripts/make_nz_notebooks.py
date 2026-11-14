@@ -55,7 +55,7 @@ CODE_COMMENTS = {
             "zh-TW": "把連結用大字顯示。如果沒有通道，就會顯示本機網址。"},
     "llm": {"en": "Start the local AI model in the background (T4 GPU: Qwen3 14B; smaller GPU: 8B; no GPU: the small Qwen3 1.7B). The next cells keep running.",
             "zh-TW": "在背景啟動本機 AI 模型（T4 GPU：Qwen3 14B；較小的 GPU：8B；沒有 GPU：小型的 Qwen3 1.7B）。後面的儲存格會繼續執行，不用等。"},
-    "gpu": {"en": "Which hardware did Colab give us?", "zh-TW": "Colab 分配給我們的是什麼硬體？"},
+    "gpu": {"en": "Which hardware did we get?", "zh-TW": "我們分配到的是什麼硬體？"},
     "chat": {"en": "The chat on the dashboard uses the same data as the map; it has no internet access and no tools.",
              "zh-TW": "儀表板上的聊天使用和地圖一樣的資料；它不能上網，也沒有任何工具。"},
     "wait": {"en": "Wait (up to about 10 minutes) for the AI model, then ask it two test questions. The dashboard link above already works.",
@@ -110,7 +110,8 @@ JUDGES_SETUP = f'''
 import importlib.metadata as md
 import json, os, subprocess, sys
 
-REPO = "/content/SolarCast-Lite"
+# Colab works in /content, Kaggle in /kaggle/working.
+REPO = "/kaggle/working/SolarCast-Lite" if os.path.isdir("/kaggle/working") else "/content/SolarCast-Lite"
 # @@clone@@
 if not os.path.isdir(f"{{REPO}}/src"):
     subprocess.run(["git", "clone", "--depth", "1", "{REPO_URL}.git", REPO], check=True)
@@ -120,7 +121,8 @@ want = json.load(open(f"{{REPO}}/models/nz_model.json"))["sklearn_version"]
 need = ["flask"] + ([] if md.version("scikit-learn") == want else [f"scikit-learn=={{want}}"])
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", *need], check=True)
 if "sklearn" in sys.modules and sys.modules["sklearn"].__version__ != want:
-    raise SystemExit(f"scikit-learn {{want}} was just installed: use Runtime > Restart session, then Run all again.")
+    raise SystemExit(f"scikit-learn {{want}} was just installed: restart the session (Colab: Runtime > Restart session; "
+                     "Kaggle: Run > Restart & clear cell outputs), then run all again.")
 
 # @@path@@
 sys.path.insert(0, f"{{REPO}}/src")
@@ -397,6 +399,48 @@ else:
 # Markdown (per language)
 # ---------------------------------------------------------------------------------------------------------------
 BADGE = "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]({url})"
+KAGGLE_BADGE = "[![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)]({url})"
+
+
+def kaggle_url(name: str) -> str:
+    return f"https://kaggle.com/kernels/welcome?src={REPO_URL}/blob/main/notebooks/{name}"
+
+
+# The Kaggle judges notebook is the same code; only the "how to run" text differs.
+KAGGLE_TEXT = {
+    "en": [("""**How to run it:** `Runtime > Run all` (the notebook asks for a free **T4 GPU**; if Colab has none, accept the CPU runtime and
+everything except the speed of the AI chat still works).""",
+            """**How to run it on Kaggle:** in the right-hand panel open **Settings** and set **Accelerator: GPU T4 x2** and
+**Internet: On** (Internet needs a phone-verified Kaggle account), then **Run All**. Without a GPU everything except the speed
+of the AI chat still works."""),
+           ("This notebook asks Colab for a **T4 GPU** (Runtime > Change runtime type shows it).",
+            "On Kaggle choose **Settings > Accelerator > GPU T4 x2** (the chat model uses one T4)."),
+           ("**on this Colab machine only**", "**on this Kaggle machine only**")],
+    "zh-TW": [("""**怎麼執行：** 選 `執行階段 > 全部執行`（這個 notebook 會要求免費的 **T4 GPU**；如果 Colab 沒有 GPU，就接受 CPU 執行階段，
+除了 AI 聊天比較慢之外，其他功能都正常）。""",
+               """**在 Kaggle 上怎麼執行：** 在右側面板打開 **Settings**，把 **Accelerator 設成 GPU T4 x2**、**Internet 設成 On**
+（開網路需要先在 Kaggle 驗證手機號碼），然後按 **Run All**。沒有 GPU 時，除了 AI 聊天比較慢之外，其他功能都正常。"""),
+              ("這個 notebook 會向 Colab 要求 **T4 GPU**（可以在「執行階段 > 變更執行階段類型」看到）。",
+               "在 Kaggle 上請選 **Settings > Accelerator > GPU T4 x2**（聊天模型會用其中一顆 T4）。"),
+              ("**只在這台 Colab 機器上執行**", "**只在這台 Kaggle 機器上執行**")],
+}
+
+
+def kaggle(notebook: dict, lang: str) -> dict:
+    """The Colab judges notebook turned into the Kaggle one: Kaggle badge, run instructions, Kaggle metadata."""
+    nbk = json.loads(json.dumps(notebook))
+    for cell in nbk["cells"]:
+        if cell["cell_type"] != "markdown":
+            continue
+        src = "".join(cell["source"])
+        for a, b in KAGGLE_TEXT[lang]:
+            src = src.replace(a, b)
+        cell["source"] = src.splitlines(keepends=True)
+    nbk["metadata"].pop("colab", None)
+    nbk["metadata"].pop("accelerator", None)
+    nbk["metadata"]["kaggle"] = {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True, "isInternetEnabled": True,
+                                 "language": "python", "sourceType": "notebook", "dataSources": []}
+    return nbk
 
 
 def colab_url(name: str) -> str:
@@ -624,7 +668,13 @@ def build(lang: str) -> dict:
         md("t_backup", lang), C(TRAIN_BACKUP),
         md("credits", lang),
     ]
-    return {f"SolarCast_NZ_Judges{suffix}.ipynb": nb(judges, lang, gpu=True),f"train{suffix}.ipynb": nb(train, lang)}
+    colab_nb = nb(judges, lang, gpu=True)
+    k = nb([("markdown", "".join(md("judges_title", lang, badge=KAGGLE_BADGE.format(
+                url=kaggle_url(f"SolarCast_NZ_Judges_Kaggle{suffix}.ipynb")), ver=VER)[1]))] + judges[1:], lang, gpu=True)
+    for cell, ref in zip(k["cells"][1:], colab_nb["cells"][1:]):
+        cell["id"] = ref["id"]
+    return {f"SolarCast_NZ_Judges{suffix}.ipynb": colab_nb, f"SolarCast_NZ_Judges_Kaggle{suffix}.ipynb": kaggle(k, lang),
+            f"train{suffix}.ipynb": nb(train, lang)}
 
 
 if __name__ == "__main__":

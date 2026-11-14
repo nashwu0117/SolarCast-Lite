@@ -8,13 +8,15 @@ Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 
 **網站：** [https://nashwu0117.github.io/SolarCast-Lite/](https://nashwu0117.github.io/SolarCast-Lite/) &middot; **授權：** MIT（開源）
 
-**評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb)
+**評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) 或 [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb)
+（Kaggle：在 **Settings** 選 **Accelerator: GPU T4 x2**、**Internet: On**（開網路需要先驗證手機號碼），再按 **Run All**。Colab 的 GPU 額度用完時可以改用 Kaggle。）
 Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI 聊天用）。大約三分鐘內，notebook 會從本 repo 載入
 我們訓練好的模型、顯示它的準確度，並印出儀表板的公開連結（免費的 Cloudflare tunnel）；AI 聊天再過幾分鐘就會準備好。
 
 | Notebook | 用途 | English | 繁體中文 |
 |---|---|---|---|
 | 評審用 | 載入訓練好的模型、顯示結果、開啟儀表板 | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) |
+| 評審用（Kaggle） | 同一份 notebook 的 Kaggle 版（GPU T4 x2、開網路） | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb) |
 | 訓練用 | 抓資料、訓練並評估模型、把模型備份到 GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) |
 
 ## 使用者與決策
