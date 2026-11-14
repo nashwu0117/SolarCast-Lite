@@ -361,8 +361,9 @@ class Assistant:
                                             "clear_sky_persistence_baseline": acc(overall.get("clear_sky"))},
             "errors_are_for": "mae_kw values are scaled to the user's system size; error_pct_of_capacity is the same "
                               "for any size",
-            "accuracy_definition": "100% minus the mean absolute error as a percentage of the system's capacity; the "
-                                   "same error is 7.9% of the mean daytime output. v4 is 32.6% better than "
+            "accuracy_definition": "100% minus the mean absolute error as a percentage of the system's capacity (it is "
+                                   "NOT the share of hours predicted correctly); the same error is 7.9% of the mean "
+                                   "daytime output. v4 is 32.6% better than "
                                    "clear-sky persistence and 40.3% better than Open-Meteo's day-ahead forecast alone",
             "ev_decision_value_test_period": "EV example (the 50 kW workshop): the same charging rule driven by the v4 "
                                              "forecast causes 6.96 kWh/day of "

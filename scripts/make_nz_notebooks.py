@@ -53,8 +53,8 @@ CODE_COMMENTS = {
               "zh-TW": "啟動儀表板（Flask），並開啟免費的 Cloudflare 通道，讓任何人都能連進來。"},
     "big": {"en": "Show the link big. If there is no tunnel, the local URL is shown instead.",
             "zh-TW": "把連結用大字顯示。如果沒有通道，就會顯示本機網址。"},
-    "llm": {"en": "Start the local AI model in the background (GPU: Qwen3 8B; no GPU: the small Qwen3 1.7B). The next cells keep running.",
-            "zh-TW": "在背景啟動本機 AI 模型（有 GPU：Qwen3 8B；沒有 GPU：小型的 Qwen3 1.7B）。後面的儲存格會繼續執行，不用等。"},
+    "llm": {"en": "Start the local AI model in the background (T4 GPU: Qwen3 14B; smaller GPU: 8B; no GPU: the small Qwen3 1.7B). The next cells keep running.",
+            "zh-TW": "在背景啟動本機 AI 模型（T4 GPU：Qwen3 14B；較小的 GPU：8B；沒有 GPU：小型的 Qwen3 1.7B）。後面的儲存格會繼續執行，不用等。"},
     "gpu": {"en": "Which hardware did Colab give us?", "zh-TW": "Colab 分配給我們的是什麼硬體？"},
     "chat": {"en": "The chat on the dashboard uses the same data as the map; it has no internet access and no tools.",
              "zh-TW": "儀表板上的聊天使用和地圖一樣的資料；它不能上網，也沒有任何工具。"},
@@ -446,12 +446,12 @@ everything except the speed of the AI chat still works). The big dashboard link 
  "llm": {
   "en": """### 1b. Start the SolarCast AI chat model (background)
 This notebook asks Colab for a **T4 GPU** (Runtime > Change runtime type shows it). The cell below starts a local, open language
-model (**Qwen3 8B** via Ollama, about 5 GB) in the background while the rest of the notebook runs. Without a GPU it uses the small
+model (**Qwen3 14B** via Ollama, about 9 GB; **8B** on a GPU under 14 GB) in the background while the rest of the notebook runs. Without a GPU it uses the small
 **Qwen3 1.7B** on the CPU, and if that also fails the chat answers with fixed templates, so nothing else breaks.
 The model runs **on this Colab machine only**: it has no internet access and no tools, and it only sees our dashboard data.""",
   "zh-TW": """### 1b. 在背景啟動 SolarCast AI 聊天模型
 這個 notebook 會向 Colab 要求 **T4 GPU**（可以在「執行階段 > 變更執行階段類型」看到）。下面的儲存格會在背景啟動一個本機的開源語言模型
-（透過 Ollama 執行 **Qwen3 8B**，約 5 GB），同時 notebook 其他部分照常執行。沒有 GPU 時會在 CPU 上改用小型的 **Qwen3 1.7B**；
+（透過 Ollama 執行 **Qwen3 14B**，約 9 GB；GPU 小於 14 GB 時改用 **8B**），同時 notebook 其他部分照常執行。沒有 GPU 時會在 CPU 上改用小型的 **Qwen3 1.7B**；
 如果連這個也失敗，聊天會改用固定範本回答，其他功能完全不受影響。
 模型**只在這台 Colab 機器上執行**：不能上網、沒有任何工具，而且只看得到我們儀表板的資料。"""},
  "chat_try": {

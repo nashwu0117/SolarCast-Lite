@@ -1,0 +1,236 @@
+{
+  "qwen3:8b": {
+    "setup_seconds": 204,
+    "gpu_memory_mb": 7641,
+    "passed": 12,
+    "total": 12,
+    "median_answer_s": 4.5,
+    "answers": [
+      {
+        "round": 1,
+        "q": "I have 5 kW of panels in Christchurch. How much power will they give next hour, and how much today?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 81.0,
+        "answer": "Your 5 kW solar system in Christchurch will generate approximately 3.36 kW next hour. Today, your system is expected to produce 27.4 kWh of power.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "我在奧克蘭有 10 kW 的太陽能板，下一小時能發多少電？今天的發電大概值多少錢？",
+        "size_kw": 10,
+        "mode": "llm",
+        "seconds": 5.0,
+        "answer": "根據您在奧克蘭的 10 kW 太陽能板，下一小時預計發電 6.72 kW。今天預計發電約 55.2 kWh，按電網價格 NZD 0.3 計算，價值約 NZD 16.56。",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Which region will give the most solar power next hour?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 2.9,
+        "answer": "In the replayed past hour, Gisborne will give the most solar power next hour with a predicted 3.54 kW.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Should the Christchurch workshop charge its EV now?",
+        "size_kw": 50,
+        "mode": "llm",
+        "seconds": 4.6,
+        "answer": "Yes, the Christchurch workshop should charge its EV now. The forecast predicts 33.6 kW of solar power next hour, which is enough to charge the EV at 11.0 kW while using the surplus solar energy. This helps avoid grid usage and saves money.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "How accurate is the forecasting model?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 4.1,
+        "answer": "The forecasting model (v4) has an accuracy of 97.76% during the test period. This means it correctly predicts solar power output 97.76% of the time. The model is 32.6% better than the clear-sky persistence baseline and 40.3% better than the Open-Meteo day-ahead forecast alone. The accuracy is calculated as 100% minus the mean absolute error as a percentage of the system's capacity.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Is it sunny in Wellington right now?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 3.0,
+        "answer": "The dashboard is replaying a past hour, so \"now\" is not available. The last recorded data for Wellington shows 99% cloud cover at 12:00, indicating it was very cloudy. Press the Live button to see the current hour's data.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "I have 5 kW of panels in Christchurch. How much power will they give next hour, and how much today?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 2.4,
+        "answer": "Your 5 kW solar system in Christchurch will generate approximately 3.36 kW next hour. Today, your system is expected to produce 27.4 kWh of power.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "我在奧克蘭有 10 kW 的太陽能板，下一小時能發多少電？今天的發電大概值多少錢？",
+        "size_kw": 10,
+        "mode": "llm",
+        "seconds": 4.5,
+        "answer": "根據奧克蘭地區的預測，您下一小時的太陽能板發電量約為 6.72 kW。今天整日的預測發電量為 55.2 kWh，以電網價格 NZD 0.3 計算，價值約 NZD 16.56。请注意，這些數據是基於回放模式的過去一小時數據，如需查看當前小時的數據，請按「Live」按鈕。",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Which region will give the most solar power next hour?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 2.9,
+        "answer": "In the replayed data, Gisborne will give the most solar power next hour with a predicted 3.54 kW.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Should the Christchurch workshop charge its EV now?",
+        "size_kw": 50,
+        "mode": "llm",
+        "seconds": 4.9,
+        "answer": "Yes, the Christchurch workshop should charge its EV now. The forecast predicts 33.6 kW of solar power next hour, which is enough to charge the EV at 11.0 kW while using the surplus solar energy. This helps avoid grid usage and saves money.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "How accurate is the forecasting model?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 4.5,
+        "answer": "The forecasting model (v4) has an accuracy of 97.76% during the test period. This means it correctly predicts solar power output 97.76% of the time. The model is 32.6% better than the clear-sky persistence baseline and 40.3% better than the Open-Meteo day-ahead forecast alone. The accuracy is calculated as 100% minus the mean absolute error as a percentage of the system's capacity.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Is it sunny in Wellington right now?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 3.4,
+        "answer": "The dashboard is replaying a past hour, so \"now\" is not available. The last recorded data for Wellington shows 99% cloud cover at 12:00, indicating it was very cloudy. To see current conditions, press the Live button to view the current hour.",
+        "failed": []
+      }
+    ]
+  },
+  "qwen3:14b": {
+    "setup_seconds": 159,
+    "gpu_memory_mb": 11749,
+    "passed": 12,
+    "total": 12,
+    "median_answer_s": 10.0,
+    "answers": [
+      {
+        "round": 1,
+        "q": "I have 5 kW of panels in Christchurch. How much power will they give next hour, and how much today?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 83.4,
+        "answer": "Your 5 kW solar system in Christchurch will generate **3.36 kW** of power in the next hour. Today, it is predicted to generate **27.4 kWh** of power.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "我在奧克蘭有 10 kW 的太陽能板，下一小時能發多少電？今天的發電大概值多少錢？",
+        "size_kw": 10,
+        "mode": "llm",
+        "seconds": 18.6,
+        "answer": "根據預測，你下一小時的發電量為 6.72 kW。今天一天的預測發電量為 55.2 kWh，按目前電網價格 0.3 新西蘭元每 kWh 計算，價值約 16.56 新西蘭元。",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Which region will give the most solar power next hour?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 5.6,
+        "answer": "Gisborne will give the most solar power next hour, with a predicted output of 3.54 kW.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Should the Christchurch workshop charge its EV now?",
+        "size_kw": 50,
+        "mode": "llm",
+        "seconds": 9.9,
+        "answer": "Yes, the Christchurch workshop should charge its EV now. The forecast shows 33.6 kW of solar power, which is enough to cover the 11 kW EV charger, allowing surplus solar energy to be used for charging. This avoids using grid electricity and saves money.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "How accurate is the forecasting model?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 11.9,
+        "answer": "The forecasting model (v4) has an accuracy of **97.76%** for daytime conditions, based on test period results. It outperforms baselines, being **32.6% better** than the clear-sky persistence model and **40.3% better** than the Open-Meteo day-ahead forecast alone. The model's mean absolute error (MAE) is **0.112 kW** for a 5 kW system, which is **2.24%** of the system's capacity. This accuracy helps reduce grid electricity use for EV charging, as shown in the 50 kW workshop example.",
+        "failed": []
+      },
+      {
+        "round": 1,
+        "q": "Is it sunny in Wellington right now?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 10.2,
+        "answer": "The dashboard is replaying a past hour, not showing current conditions. For the shown time of 2026-02-07 12:00 in Wellington, the cloud cover was 99%, meaning it was very cloudy. If you want current conditions, press the Live button on the dashboard.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "I have 5 kW of panels in Christchurch. How much power will they give next hour, and how much today?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 8.7,
+        "answer": "Your 5 kW solar system in Christchurch will generate **3.36 kW** of power in the next hour. \n\nToday, your system is predicted to generate **27.4 kWh** of power. At the current grid price of **0.3 NZD per kWh**, this would save you **8.22 NZD** if you used all the generated power instead of buying from the grid.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "我在奧克蘭有 10 kW 的太陽能板，下一小時能發多少電？今天的發電大概值多少錢？",
+        "size_kw": 10,
+        "mode": "llm",
+        "seconds": 10.1,
+        "answer": "根據預測，你下一小時的發電量為 6.72 kW。今天一天的預測發電量為 55.2 kWh，按目前電網價格 0.3 新西蘭元每 kWh 計算，價值約 16.56 新西蘭元。",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Which region will give the most solar power next hour?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 2.5,
+        "answer": "Gisborne will give the most solar power next hour, with a predicted output of 3.54 kW.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Should the Christchurch workshop charge its EV now?",
+        "size_kw": 50,
+        "mode": "llm",
+        "seconds": 9.1,
+        "answer": "Yes, the Christchurch workshop should charge its EV now. The forecast shows 33.6 kW of solar power, which is enough to cover the 11 kW EV charger, allowing surplus solar energy to be used for charging. This avoids grid use and saves money.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "How accurate is the forecasting model?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 10.0,
+        "answer": "The forecasting model (v4) has an accuracy of 97.76% for daytime conditions, based on test data. It is 32.6% more accurate than the clear-sky persistence baseline and 40.3% better than the Open-Meteo day-ahead forecast alone. The model's mean absolute error (MAE) is 0.112 kW for the user's 5 kW system, which is 2.24% of the system's capacity. This means the forecast is highly reliable for planning solar energy use.",
+        "failed": []
+      },
+      {
+        "round": 2,
+        "q": "Is it sunny in Wellington right now?",
+        "size_kw": 5,
+        "mode": "llm",
+        "seconds": 7.8,
+        "answer": "The dashboard is showing a replay of a past hour, not the current time. For the shown hour of 2026-02-07 12:00 in Wellington, the cloud percentage was 99%, meaning it was very cloudy. If you want to see current conditions, press the Live button on the dashboard.",
+        "failed": []
+      }
+    ]
+  }
+}

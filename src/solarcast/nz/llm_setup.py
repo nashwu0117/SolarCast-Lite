@@ -3,7 +3,9 @@
     llm = llm_setup.start()            # returns at once; the download continues in a thread
     llm.status()                       # {"state": "downloading", "detail": "...", "model": ...}
 
-- With an NVIDIA GPU (Colab T4): Qwen3 8B (about 5 GB, 4-bit) through Ollama.
+- With an NVIDIA GPU of 14 GB or more (Colab T4, 15 GB): Qwen3 14B (about 9 GB, 4-bit) through Ollama; on a smaller GPU
+  Qwen3 8B (about 5 GB). experiments/nz_llm_compare.py: both pass every check, 14B explains the numbers more precisely;
+  it answers in about 10 s instead of 4.5 s and uses 11.7 GB of GPU memory with the safety model.
 - Without a GPU: the small Qwen3 1.7B on the CPU (slower answers), so the chat still works.
 - If anything fails, the state becomes "templates" and the dashboard answers with fixed templates.
 
@@ -22,11 +24,23 @@ import urllib.request
 
 from solarcast.nz.assistant import OllamaLLM
 
-GPU_MODEL = os.environ.get("SOLARCAST_LLM_GPU", "qwen3:8b")
+GPU_MODEL = os.environ.get("SOLARCAST_LLM_GPU", "qwen3:14b")         # GPUs with >= BIG_GPU_MB of memory
+SMALL_GPU_MODEL = os.environ.get("SOLARCAST_LLM_SMALL_GPU", "qwen3:8b")
+BIG_GPU_MB = 14000
 CPU_MODEL = os.environ.get("SOLARCAST_LLM_CPU", "qwen3:1.7b")
 GUARD_MODEL = os.environ.get("SOLARCAST_LLM_GUARD", "llama-guard3:1b")
 HOST = "http://127.0.0.1:11434"
 INSTALL_URL = "https://ollama.com/install.sh"
+
+
+def gpu_memory_mb() -> int:
+    """Total memory of the first NVIDIA GPU in MB (0 when there is none or nvidia-smi fails)."""
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=20).stdout
+        return int(out.split()[0])
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        return 0
 
 
 def has_gpu() -> bool:
@@ -133,10 +147,17 @@ class LocalLLM(OllamaLLM):
                 time.sleep(5)
 
 
+def choose_model(gpu: bool, memory_mb: int) -> str:
+    """14B on a GPU with enough memory (a Colab T4 has 15 GB), 8B on a smaller GPU, 1.7B on the CPU."""
+    if not gpu:
+        return CPU_MODEL
+    return GPU_MODEL if memory_mb >= BIG_GPU_MB else SMALL_GPU_MODEL
+
+
 def start(model: str | None = None, guard: bool = True) -> LocalLLM:
     """Start the background setup and return the LLM object at once."""
     gpu = has_gpu()
     # On a CPU the extra safety model would double the wait; the keyword filter and the rules still apply.
-    llm = LocalLLM(model or (GPU_MODEL if gpu else CPU_MODEL), GUARD_MODEL if guard and gpu else None, gpu)
+    llm = LocalLLM(model or choose_model(gpu, gpu_memory_mb() if gpu else 0), GUARD_MODEL if guard and gpu else None, gpu)
     threading.Thread(target=llm.setup, name="solarcast-llm-setup", daemon=True).start()
     return llm

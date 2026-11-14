@@ -51,7 +51,7 @@ decision?" below).
 - **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
 - **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese for your panel size, for example "how much
-  will my panels make next hour in Christchurch?". It runs an open model (Qwen3 8B on Colab's T4 GPU, Qwen3 1.7B on a CPU)
+  will my panels make next hour in Christchurch?". It runs an open model (Qwen3 14B on Colab's T4 GPU, 8B on a smaller GPU, 1.7B on a CPU)
   **locally on the notebook's machine**: no internet access, no tools, no API keys. The server looks up the numbers with
   the same code as the map and the model only explains them; a keyword filter, the Llama Guard 3 safety classifier and
   the system rules refuse off-topic or harmful requests; questions are rate-limited. The forecast itself is our own

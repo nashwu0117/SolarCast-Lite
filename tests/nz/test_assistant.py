@@ -185,3 +185,10 @@ def test_llama_guard_categories(monkeypatch, verdict, blocked):
     llm = asst.OllamaLLM("m", guard_model="llama-guard3:1b")
     monkeypatch.setattr(llm, "_post", lambda path, payload: {"message": {"content": verdict}})
     assert llm.unsafe("I have 5 kW of panels in Christchurch. How much power will they give next hour?") is blocked
+
+
+def test_llm_choice_by_gpu_memory():
+    from solarcast.nz import llm_setup
+    assert llm_setup.choose_model(True, 15360) == "qwen3:14b"          # Colab T4
+    assert llm_setup.choose_model(True, 8192) == "qwen3:8b"
+    assert llm_setup.choose_model(False, 0) == "qwen3:1.7b"
