@@ -1,0 +1,10 @@
+# Mirrors the core of Google Colab so local == Colab
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+seaborn
+jupyterlab
+ipykernel
+requests
