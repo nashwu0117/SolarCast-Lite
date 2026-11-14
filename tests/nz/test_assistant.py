@@ -75,22 +75,29 @@ def test_facts_are_grounded_in_the_service(svc):
     snap = {r["name"]: r for r in svc.snapshot(t)}
     assert len(facts["regions_now"]) == 14
     for r in facts["regions_now"]:
-        assert r["predicted_kw_next_hour"] == round(snap[r["region"]]["predicted_kw_next"], 1)
+        assert r["predicted_kw_next_hour"] == round(snap[r["region"]]["predicted_kw_next"], 2)
     assert facts["selected_region"]["region"] == "Wellington"
-    assert facts["selected_region"]["ev_advice_next_hour"]["reason"] == svc.detail("Wellington", t)["reason"]
+    assert facts["ev_example_workshop"]["advice_next_hour"]["reason"] == svc.detail("Wellington", t)["reason"]
     json.dumps(facts)                                        # the facts block must be JSON-serialisable
 
 
 def test_facts_scale_to_the_users_panel_size(svc):
+    """Every kW/kWh outside the EV example is already for the user's size: the model never has to choose or rescale."""
     t = svc.default_time()
     a = asst.Assistant(svc)
     ref, home = a.facts(t, "Wellington"), a.facts(t, "Wellington", system_kw=5)
-    assert ref["your_system"]["size_kw"] == 50 and home["your_system"]["scale_vs_50kw_reference"] == 0.1
-    for r in home["regions_now"]:
-        assert home["your_system"]["next_hour_kw_by_region"][r["region"]] == pytest.approx((r["predicted_kw_next_hour"] or 0) * 0.1, abs=0.01)
-    sel = home["your_system"]["selected"]
-    assert sel["day_predicted_kwh"] == pytest.approx(home["selected_region"]["day_predicted_kwh"] * 0.1, abs=0.1)
-    assert "5 kW" in a.ask("How much power in Wellington?", t, system_kw=5)["answer"]
+    assert ref["your_system"]["size_kw"] == 50 and home["your_system"]["size_kw"] == 5
+    for r50, r5 in zip(ref["regions_now"], home["regions_now"]):
+        assert r5["predicted_kw_next_hour"] == pytest.approx((r50["predicted_kw_next_hour"] or 0) * 0.1, abs=0.01)
+    s50, s5 = ref["selected_region"], home["selected_region"]
+    assert s5["day_predicted_kwh"] == pytest.approx(s50["day_predicted_kwh"] * 0.1, abs=0.1)
+    assert s5["predicted_kw_next_hour"] == pytest.approx(s50["predicted_kw_next_hour"] * 0.1, abs=0.01)
+    assert home["ev_example_workshop"] == ref["ev_example_workshop"]          # the EV example is always the 50 kW workshop
+    assert home["model"]["test_period_results_daytime"]["our_model"] == ref["model"]["test_period_results_daytime"]["our_model"] \
+        or home["model"]["test_period_results_daytime"]["our_model"]["error_pct_of_capacity"] == \
+        ref["model"]["test_period_results_daytime"]["our_model"]["error_pct_of_capacity"]
+    answer = a.ask("How much power in Wellington?", t, system_kw=5)["answer"]
+    assert "5 kW" in answer and str(s5["day_predicted_kwh"]) in answer
 
 
 def test_llm_gets_system_prompt_facts_and_trimmed_history(svc):
