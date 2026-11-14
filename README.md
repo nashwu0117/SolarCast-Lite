@@ -5,6 +5,10 @@
 One-hour-ahead solar PV power forecasting with scikit-learn, plus an interactive replay demo.
 Veritas AI High School Hackathon 2026, **AI + Climate** track.
 
+**Judges: start here** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_Lite_Submission.ipynb) - `notebooks/SolarCast_Lite_Submission.ipynb` is self-contained. Runtime > Run all (about 15 s on a free CPU runtime). Tick `RUN_DASHBOARD` in the last cell for the interactive dashboard (public Cloudflare link).
+
+Team notebooks:
+
 | Notebook | Open in Colab |
 |---|---|
 | main (submission) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/main.ipynb) |
@@ -48,8 +52,8 @@ forecast next hour's solar  ->  minus workshop load  ->  expected surplus
 | Data pipeline, leakage-safe features, baselines | Done, 30 tests pass on Colab |
 | Forecast models A (power + sun) and B (+ weather) | Done; Model B roughly halves persistence error on the test set |
 | Experiments: forecast weather, clear-sky index, pooling and tuning | Results in `experiments/results/` (validation only) |
-| EV charging decision simulation | In progress |
-| Submission notebook for judges, dashboard via Cloudflare tunnel | Planned |
+| EV charging decision simulation | Done; results in the submission notebook, section 5 |
+| Submission notebook for judges, dashboard via Cloudflare tunnel | Done, verified on Colab |
 | One-page write-up and 2-minute demo video | Team (humans) |
 
 ## Problem

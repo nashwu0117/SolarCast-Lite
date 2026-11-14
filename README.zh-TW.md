@@ -5,6 +5,10 @@
 用 scikit-learn 預測下一小時的太陽能發電功率，並提供互動式回放 Demo。
 Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 
+**評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_Lite_Submission.ipynb)：`notebooks/SolarCast_Lite_Submission.ipynb` 不需要其他檔案就能執行。Runtime > Run all （免費 CPU 環境約 15 秒）。在最後一格勾選 `RUN_DASHBOARD` 即可開啟互動儀表板（Cloudflare 公開連結）。
+
+團隊用 notebook：
+
 | Notebook | 在 Colab 開啟 |
 |---|---|
 | main（交件用） | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/main.ipynb) |
@@ -46,8 +50,8 @@ Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 | 資料流程、不偷看未來的特徵、基準方法 | 完成，30 個測試在 Colab 上全部通過 |
 | 預測模型 A（發電量 + 太陽位置）和 B（再加天氣） | 完成；在測試集上，Model B 的誤差約為 Persistence 的一半 |
 | 實驗：天氣預報特徵、晴空指標、合併訓練與調參數 | 結果在 `experiments/results/`（只用驗證集） |
-| 電動車充電決策模擬 | 進行中 |
-| 給評審的交件 notebook、用 Cloudflare tunnel 開的儀表板 | 規劃中 |
+| 電動車充電決策模擬 | 完成；結果在交件 notebook 第 5 節 |
+| 給評審的交件 notebook、用 Cloudflare tunnel 開的儀表板 | 完成，已在 Colab 驗證 |
 | 一頁書面報告和 2 分鐘 demo 影片 | 團隊成員負責 |
 
 ## 問題
