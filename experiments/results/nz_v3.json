@@ -1,0 +1,29 @@
+{
+  "v1_val_mae_wm2": 30.352190341995232,
+  "candidates": {
+    "v1 features, train 2024": {
+      "val_mae_wm2": 30.827,
+      "val_mae_kw": 1.1546,
+      "train_rows": 122976
+    },
+    "v1 + forecast, train 2024": {
+      "val_mae_wm2": 30.485,
+      "val_mae_kw": 1.1432,
+      "train_rows": 122976
+    },
+    "v1 + forecast, train 2022-2024": {
+      "val_mae_wm2": 29.644,
+      "val_mae_kw": 1.1111,
+      "train_rows": 368242
+    },
+    "v1 + forecast, train 2024, deeper": {
+      "val_mae_wm2": 30.304,
+      "val_mae_kw": 1.1357,
+      "train_rows": 122976
+    }
+  },
+  "best": "v1 + forecast, train 2022-2024",
+  "gain_wm2": 0.708,
+  "verdict": "NOT PROMOTED: gain on validation too small; keeping v1",
+  "forecast_source": "Open-Meteo Previous Runs API, *_previous_day1 (issued ~24 h earlier), from 2024"
+}
