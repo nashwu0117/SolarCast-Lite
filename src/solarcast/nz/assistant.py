@@ -93,6 +93,10 @@ REFUSAL = {
     "zh": "抱歉，這個我沒辦法回答。我只能回答 SolarCast NZ 資料相關的問題：你的太陽能板能發多少電、天氣、電動車充電範例，以及我們模型的準確度。",
 }
 
+# Decided from the question itself (detect_lang), so the small model never drifts into another language or script.
+REPLY_LANGUAGE = {"en": "Reply language: English (the user's question is in English).",
+                  "zh": "Reply language: Traditional Chinese (繁體中文) only, never Simplified Chinese characters."}
+
 BRIEFING_PROMPT = """You write the short national solar briefing shown at the top of the SolarCast NZ dashboard map.
 Use ONLY the numbers in the FACTS JSON (next-hour solar output in every grid cell of New Zealand). Talk about how much
 power rooftop panels will give: use percent_of_rated_power (works for any panel size) and home_5kw_system_kw (what a
@@ -387,6 +391,7 @@ class Assistant:
         for turn in (history or [])[-MAX_HISTORY_TURNS:]:
             if turn.get("role") in ("user", "assistant") and isinstance(turn.get("content"), str):
                 messages.append({"role": turn["role"], "content": turn["content"][:1500]})
+        messages.append({"role": "system", "content": REPLY_LANGUAGE[lang]})
         messages.append({"role": "user", "content": q})
         with self._lock:                                   # one generation at a time on the single GPU
             try:

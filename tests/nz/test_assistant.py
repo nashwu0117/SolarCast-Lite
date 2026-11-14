@@ -101,8 +101,12 @@ def test_llm_gets_system_prompt_facts_and_trimmed_history(svc):
     msgs = llm.calls[0]
     assert msgs[0]["content"] == asst.SYSTEM_PROMPT
     assert msgs[1]["content"].startswith("FACTS") and '"Nelson"' in msgs[1]["content"]
-    assert [m["role"] for m in msgs].count("system") == 2      # injected "system" turns from the client are dropped
-    assert len(msgs) <= 2 + asst.MAX_HISTORY_TURNS + 1
+    assert [m["role"] for m in msgs].count("system") == 3      # prompt, facts, reply language; client "system" turns dropped
+    assert msgs[-2] == {"role": "system", "content": asst.REPLY_LANGUAGE["en"]}
+    assert len(msgs) <= 3 + asst.MAX_HISTORY_TURNS + 1
+    llm.calls.clear()
+    asst.Assistant(svc, llm).ask("基督城下一小時能發多少電？", "live")
+    assert "繁體中文" in llm.calls[0][-2]["content"]
 
 
 def test_harmful_model_output_is_replaced(svc):
