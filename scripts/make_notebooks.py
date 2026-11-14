@@ -47,6 +47,8 @@ if IN_COLAB:
     if not REPO.exists():
         _git(["clone", auth_url, str(REPO)], secret=token)
         _git(["remote", "set-url", "origin", REPO_URL], cwd=REPO)  # keep the token out of .git/config
+    elif not (REPO / ".git").exists():
+        print("Using the uploaded copy in", REPO, "(not a git clone, so no pull).")
     else:
         _git(["remote", "set-url", "origin", auth_url], cwd=REPO, secret=token)
         code, out = _git(["pull", "--ff-only"], cwd=REPO, secret=token, check=False)
@@ -66,8 +68,13 @@ else:
 sys.path.insert(0, str(REPO / "src"))
 print("Repo:", REPO, "| Colab:", IN_COLAB)
 
-%load_ext autoreload
-%autoreload 2'''
+# Pick up edits to src/solarcast/*.py without restarting. Colab's IPython 7 autoreload imports the
+# removed `imp` module on Python 3.12+, so fall back gracefully instead of failing the whole notebook.
+try:
+    get_ipython().run_line_magic("load_ext", "autoreload")
+    get_ipython().run_line_magic("autoreload", "2")
+except Exception as exc:
+    print(f"autoreload unavailable ({type(exc).__name__}); after editing src/, use Runtime > Restart session.")'''
 
 LAUNCH_CODE = '''import os
 
