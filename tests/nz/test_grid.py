@@ -87,7 +87,7 @@ def test_replay_snapshot_is_cached_and_budgeted(service, fake_fetch, monkeypatch
 
 def test_live_snapshot_and_precompute(service, fake_fetch):
     g = nzgrid.NationalGrid(service, CELLS, 0.5)
-    done = g.precompute(service.default_time())
+    done = g.precompute(service.default_time(), live_in_background=False)
     assert done["live"] == "ok" and done["replay_day"] == "ok" and g.status["state"] == "ready"
     snap = g.snapshot("live")
     assert snap["live"] and snap["time"] == pd.Timestamp.now(tz="UTC").floor("h").strftime(svc.ISO)
@@ -143,3 +143,31 @@ def test_grid_route(service, fake_fetch):
     r = client.get("/api/grid?t=" + service.default_time())
     assert r.status_code == 200 and len(r.get_json()["cells"]) == 4
     assert create_app(service).test_client().get("/api/grid").status_code == 404
+
+
+def test_live_grid_in_background_and_shipped_replay(service, fake_fetch, monkeypatch, tmp_path):
+    """The dashboard link must not wait for downloads: replay uses shipped data, live is computed in a thread."""
+    t = service.default_time()
+    day = pd.Timestamp(t).tz_convert(config.LOCAL_TZ).normalize()
+    names = [f"cell{i:03d}" for i in range(len(CELLS))]
+    shipped = nzgrid.data.fetch_points(CELLS, names, (day - pd.Timedelta("3D")).strftime("%Y-%m-%d"),
+                                       (day + pd.Timedelta("3D")).strftime("%Y-%m-%d"))
+    path = tmp_path / "grid_replay.csv.gz"
+    shipped.to_csv(path, index=False)
+    monkeypatch.setattr(nzgrid, "GRID_REPLAY_PATH", path)
+    fake_fetch.clear()
+    g = nzgrid.NationalGrid(service, CELLS, 0.5)
+    done = g.precompute(t)
+    assert done["replay_day"] == "ok" and all(c[1] is None for c in fake_fetch)   # replay: no download at all
+    for _ in range(100):
+        if not g._live_busy.is_set():
+            break
+        time.sleep(0.05)
+    assert g.snapshot("live")["live"] and len(fake_fetch) == 1
+
+
+def test_live_grid_still_computing_is_a_clear_error(service, fake_fetch):
+    g = nzgrid.NationalGrid(service, CELLS, 0.5)
+    g._live_busy.set()
+    with pytest.raises(RuntimeError, match="still being computed"):
+        g.snapshot("live")

@@ -29,6 +29,7 @@ from solarcast.nz.features import build_features
 from solarcast.nz.service import HOUR, ISO, nearest_region
 
 GRID_PATH = config.ROOT / "data" / "nz" / "grid_cells.json"
+GRID_REPLAY_PATH = config.ROOT / "data" / "nz" / "grid_replay.csv.gz"   # cell weather around the default replay day
 REFRESH_MINUTE = 50                 # live data is downloaded again at HH:50, ready for the next hour
 MAX_DAYS_CACHED = 12                # replay days kept in memory
 MAX_NEW_DAYS_PER_HOUR = 6           # replay days downloaded on demand per hour (protects the free API quota)
@@ -113,6 +114,8 @@ class NationalGrid:
         self.summarizer = None                                 # callable(facts) -> {"text", "mode", "model"} | None
         self.status = {"state": "idle", "updated_at": None, "next_update": None, "error": None}
         self._thread = None
+        self._replay_raw = None                                # shipped cell weather (no download needed)
+        self._live_busy = threading.Event()
 
     # ----- computing -----
     def _compute(self, raw: pd.DataFrame) -> pd.DataFrame:
@@ -149,24 +152,57 @@ class NationalGrid:
                                    "weather API it will compute more later. The region circles still work.")
             start = (day - pd.Timedelta("2D")).tz_convert("UTC").strftime("%Y-%m-%d")
             end = (day + pd.Timedelta("2D")).tz_convert("UTC").strftime("%Y-%m-%d")
-            pts = [(c.get("qlat", c["lat"]), c.get("qlon", c["lon"])) for c in self.cells]
-            frame = self._compute(data.fetch_points(pts, self.names, start, end))
-            self._new_days.append(now)
+            raw = self._shipped(start, end)
+            if raw is None:
+                pts = [(c.get("qlat", c["lat"]), c.get("qlon", c["lon"])) for c in self.cells]
+                raw = data.fetch_points(pts, self.names, start, end)
+                self._new_days.append(now)
+            frame = self._compute(raw)
             self._days[key] = frame
             while len(self._days) > MAX_DAYS_CACHED:
                 self._days.popitem(last=False)
             return frame
 
-    def precompute(self, replay_time: str | None = None) -> dict:
-        """Compute the live hours and the default replay day now (call before opening the dashboard)."""
-        t0, done = time.time(), {}
+    def _shipped(self, start: str, end: str):
+        """Cell weather shipped in the repository for [start, end] (dates), or None if it does not cover them."""
+        if self._replay_raw is None:
+            try:
+                df = pd.read_csv(GRID_REPLAY_PATH)
+                df["time_utc"] = pd.to_datetime(df["time_utc"], utc=True)
+                if set(df["region"]) != set(self.names):           # a different cell list: do not use it
+                    df = df.iloc[0:0]
+                self._replay_raw = df
+            except (OSError, ValueError, KeyError):
+                self._replay_raw = pd.DataFrame()
+        df = self._replay_raw
+        if df.empty:
+            return None
+        lo, hi = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta("23h")
+        if df["time_utc"].min() > lo or df["time_utc"].max() < hi:
+            return None
+        return df[(df["time_utc"] >= lo) & (df["time_utc"] <= hi)].reset_index(drop=True)
+
+    def _refresh_live_safe(self) -> None:
+        self._live_busy.set()
         try:
             self.refresh_live()
-            done["live"] = "ok"
             self.status.update(state="ready", updated_at=pd.Timestamp.now(tz="UTC").strftime(ISO), error=None)
         except Exception as exc:                               # replay still works without the internet
-            done["live"] = f"failed ({type(exc).__name__})"
             self.status.update(state="error", error=f"live grid download failed ({type(exc).__name__})")
+        finally:
+            self._live_busy.clear()
+
+    def precompute(self, replay_time: str | None = None, live_in_background: bool = True) -> dict:
+        """Compute the default replay day now (shipped data, a few seconds) and the live hours (in the background
+        by default, so the dashboard link appears at once; the live map shows up when it is ready)."""
+        t0, done = time.time(), {}
+        if live_in_background:
+            self._live_busy.set()
+            threading.Thread(target=self._refresh_live_safe, name="solarcast-grid-live", daemon=True).start()
+            done["live"] = "computing in the background"
+        else:
+            self._refresh_live_safe()
+            done["live"] = "ok" if self._live is not None else self.status.get("error")
         if replay_time:
             try:
                 self._day_frame(self._issue(replay_time), budget=False)
@@ -217,9 +253,14 @@ class NationalGrid:
         live = str(time_utc).lower() == "live"
         if live:
             if self._live is None:
+                if self._live_busy.is_set():
+                    raise RuntimeError("The live nationwide grid is still being computed (about a minute). "
+                                       "The region circles and replay already work.")
                 with self._fetch_lock:
                     if self._live is None:
-                        self.refresh_live()
+                        self._refresh_live_safe()
+                if self._live is None:
+                    raise RuntimeError(self.status.get("error") or "The live nationwide grid is not available.")
             frame = self._live["frame"]
             t = self._issue(at) if at else pd.Timestamp.now(tz="UTC").floor("h")
             times = frame.index.get_level_values(1)

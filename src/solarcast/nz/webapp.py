@@ -634,6 +634,7 @@ async function loadGrid() {
     $('brief').hidden = false; $('brief').classList.add('err');
     $('briefTag').textContent = 'Nationwide grid'; $('briefTag').className = 'ai tpl'; $('briefMeta').textContent = '';
     $('briefText').textContent = e.message; $('briefStats').textContent = '';
+    if (/still being computed/.test(e.message)) gridTimer = setTimeout(loadGrid, 10000);
   }
 }
 $('gridOn').onchange = () => drawGrid(lastGrid);
