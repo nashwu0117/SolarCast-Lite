@@ -93,6 +93,19 @@ REFUSAL = {
     "zh": "抱歉，這個我沒辦法回答。我只能回答 SolarCast NZ 資料相關的問題：你的太陽能板能發多少電、天氣、電動車充電範例，以及我們模型的準確度。",
 }
 
+# The chat answers about NOW unless the question points at the past hour the map is replaying.
+_REPLAY_WORDS = re.compile("|".join([
+    r"replay", r"\bpast", r"earlier", r"yesterday", r"that (hour|time|day|moment)", r"\bthen\b", r"\bshown\b",
+    r"on the (map|slider)", r"slider", r"history", r"historical", r"back in", r"last (week|month|year|summer|winter)",
+    "回放", "重播", "過去", "过去", "昨天", "之前", "當時", "当时", "那時", "那时", "那個時", "那个时", "地圖上", "地图上",
+    "這個時段", "这个时段", "滑桿", "滑杆", "歷史", "历史", "上週", "上周", "去年", "上個月", "上个月",
+]), re.I)
+
+
+def asks_about_replay(text: str) -> bool:
+    return bool(_REPLAY_WORDS.search(text or ""))
+
+
 # Decided from the question itself (detect_lang), so the small model never drifts into another language or script.
 REPLY_LANGUAGE = {"en": "Reply language: English (the user's question is in English).",
                   "zh": "Reply language: Traditional Chinese (繁體中文) only, never Simplified Chinese characters."}
@@ -389,10 +402,20 @@ class Assistant:
             return {"answer": OFF_TOPIC[lang], "mode": "refused"}
         named = find_region(q)
         region = named or (region if region in config.REGIONS else None)
-        facts = self.facts(time_utc, region, None if named else point, system_kw)
+        replay_shown = str(time_utc).lower() != "live"
+        use = time_utc if replay_shown and asks_about_replay(q) else "live"
+        try:
+            facts = self.facts(use, region, None if named else point, system_kw)
+        except Exception:                                  # live weather unavailable: fall back to the map's hour
+            use = time_utc
+            facts = self.facts(use, region, None if named else point, system_kw)
+        if replay_shown and use == "live":
+            facts["dashboard_time"]["note"] += (f" The map is replaying {time_utc} (UTC), but the user did not ask about "
+                                                "that past hour, so these facts are for NOW (live).")
 
         if not self._llm_ready():
-            return {"answer": self._template_answer(q, lang, facts), "mode": "templates", "region": region}
+            return {"answer": self._template_answer(q, lang, facts), "mode": "templates", "region": region,
+                    "data_time": use}
         if getattr(self.llm, "unsafe", None) and self.llm.unsafe(q):
             return {"answer": REFUSAL[lang], "mode": "refused"}
 
@@ -409,10 +432,10 @@ class Assistant:
                 answer = self.llm.chat(messages)
             except Exception as exc:
                 return {"answer": self._template_answer(q, lang, facts), "mode": "templates",
-                        "region": region, "error": f"AI model error ({type(exc).__name__})"}
+                        "region": region, "data_time": use, "error": f"AI model error ({type(exc).__name__})"}
         if not answer or is_harmful(answer):
             return {"answer": REFUSAL[lang], "mode": "refused"}
-        return {"answer": answer, "mode": "llm", "region": region}
+        return {"answer": answer, "mode": "llm", "region": region, "data_time": use}
 
     # ----- national briefing (written from the grid numbers; no user text involved) -----
     def summarize(self, facts: dict) -> dict | None:

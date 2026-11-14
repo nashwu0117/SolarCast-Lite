@@ -96,8 +96,9 @@ def test_facts_scale_to_the_users_panel_size(svc):
     assert home["model"]["test_period_results_daytime"]["our_model"] == ref["model"]["test_period_results_daytime"]["our_model"] \
         or home["model"]["test_period_results_daytime"]["our_model"]["error_pct_of_capacity"] == \
         ref["model"]["test_period_results_daytime"]["our_model"]["error_pct_of_capacity"]
-    answer = a.ask("How much power in Wellington?", t, system_kw=5)["answer"]
-    assert "5 kW" in answer and str(s5["day_predicted_kwh"]) in answer
+    live5 = a.facts("live", "Wellington", system_kw=5)["selected_region"]
+    answer = a.ask("How much power in Wellington?", "live", system_kw=5)["answer"]
+    assert "5 kW" in answer and str(live5["day_predicted_kwh"]) in answer
 
 
 def test_llm_gets_system_prompt_facts_and_trimmed_history(svc):
@@ -192,3 +193,18 @@ def test_llm_choice_by_gpu_memory():
     assert llm_setup.choose_model(True, 15360) == "qwen3:14b"          # Colab T4
     assert llm_setup.choose_model(True, 8192) == "qwen3:8b"
     assert llm_setup.choose_model(False, 0) == "qwen3:1.7b"
+
+
+def test_chat_uses_live_data_unless_the_question_is_about_the_replayed_hour(svc):
+    llm = RecordingLLM()
+    a = asst.Assistant(svc, llm)
+    t = svc.default_time()                                   # the map is replaying a past hour
+    res = a.ask("How much power will Nelson give next hour?", t)
+    assert res["data_time"] == "live" and '"mode":"live"' in llm.calls[-1][1]["content"]
+    assert "did not ask about that past hour" in llm.calls[-1][1]["content"]
+    for q in ("How sunny was Nelson in the replayed hour?", "回放的那個時段尼爾森發多少電？", "What did the map show for Nelson then?"):
+        assert asst.asks_about_replay(q)
+        res = a.ask(q, t)
+        assert res["data_time"] == t and "REPLAY" in llm.calls[-1][1]["content"]
+    assert a.ask("How much power will Nelson give next hour?", "live")["data_time"] == "live"
+    assert not asst.asks_about_replay("現在基督城下一小時能發多少電？")

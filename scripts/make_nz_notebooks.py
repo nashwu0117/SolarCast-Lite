@@ -86,12 +86,12 @@ CODE_COMMENTS = {
              "zh-TW": "只看「一次」測試集，並且只用選定的那個模型。"},
     "lc_old": {"en": "The learning curve was computed earlier and is stored in the JSON of the committed model.",
                "zh-TW": "學習曲線先前已經算好，存在儲存庫裡已提交模型的 JSON 檔中。"},
-    "save": {"en": "Save the model. QUICK runs write to /content so the repo model stays untouched.",
-             "zh-TW": "儲存模型。QUICK 模式會寫到 /content，所以儲存庫裡的模型不會被覆蓋。"},
-    "backup": {"en": "Set BACKUP = True to commit and push the model to GitHub (needs the Colab Secret GITHUB_TOKEN).",
-               "zh-TW": "把 BACKUP 改成 True，就會把模型 commit 並 push 到 GitHub（需要 Colab Secret：GITHUB_TOKEN）。"},
-    "token": {"en": "The token is read from Colab Secrets and is never printed (it is masked in all output).",
-              "zh-TW": "token 從 Colab Secrets 讀取，而且絕不會印出來（所有輸出都會把它遮成 ***）。"},
+    "save": {"en": "Save the model. QUICK runs write next to the repository (WORK), so the repo model stays untouched.",
+             "zh-TW": "儲存模型。QUICK 模式會寫到儲存庫旁邊（WORK），所以儲存庫裡的模型不會被覆蓋。"},
+    "backup": {"en": "Set BACKUP = True to commit and push the model to GitHub (needs the secret GITHUB_TOKEN).",
+               "zh-TW": "把 BACKUP 改成 True，就會把模型 commit 並 push 到 GitHub（需要名為 GITHUB_TOKEN 的 Secret）。"},
+    "token": {"en": "The token is read from Colab Secrets or Kaggle Secrets and is never printed (it is masked in all output).",
+              "zh-TW": "token 從 Colab Secrets 或 Kaggle Secrets 讀取，而且絕不會印出來（所有輸出都會把它遮成 ***）。"},
 }
 
 
@@ -266,7 +266,9 @@ for q, size in (("I have 5 kW of panels in Christchurch. How much power will the
 TRAIN_SETUP = f'''
 import os, subprocess, sys
 
-REPO = "/content/SolarCast-Lite"
+# Colab works in /content, Kaggle in /kaggle/working.
+WORK = "/kaggle/working" if os.path.isdir("/kaggle/working") else "/content"
+REPO = f"{{WORK}}/SolarCast-Lite"
 URL = "{REPO_URL}.git"
 # @@clone@@
 if os.path.isdir(f"{{REPO}}/.git"):
@@ -296,7 +298,7 @@ if QUICK:
     regions, start = ["Auckland", "Christchurch"], end - timedelta(days=119)
     a, b = start + timedelta(days=72), start + timedelta(days=96)
     config.SPLITS.update(train=(str(start), str(a)), val=(str(a), str(b)), test=(str(b), str(end + timedelta(days=1))))
-    model_path, meta_path = "/content/quick_model.joblib", "/content/quick_model.json"
+    model_path, meta_path = f"{WORK}/quick_model.joblib", f"{WORK}/quick_model.json"
 else:
     # @@full_cfg@@
     regions, start = list(config.REGIONS), config.HISTORY_START
@@ -378,18 +380,23 @@ TRAIN_BACKUP = '''
 BACKUP = False
 if BACKUP and not QUICK:
     import subprocess
-    from google.colab import userdata
     # @@token@@
-    token = userdata.get("GITHUB_TOKEN")
+    try:                                             # Colab: key icon on the left
+        from google.colab import userdata
+        token = userdata.get("GITHUB_TOKEN")
+    except ImportError:                              # Kaggle: Add-ons > Secrets
+        from kaggle_secrets import UserSecretsClient
+        token = UserSecretsClient().get_secret("GITHUB_TOKEN")
 
     def git(*args):
         r = subprocess.run(["git", "-C", REPO, *args], capture_output=True, text=True)
         print((r.stdout + r.stderr).replace(token, "***").strip())
 
-    git("config", "user.name", "SolarCast Colab")
-    git("config", "user.email", "solarcast-colab@users.noreply.github.com")
+    where = "Kaggle" if WORK.startswith("/kaggle") else "Colab"
+    git("config", "user.name", f"SolarCast {where}")
+    git("config", "user.email", "solarcast-notebook@users.noreply.github.com")
     git("add", "models/nz_model.joblib", "models/nz_model.json")
-    git("commit", "-m", "model(nz): retrained on Colab")
+    git("commit", "-m", f"model(nz): retrained on {where}")
     git("push", f"https://x-access-token:{token}@github.com/nashwu0117/SolarCast-Lite.git", "HEAD:main")
 else:
     print("backup skipped (BACKUP is False or QUICK is True)")
@@ -422,11 +429,19 @@ of the AI chat still works."""),
 （開網路需要先在 Kaggle 驗證手機號碼），然後按 **Run All**。沒有 GPU 時，除了 AI 聊天比較慢之外，其他功能都正常。"""),
               ("這個 notebook 會向 Colab 要求 **T4 GPU**（可以在「執行階段 > 變更執行階段類型」看到）。",
                "在 Kaggle 上請選 **Settings > Accelerator > GPU T4 x2**（聊天模型會用其中一顆 T4）。"),
-              ("**只在這台 Colab 機器上執行**", "**只在這台 Kaggle 機器上執行**")],
+              ("**只在這台 Colab 機器上執行**", "**只在這台 Kaggle 機器上執行**"),
+              ("Colab 的虛擬機是暫時的，所以要把新模型 push 到 GitHub。請在 Colab 左側的鑰匙圖示新增一個名為 `GITHUB_TOKEN` 的 **Secret**",
+               "Kaggle 的機器是暫時的，所以要把新模型 push 到 GitHub。請在 Kaggle 的 **Add-ons > Secrets** 新增一個名為 `GITHUB_TOKEN` 的 **Secret**"),
+              ("，並開啟筆記本存取權限。", "，並勾選讓這個 notebook 使用它。")],
 }
+KAGGLE_TEXT["en"] += [("Colab VMs are temporary, so push the new model to GitHub. Add a Colab **Secret** named `GITHUB_TOKEN` (key icon on the left; a GitHub token with",
+                       "Kaggle machines are temporary, so push the new model to GitHub. Add a Kaggle **Secret** named `GITHUB_TOKEN` (Add-ons > Secrets; a GitHub token with"),
+                      ("and enable notebook access.", "and attach it to this notebook.")]
+KAGGLE_TRAIN_RUN = {"en": "\n\n**On Kaggle:** in **Settings** set **Internet: On** (needs a phone-verified account; no GPU is needed for training), then **Run All**.",
+                    "zh-TW": "\n\n**在 Kaggle 上：**在 **Settings** 把 **Internet 設成 On**（需要先驗證手機號碼；訓練不需要 GPU），再按 **Run All**。"}
 
 
-def kaggle(notebook: dict, lang: str) -> dict:
+def kaggle(notebook: dict, lang: str, gpu: bool = True) -> dict:
     """The Colab judges notebook turned into the Kaggle one: Kaggle badge, run instructions, Kaggle metadata."""
     nbk = json.loads(json.dumps(notebook))
     for cell in nbk["cells"]:
@@ -438,8 +453,8 @@ def kaggle(notebook: dict, lang: str) -> dict:
         cell["source"] = src.splitlines(keepends=True)
     nbk["metadata"].pop("colab", None)
     nbk["metadata"].pop("accelerator", None)
-    nbk["metadata"]["kaggle"] = {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True, "isInternetEnabled": True,
-                                 "language": "python", "sourceType": "notebook", "dataSources": []}
+    nbk["metadata"]["kaggle"] = {"accelerator": "nvidiaTeslaT4" if gpu else "none", "isGpuEnabled": gpu,
+                                 "isInternetEnabled": True, "language": "python", "sourceType": "notebook", "dataSources": []}
     return nbk
 
 
@@ -673,8 +688,13 @@ def build(lang: str) -> dict:
                 url=kaggle_url(f"SolarCast_NZ_Judges_Kaggle{suffix}.ipynb")), ver=VER)[1]))] + judges[1:], lang, gpu=True)
     for cell, ref in zip(k["cells"][1:], colab_nb["cells"][1:]):
         cell["id"] = ref["id"]
+    train_nb = nb(train, lang)
+    kt = nb([("markdown", md("train_title", lang, badge=KAGGLE_BADGE.format(url=kaggle_url(f"train_Kaggle{suffix}.ipynb")))[1]
+                          + KAGGLE_TRAIN_RUN[lang])] + train[1:], lang)
+    for cell, ref in zip(kt["cells"][1:], train_nb["cells"][1:]):
+        cell["id"] = ref["id"]
     return {f"SolarCast_NZ_Judges{suffix}.ipynb": colab_nb, f"SolarCast_NZ_Judges_Kaggle{suffix}.ipynb": kaggle(k, lang),
-            f"train{suffix}.ipynb": nb(train, lang)}
+            f"train{suffix}.ipynb": train_nb, f"train_Kaggle{suffix}.ipynb": kaggle(kt, lang, gpu=False)}
 
 
 if __name__ == "__main__":

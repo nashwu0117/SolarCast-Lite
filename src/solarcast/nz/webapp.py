@@ -313,7 +313,8 @@ INDEX_HTML = r"""<!doctype html>
   .clock .mode { font-size: 12px; color: var(--muted); }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 10px; }
   .controls label { font-size: 13px; color: var(--muted); }
-  #sizeSel { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  #sizeSel, #sizeNum { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  #sizeNum { width: 76px; }
   .yours { background: #fff8e8; border: 1px solid #f3d9a4; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
   .yours .big { font-size: 28px; font-weight: 700; color: #b45309; line-height: 1.1; }
   .yours .big small { font-size: 14px; font-weight: 500; color: var(--muted); }
@@ -433,7 +434,9 @@ INDEX_HTML = r"""<!doctype html>
       <option value="10">10 kW (large home / farm house)</option>
       <option value="50">50 kW (business / school)</option>
       <option value="100">100 kW (large roof)</option>
+      <option value="custom">Other size (type it)</option>
     </select>
+    <input id="sizeNum" type="number" min="0.5" max="1000" step="0.5" value="5" aria-label="Your solar system size in kW"><span class="tagline">kW</span>
   </div>
   <div class="tabs">
     <button id="tabMap" type="button" class="on">Map</button>
@@ -952,8 +955,9 @@ function addMsg(role, html, cls = '') {
   return d;
 }
 function chatContext() {
-  const when = current === 'live' ? 'Live' : nzString(current) + ' - a replay of a past hour, not now; press Live for the current hour';
-  $('chatCtx').textContent = `Answers use your ${SIZE} kW panels and the map's current time (${when}, NZ)` + (selected ? ` and the selected region (${selected}).`
+  const when = current === 'live' ? 'live data for the current hour'
+    : `live data; ask about "the replayed hour" to get the one on the map (${nzString(current)} NZ)`;
+  $('chatCtx').textContent = `Answers use your ${SIZE} kW panels and ${when}` + (selected ? ` and the selected region (${selected}).`
     : selectedPoint ? ` and the clicked point (${selectedPoint.lat.toFixed(2)}, ${selectedPoint.lon.toFixed(2)}).` : '.');
 }
 async function pollChat() {
@@ -986,7 +990,8 @@ async function sendChat(q) {
       body: JSON.stringify({ question: q, t: current, region: selected, point: selectedPoint, system_kw: SIZE, history: chatHistory.slice(-6) }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
-    const tag = body.mode === 'llm' ? 'AI answer from the dashboard data' : body.mode === 'templates' ? 'template answer'
+    const src = body.data_time === 'live' ? 'live data' : body.data_time ? `the replayed hour ${nzString(body.data_time)}` : '';
+    const tag = body.mode === 'llm' ? `AI answer from ${src || 'the dashboard data'}` : body.mode === 'templates' ? `template answer from ${src || 'the data'}`
       : body.mode === 'refused' ? 'outside what this assistant answers' : '';
     wait.className = 'msg bot';
     wait.innerHTML = fmtAnswer(body.answer || '') + (tag ? `<span class="tag">${esc(tag)}</span>` : '');
@@ -1004,17 +1009,26 @@ $('chatForm').onsubmit = e => { e.preventDefault(); sendChat($('chatInput').valu
 pollChat();
 
 // ---------- panel size ----------
-$('sizeSel').value = String(SIZE);
-if ($('sizeSel').value !== String(SIZE)) { SIZE = 5; $('sizeSel').value = '5'; }
-$('sizeSel').onchange = () => {
-  SIZE = +$('sizeSel').value;
+// A preset from the list, or any size typed in kW (0.5 - 1000). Remembered in this browser.
+function showSize() {
+  $('sizeNum').value = String(SIZE);
+  $('sizeSel').value = [...$('sizeSel').options].some(o => o.value === String(SIZE)) ? String(SIZE) : 'custom';
+}
+function setSize(v) {
+  v = Math.round(Math.min(1000, Math.max(0.5, +v || 5)) * 10) / 10;
+  if (v === SIZE) { showSize(); return; }
+  SIZE = v; showSize();
   try { localStorage.setItem('solarcastSize', String(SIZE)); } catch (e) {}
   drawLegend(); drawRegions(lastRegions); drawGrid(lastGrid); if (lastGrid) renderBrief(lastGrid);
   if (selectedPoint && !selected) loadPoint();
   else if (lastPanel && selected) renderPanel(lastPanel[0], lastPanel[1], `Local day, hourly power of your ${SIZE} kW rooftop system`);
   if ($('modelView').style.display === 'block') renderModel();
   chatContext();
-};
+}
+if (!(SIZE >= 0.5 && SIZE <= 1000)) SIZE = 5;
+showSize();
+$('sizeSel').onchange = () => { if ($('sizeSel').value === 'custom') $('sizeNum').focus(); else setSize($('sizeSel').value); };
+$('sizeNum').onchange = () => setSize($('sizeNum').value);
 
 // ---------- start ----------
 drawLegend();
@@ -1027,7 +1041,8 @@ loadModel();
     if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
     $('slider').max = Math.max(0, times.length - 1);
     const i = times.indexOf(info.default);
-    setTime(i >= 0 ? info.default : (times[0] || 'live'));
+    $('slider').value = i >= 0 ? i : 0;              // the Replay slider starts at a sunny past midday
+    setTime('live');                                 // but the page always opens on the current hour (Live)
   } catch (e) { setNote('Could not load the time list: ' + e.message, 'error'); }
 })();
 </script>

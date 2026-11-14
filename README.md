@@ -11,15 +11,14 @@ charging as a worked example of using the forecast. Veritas AI International Hig
 
 **Judges: start here** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) or [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb)
 (Kaggle: in **Settings** choose **Accelerator: GPU T4 x2** and **Internet: On**, which needs a phone-verified account, then **Run All**. Use it when Colab has no GPU left.)
-Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by the AI chat). In about three minutes the
+Colab: Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by the AI chat). In about three minutes the
 notebook loads our trained model from this repository, shows how accurate it is, and prints a public link (free
 Cloudflare tunnel) to the live dashboard; the AI chat is ready a few minutes later.
 
-| Notebook | Purpose | English | 繁體中文 |
-|---|---|---|---|
-| Judges | Load the trained model, show results, open the dashboard | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) |
-| Judges on Kaggle | Same notebook for Kaggle (GPU T4 x2, Internet on) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb) |
-| Train | Fetch data, train and evaluate the model, back it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) |
+| Notebook | Purpose | Colab (English) | Colab (繁體中文) | Kaggle (English) | Kaggle (繁體中文) |
+|---|---|---|---|---|---|
+| Judges | Load the trained model, show results, open the dashboard (GPU T4) | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb) |
+| Train | Fetch data, train and evaluate the model, back it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/train_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/train_Kaggle.zh-TW.ipynb) |
 
 ## The user and the decision
 Anyone with rooftop solar in New Zealand, from a family with 5 kW of panels to a school or business with 50 kW, gets the
