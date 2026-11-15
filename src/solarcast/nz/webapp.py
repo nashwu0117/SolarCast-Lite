@@ -401,6 +401,23 @@ INDEX_HTML = r"""<!doctype html>
   .stat b { display: block; font-size: 18px; }
   .stat span { font-size: 12px; color: var(--muted); }
   table.m { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .wsbox { background: var(--bg); border-radius: 10px; padding: 8px 8px 6px; margin-top: 8px; }
+  .wsbox svg { width: 100%; height: auto; display: block; }
+  .wsbox .lg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .wsbox .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .advice { display: flex; gap: 10px; align-items: center; }
+  .advice .ico { font-size: 28px; line-height: 1; flex: none; }
+  .gbars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 8px; align-items: center; font-size: 12.5px; margin: 6px 0 8px; }
+  .gbars .track { background: var(--bg); border-radius: 6px; height: 14px; overflow: hidden; }
+  .gbars .fill { height: 100%; border-radius: 6px; width: 0; transition: width .9s ease; }
+  .gbars .v { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
+  .gbars .best { font-weight: 600; color: var(--good); }
+  .stat .si { font-size: 20px; display: block; line-height: 1.2; }
+  .acc { display: flex; gap: 14px; align-items: center; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .acc svg { width: 86px; height: 86px; flex: none; }
+  .acc .rows { font-size: 13px; line-height: 1.5; }
+  .acc .rows b { font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .gbars .fill { transition: none; } }
   table.m td { padding: 3px 0; border-bottom: 1px solid var(--line); }
   table.m td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
   .tabs { display: flex; gap: 6px; margin-top: 10px; }
@@ -998,11 +1015,57 @@ $('rPlay').onclick = togglePlay;
 function hourLabel(h) { return (typeof h === 'number') ? String(h).padStart(2, '0') + ':00' : String(h); }
 
 function metricsHtml(m, label) {
-  if (!m || typeof m !== 'object') return '';
-  const rows = Object.entries(m).filter(([, v]) => typeof v === 'number')
-    .map(([k, v]) => `<tr><td>${esc(({ mae_kw: 'Average gap (kW)', rmse_kw: 'Gap that counts big misses more (kW)', mae_wm2: 'Average gap in sunlight (W/m²)' })[k] || k.replace(/_/g, ' '))}</td><td>${num(/_kw$/.test(k) ? S(v) : v, 2)}</td></tr>`).join('');
-  return rows ? `<h3>${label || 'How accurate the forecast is here (test months)'}</h3><table class="m">${rows}</table>` +
-    `<div class="sub">Gap between forecast and reality, for your ${SIZE} kW system. Smaller is better.</div>` : '';
+  if (!m || typeof m !== 'object' || typeof m.mae_kw !== 'number') return '';
+  // The typical miss as a share of the panel size: the red slice of the ring.
+  const pct = Math.max(0, Math.min(100, m.mae_kw / REF * 100)), r = 34, C = 2 * Math.PI * r;
+  const ring = `<svg viewBox="0 0 86 86" role="img" aria-label="Typical miss ${pct.toFixed(1)}% of the panel size">
+    <circle cx="43" cy="43" r="${r}" fill="none" stroke="#cfe9d8" stroke-width="10"/>
+    <circle cx="43" cy="43" r="${r}" fill="none" stroke="#d9534f" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="${(C * pct / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 43 43)"/>
+    <text x="43" y="42" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor">${pct.toFixed(1)}%</text>
+    <text x="43" y="57" text-anchor="middle" font-size="9" fill="#5d6b7a">typical miss</text></svg>`;
+  const row = (k, t) => typeof m[k] === 'number' ? `<div>${t}: <b>${num(/_kw$/.test(k) ? S(m[k]) : m[k], 2)}${/_kw$/.test(k) ? ' kW' : ' W/m&sup2;'}</b></div>` : '';
+  return `<h3>${label || 'How accurate the forecast is here (test months)'}</h3>
+    <div class="acc">${ring}<div class="rows">
+      <div>Typical miss: <b>${num(S(m.mae_kw), 2)} kW</b> of your ${SIZE} kW system</div>
+      ${row('rmse_kw', 'Counting big misses more')}${row('mae_wm2', 'In sunlight')}
+      <div class="sub" style="margin-top:2px">Green: on target. Red: the average gap between forecast and reality. Smaller is better.</div>
+    </div></div>`;
+}
+
+// The workshop example as a picture: forecast solar per plug-in hour, the planned EV charging, and the 6 kW load.
+function workshopSvg(d) {
+  const w = d.workshop;
+  if (!w || !(w.solar_kw || []).length) return '';
+  const n = w.solar_kw.length, W = 330, H = 132, L = 26, B = 18, T = 8, cw = (W - L - 4) / n;
+  const top = Math.max(w.load_kw + w.charger_kw, ...w.solar_kw) * 1.08;
+  const y = v => T + (H - T - B) * (1 - v / top), now = (d.next_local_hour ?? -1) - w.start_hour;
+  let g = '';
+  for (let i = 0; i < n; i++) {
+    const x = L + i * cw, sol = w.solar_kw[i], ch = w.charge_kw[i];
+    if (i === now) g += `<rect x="${x + 1}" y="${T - 4}" width="${cw - 2}" height="${H - B - T + 6}" rx="4" fill="none" stroke="#e8890c" stroke-width="1.6" stroke-dasharray="3 2"/>`;
+    g += `<rect x="${x + 3}" y="${y(sol)}" width="${cw - 6}" height="${y(0) - y(sol)}" rx="2" fill="#f5b400" opacity=".55"><title>${hourLabel(w.start_hour + i)}: forecast solar ${num(sol, 1)} kW</title></rect>`;
+    if (ch > 0.05) g += `<rect x="${x + cw * 0.3}" y="${y(ch)}" width="${cw * 0.4}" height="${y(0) - y(ch)}" rx="2" fill="#1f8f4d"><title>${hourLabel(w.start_hour + i)}: EV charges ${num(ch, 1)} kW</title></rect>`;
+    if (i % 2 === 0) g += `<text x="${x + cw / 2}" y="${H - 5}" text-anchor="middle" font-size="9.5" fill="#5d6b7a">${String(w.start_hour + i).padStart(2, '0')}</text>`;
+  }
+  const ticks = [0, Math.round(top / 2 / 5) * 5, Math.floor(top / 5) * 5].filter((v, i, a) => a.indexOf(v) === i);
+  const axis = ticks.map(v => `<text x="${L - 4}" y="${y(v) + 3}" text-anchor="end" font-size="9" fill="#5d6b7a">${v}</text><line x1="${L}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}" stroke="#dfe5ec"/>`).join('');
+  const load = `<line x1="${L}" x2="${W - 4}" y1="${y(w.load_kw)}" y2="${y(w.load_kw)}" stroke="#243b6b" stroke-width="1.4" stroke-dasharray="5 3"/>`;
+  const total = w.charge_kw.reduce((a, b) => a + b, 0);
+  return `<div class="wsbox"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Workshop plan: forecast solar and EV charging per hour, ${hourLabel(w.start_hour)} to ${hourLabel(w.start_hour + n)}">${axis}${g}${load}</svg>
+    <div class="lg"><span><i style="background:#f5b400;opacity:.6"></i>Forecast solar (kW)</span><span><i style="background:#1f8f4d"></i>EV charging (kW), ${num(total, 0)} of ${num(w.need_kwh, 0)} kWh</span>
+      <span><i style="height:0;border-top:2px dashed #243b6b;border-radius:0"></i>${num(w.load_kw, 0)} kW workshop load</span>
+      ${now >= 0 && now < n ? '<span><i style="border:1.5px dashed #e8890c"></i>This hour</span>' : ''}</div></div>`;
+}
+
+// Grid power the workshop's EV needs today under each habit: shorter bar = less from the grid.
+function savingsBars(d) {
+  const g = (d.workshop || {}).grid_kwh;
+  if (!g) return '';
+  const rows = [['Charge on arrival', g.arrival, '#9aa5b1'], ['Always charge 10:00-14:00', g.fixed, '#e8a33c'], ['SolarCast plan', g.solarcast, '#1f8f4d']];
+  const max = Math.max(...rows.map(r => r[1]), 0.1);
+  return `<div class="sub" style="margin-top:4px">Grid power the EV needs today (kWh, less is better)</div><div class="gbars">${rows.map(([t, v, c], i) =>
+    `<span class="${i === 2 ? 'best' : ''}">${t}</span><div class="track"><div class="fill" data-w="${(v / max * 100).toFixed(1)}" style="background:${c}"></div></div><span class="v ${i === 2 ? 'best' : ''}">${num(v, 1)}</span>`).join('')}</div>`;
 }
 
 async function loadDetail(name) {
@@ -1249,17 +1312,21 @@ function renderPanel(d, titleHtml, subHtml) {
     ${evCardHtml()}
     <h3>Example use: should a workshop charge its EV now?</h3>
     <div class="sub" style="margin-bottom:6px">One way to use the forecast. This example is fixed: a workshop with ${REF} kW of panels, a 6 kW load and an 11 kW EV charger.</div>
-    <div class="advice ${yes ? 'yes' : 'no'}"><strong>${yes ? 'Charge now' : 'Wait'}</strong><br>${esc(d.reason || '')}</div>
+    <div class="advice ${yes ? 'yes' : 'no'}"><span class="ico" aria-hidden="true">${yes ? '&#9889;' : '&#9203;'}</span><div><strong>${yes ? 'Charge now' : 'Wait'}</strong><br>${esc(d.reason || '')}</div></div>
+    ${workshopSvg(d)}
     <h3>Savings today vs charging on arrival</h3>
+    ${savingsBars(d)}
     <div class="stats">
-      <div class="stat"><b>${num(d.grid_kwh_saved)}</b><span>kWh from grid avoided</span></div>
-      <div class="stat"><b>NZD ${num(d.money_saved_nzd, 2)}</b><span>money saved</span></div>
-      <div class="stat"><b>${num(d.co2_saved_kg)}</b><span>kg CO2 avoided</span></div>
+      <div class="stat"><span class="si" aria-hidden="true">&#128268;</span><b>${num(d.grid_kwh_saved)}</b><span>kWh from grid avoided</span></div>
+      <div class="stat"><span class="si" aria-hidden="true">&#128176;</span><b>NZD ${num(d.money_saved_nzd, 2)}</b><span>money saved</span></div>
+      <div class="stat"><span class="si" aria-hidden="true">&#127807;</span><b>${num(d.co2_saved_kg)}</b><span>kg CO2 avoided</span></div>
     </div>
     ${d.grid_kwh_saved_vs_fixed !== undefined ? `<div class="sub" style="margin-top:6px">Against a tougher habit (always charge 10:00-14:00): ${num(d.grid_kwh_saved_vs_fixed)} kWh, NZD ${num(d.money_saved_vs_fixed_nzd, 2)} saved today. Over the whole test period the forecast saves 1.5 kWh/day vs that habit and 11.1 kWh/day vs charging on arrival.</div>` : ''}
     ${d.assumptions ? `<div class="sub" style="margin-top:6px">Assumptions: ${esc(d.assumptions)}</div>` : ''}
     ${metricsHtml(d.metrics, mlabel)}`;
   drawChart(d);
+  void panel.offsetWidth;                                   // start the bars at 0 so they grow
+  panel.querySelectorAll('.gbars .fill').forEach(f => { f.style.width = f.dataset.w + '%'; });
   countUp(panel.querySelector('.yours .big .cu'));
   evBind(d);
 }

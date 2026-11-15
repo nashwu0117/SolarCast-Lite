@@ -108,6 +108,19 @@ class FakeService:
         reason = (f"Predicted solar {nxt['kw']:.1f} kW covers the 11 kW charger, so charge now."
                   if charge else f"Predicted solar only {nxt['kw']:.1f} kW; waiting for a sunnier hour saves grid power.")
         kwh = sum(x for x in pred[8:18]) * 0.5
+        # The workshop plan (same rule as the real service: solar surplus over a 6 kW load, finish 40 kWh by 18:00).
+        need, charges, fc = 40.0, [], pred[8:18]
+        for i, f in enumerate(fc):
+            c = min(11.0, need, max(max(0.0, need - 11.0 * (len(fc) - i - 1)), f - 6.0, 0.0))
+            need -= c
+            charges.append(round(c, 2))
+        grid = lambda ch: sum(max(0.0, 6 + c - f) - max(0.0, 6 - f) for c, f in zip(ch, fc))
+        arrival = [min(11.0, max(0.0, 40.0 - 11.0 * i)) for i in range(len(fc))]
+        fixed = [11.0 if 2 <= i < 6 else 0.0 for i in range(len(fc))]
+        kwh = grid(arrival) - grid(charges)                     # savings that match the bars
+        workshop = {"start_hour": 8, "solar_kw": [round(f, 2) for f in fc], "charge_kw": charges, "load_kw": 6.0,
+                    "charger_kw": 11.0, "need_kwh": 40.0,
+                    "grid_kwh": {"arrival": round(grid(arrival), 2), "fixed": round(grid(fixed), 2), "solarcast": round(grid(charges), 2)}}
         ahead = []
         if time_utc == "live" or time_utc.startswith("ahead:"):
             for k in (1, 2, 3):
@@ -118,7 +131,7 @@ class FakeService:
         return {"region": region, "hours": hours, "ahead": ahead, "actual_kw": actual, "predicted_kw": pred, "persistence_kw": pers,
                 "predicted_kw_next": nxt["kw"], "next_local_hour": now.astimezone(NZ).hour,
                 "cloud_cover_pct": cloud, "charge_now": charge, "reason": reason,
-                "grid_kwh_saved": kwh, "money_saved_nzd": kwh * 0.30, "co2_saved_kg": kwh * 0.10,
+                "grid_kwh_saved": kwh, "money_saved_nzd": kwh * 0.30, "co2_saved_kg": kwh * 0.10, "workshop": workshop,
                 "assumptions": "price NZD 0.30/kWh, grid 0.10 kg CO2/kWh, EV 40 kWh/day, 11 kW charger, 08:00-18:00 local",
                 "metrics": {"mae_kw": 1.8 + _rand(region, "m"), "rmse_kw": 3.0 + _rand(region, "r")}}
 

@@ -298,6 +298,7 @@ class Service:
         advice = {"charge_now": False, "reason": "No data for this local day."}
         saved = {"grid_kwh_saved": 0.0, "money_saved_nzd": 0.0, "co2_saved_kg": 0.0, "grid_kwh_saved_vs_fixed": 0.0,
                  "money_saved_vs_fixed_nzd": 0.0}
+        workshop = None
         if slot.sum() == n_slots:
             fc = np.nan_to_num(np.asarray(pred_kw)[slot])
             act = np.nan_to_num(np.where(np.isnan(actual_kw), pred_kw, actual_kw)[slot])   # live: estimate the rest
@@ -311,12 +312,18 @@ class Service:
                      "co2_saved_kg": kwh * config.GRID_CO2_KG_PER_KWH, "grid_kwh_saved_vs_fixed": grid_fixed - grid,
                      "money_saved_vs_fixed_nzd": (grid_fixed - grid) * config.GRID_PRICE_NZD}
             advice = self._advice(t, local, slot, np.asarray(pred_kw), charges)
+            # The same plan as numbers the dashboard can draw (workshop scale, not the user's system size).
+            workshop = {"start_hour": config.WORK_START, "solar_kw": [round(float(v), 2) for v in fc],
+                        "charge_kw": [round(float(v), 2) for v in charges], "load_kw": config.WORKSHOP_LOAD_KW,
+                        "charger_kw": config.CHARGER_KW, "need_kwh": config.EV_NEED_KWH,
+                        "grid_kwh": {"arrival": round(float(grid_arrival), 2), "fixed": round(float(grid_fixed), 2),
+                                     "solarcast": round(float(grid), 2)}}
         res = {"region": region, "local_date": str(day), "hours": [int(h) for h in local.hour],
                "actual_kw": [_num(v) for v in actual_kw], "predicted_kw": [_num(v) for v in pred_kw],
                "persistence_kw": [_num(v) for v in pers_kw], "cloud_cover_pct": [_num(v, 0) for v in f["cloud_t"]],
                "predicted_kw_next": _num(next_kw), "next_local_hour": int(t.tz_convert(config.LOCAL_TZ).hour),
                "totals_estimated": bool(live), **advice,
-               **{k: round(float(v), 2) for k, v in saved.items()},
+               **{k: round(float(v), 2) for k, v in saved.items()}, "workshop": workshop,
                "metrics": metrics}
         return res
 
