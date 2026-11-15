@@ -632,7 +632,7 @@ function colorFor(kw) { return (BINS.find(b => kw / REF < b.max) || BINS[BINS.le
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = (v, d = 1) => (v === null || v === undefined || Number.isNaN(+v)) ? '--' : (+v).toFixed(d);
-const NZ_FMT = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', day: 'numeric', month: 'short',
+const NZ_FMT = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
                                                   hour: '2-digit', minute: '2-digit', hour12: false });
 function nzString(iso) {
   const d = new Date(iso);
@@ -783,6 +783,7 @@ $('gridOn').onchange = () => drawGrid(lastGrid);
 setInterval(() => {
   if (current === 'live' && document.visibilityState === 'visible') loadSnapshot({ panel: false });
 }, 60000);
+setInterval(() => { if (current === 'live') headerClock(); }, 15000);       // keep the Live clock ticking
 
 // ---------- header: clock, mode, note ----------
 function setNote(text, kind, html) {
@@ -793,8 +794,7 @@ function setNote(text, kind, html) {
 }
 
 function updateHeader(regions) {
-  const local = regions.length ? regions[0].local_time : nzString(current === 'live' ? new Date().toISOString() : current);
-  $('nzTime').innerHTML = esc(local) + ' <small>New Zealand time</small>';
+  headerClock();
   const anyDay = regions.some(r => r.is_day);
   const anyGen = regions.some(r => r.generating);
   const sunny = '<button type="button" id="sunnyBtn" class="on">&#9654; Watch a sunny day</button>';
@@ -865,7 +865,13 @@ function syncBar() {
   $('modeLabel').textContent = live ? 'The current hour, with the latest weather' : 'A past hour from months the model never saw';
   if (live) stopPlay();
   else { const [d, h] = nzKey(current); $('rDate').value = d; $('slider').value = h; $('rHour').textContent = String(h).padStart(2, '0') + ':00'; }
-  $('nzTime').innerHTML = esc(live ? 'Live' : nzString(current)) + ' <small>New Zealand time</small>';
+  headerClock();
+}
+// Top-right clock, always in one format: the real NZ time in Live, the replayed hour (clearly marked) in Replay.
+function headerClock() {
+  const live = current === 'live';
+  $('nzTime').innerHTML = (live ? '' : '<small>Replaying</small> ') + esc(nzString(live ? new Date().toISOString() : current)) +
+    ` <small>${live ? 'New Zealand time now' : 'New Zealand time (a past day)'}</small>`;
 }
 function setTime(t) {
   if (!t) return;
