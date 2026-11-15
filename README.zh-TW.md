@@ -10,7 +10,9 @@ Veritas AI 國際高中黑客松 2026，**AI + Climate** 賽道。
 
 **評審請從這裡開始** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) 或 [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb)
 （兩個選你喜歡的、或你有 GPU 額度或付費方案的那一個就好：跑的是同一份 notebook，打開的儀表板也一樣。
-Kaggle：在 **Settings** 選 **Accelerator: GPU T4 x2**、**Internet: On**（開網路需要先驗證手機號碼），再按 **Run All**。）
+Kaggle：在 **Settings** 選 **Accelerator: GPU T4 x2**、**Internet: On**（開網路需要先驗證手機號碼），再按 **Run All**。
+Kaggle 從 GitHub 複製 notebook 時頁面會空白 15～30 秒，請等一下、不要重新整理；如果一直空白，先登入 Kaggle 再開一次，
+或用 File > Import Notebook 貼上 notebook 的 GitHub 連結。）
 Colab：Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI 聊天用）。大約三分鐘內，notebook 會從本 repo 載入
 我們訓練好的模型、顯示它的準確度，並印出儀表板的公開連結（免費的 Cloudflare tunnel）；AI 聊天再過幾分鐘就會準備好。
 
