@@ -589,7 +589,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="card"><h3 id="hOverallWm">How far off in sunlight (W/m&sup2;)</h3><div class="sub">The same gap measured in sunlight on each square metre, the unit scientists use. Shorter bar = better.</div><div class="chartbox"><canvas id="cOverallWm"></canvas></div></div>
     <div class="card wide"><h3>All the numbers</h3><div id="mTable"></div></div>
     <div class="card wide"><h3>How far off in each region (kW)</h3><div class="sub">Average gap in the test months, shorter bar = better. Our forecast wins in all 14 regions.</div><div class="chartbox tall"><canvas id="cRegion"></canvas></div></div>
-    <div class="card wide"><h3 id="hSample">One example week</h3><div class="sub">What we forecast vs what the panels really made</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
+    <div class="card wide"><h3 id="hSample">One example week</h3><div class="sub" id="sSample">A past week from the weather archive, kept hidden while the model was trained: what we forecast vs what the panels really made</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
     <div class="card wide"><h3>What the forecast pays most attention to</h3><div class="sub">Share of the model's decisions that use each piece of information (top 10)</div><div class="chartbox tall"><canvas id="cImp"></canvas></div></div>
   </div>
 </section>
@@ -1379,7 +1379,9 @@ function renderModel() {
       scales: { y: { beginAtZero: true, title: { display: true, text: 'Average gap (kW)' } }, x: { ticks: { maxRotation: 60, minRotation: 40 } } } } });
 
   const s = report.sample || {};
-  $('hSample').textContent = 'Sample week' + (s.region ? ': ' + s.region : '');
+  $('hSample').textContent = 'A past test week' + (s.region ? ': ' + s.region : '') +
+    ((s.times || []).length ? ', ' + new Date(s.times[0]).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', timeZone: 'Pacific/Auckland' }) +
+      ' - ' + new Date(s.times[s.times.length - 1]).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }) : '');
   mchart('cSample', { type: 'line',
     data: { labels: (s.times || []).map(nzString), datasets: [
       { label: 'What the panels made', data: s.actual_kw || [], borderColor: '#1f8f4d', borderWidth: 2, pointRadius: 0, tension: 0.2 },

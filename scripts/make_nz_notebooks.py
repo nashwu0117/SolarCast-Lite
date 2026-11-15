@@ -212,7 +212,8 @@ ax.plot(t, s["actual_kw"], color="black", lw=2, label="actual (derived from irra
 ax.plot(t, s["predicted_kw"], color="tab:orange", lw=1.8, label="SolarCast model")
 ax.plot(t, s["persistence_kw"], color="tab:blue", lw=1, ls="--", label="persistence")
 ax.set_ylabel("PV power of a 50 kW system (kW)")
-ax.set_title(f"One sample week in {s['region']}: next-hour forecast (NZ local time)")
+ax.set_title(f"Past test week in {s['region']}, {t[0]:%d %b} - {t[-1]:%d %b %Y} (never seen in training): "
+             "next-hour forecast vs. what really happened, NZ time")
 ax.xaxis.set_major_locator(mdates.DayLocator())
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%a %d %b"))
 ax.legend(loc="upper right")
@@ -604,7 +605,8 @@ The forecast helps a little by itself; most of the extra gain comes from letting
  "region": {"en": "### Per region", "zh-TW": "### 各區域結果"},
  "curve": {"en": "### Learning curve (measured for v1)\nMore training days means a lower error, and the gain flattens after about a year of data.",
            "zh-TW": "### 學習曲線（針對 v1 量測）\n訓練天數越多，誤差越低；大約一年的資料之後，進步就趨於平緩。"},
- "sample": {"en": "### One sample week", "zh-TW": "### 取樣一週"},
+ "sample": {"en": "### One sample week (a past week, replayed from the weather archive)\n\nWe built SolarCast in November 2026. To test it fairly we downloaded about five years of **past** weather from the Open-Meteo archive, trained on 2022-2024 and kept July 2025 - October 2026 hidden as the test period. The week below (December 2025, last NZ summer) comes from that hidden period: the model never saw it, and the real outcome is already known, so every hour can be checked. It is a replay of history, not a forecast for this December.",
+               "zh-TW": "### 取樣一週（從天氣資料庫重播的過去一週）\n\nSolarCast 是我們在 2026 年 11 月做的。為了公平測試，我們從 Open-Meteo 的資料庫下載了大約五年的**過去**天氣資料，用 2022–2024 年訓練，並把 2025 年 7 月到 2026 年 10 月藏起來當測試期。下面這一週（2025 年 12 月，也就是去年紐西蘭的夏天）就來自這段被藏起來的期間：模型從沒看過它，而真實結果已經知道，所以每個小時都能對答案。這是重播過去的資料，不是預測今年 12 月。"},
  "notes": {
   "en": """## 4. Honest notes
 - The weather is **Open-Meteo modelled data (ERA5-based reanalysis)**, not measurements from real solar plants.
