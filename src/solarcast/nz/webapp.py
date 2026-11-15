@@ -589,7 +589,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="card"><h3 id="hOverallWm">How far off in sunlight (W/m&sup2;)</h3><div class="sub">The same gap measured in sunlight on each square metre, the unit scientists use. Shorter bar = better.</div><div class="chartbox"><canvas id="cOverallWm"></canvas></div></div>
     <div class="card wide"><h3>All the numbers</h3><div id="mTable"></div></div>
     <div class="card wide"><h3>How far off in each region (kW)</h3><div class="sub">Average gap in the test months, shorter bar = better. Our forecast wins in all 14 regions.</div><div class="chartbox tall"><canvas id="cRegion"></canvas></div></div>
-    <div class="card wide"><h3 id="hSample">One example week</h3><div class="sub" id="sSample">A past week from the weather archive, kept hidden while the model was trained: what we forecast vs what the panels really made</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
+    <div class="card wide"><h3 id="hSample">One example week</h3><div class="sub" id="sSample">A past week from the weather archive. We trained the model during the hackathon (Nov 2026) and kept this week out of training: what we forecast vs what the panels really made</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
     <div class="card wide"><h3>What the forecast pays most attention to</h3><div class="sub">Share of the model's decisions that use each piece of information (top 10)</div><div class="chartbox tall"><canvas id="cImp"></canvas></div></div>
   </div>
 </section>
