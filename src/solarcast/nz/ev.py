@@ -5,16 +5,27 @@ uses a small base load first; whatever is left goes into the car, up to what the
 charger accept. An EV charger cannot start below about 1.4 kW (6 A at 230 V), so smaller surpluses are not used.
 About 10% is lost between the wall and the battery.
 
-The two cars are New Zealand's two best-selling EVs in 2025 (Tesla Model Y first, BYD Atto 3 second). Specs are typical
-published figures for the NZ models; real cars and chargers vary, so the result is an estimate, not a promise.
+The cars are common in New Zealand: the Tesla Model Y and BYD Atto 3 were the two best-selling new EVs in 2025, and the
+Nissan Leaf is the most common used import. Specs are typical published figures (battery size, the most AC power the
+car's on-board charger accepts, energy use); real cars and chargers vary, so the result is an estimate, not a promise.
 """
 from __future__ import annotations
 
 from solarcast.nz import config
 
 CARS = {
-    "tesla_model_y": {"name": "Tesla Model Y (RWD)", "battery_kwh": 60.0, "ac_max_kw": 11.0, "kwh_per_100km": 15.0},
-    "byd_atto_3": {"name": "BYD Atto 3 (60.48 kWh)", "battery_kwh": 60.48, "ac_max_kw": 7.0, "kwh_per_100km": 16.0},
+    "tesla_model_y": {"name": "Tesla Model Y", "battery_kwh": 60.0, "ac_max_kw": 11.0, "kwh_per_100km": 15.0,
+                      "note": "NZ's best-selling new EV in 2025"},
+    "byd_atto_3": {"name": "BYD Atto 3", "battery_kwh": 60.48, "ac_max_kw": 7.0, "kwh_per_100km": 16.0,
+                   "note": "No. 2 new EV in NZ in 2025"},
+    "tesla_model_3": {"name": "Tesla Model 3", "battery_kwh": 57.5, "ac_max_kw": 11.0, "kwh_per_100km": 13.5, "note": ""},
+    "byd_dolphin": {"name": "BYD Dolphin", "battery_kwh": 60.4, "ac_max_kw": 11.0, "kwh_per_100km": 15.0, "note": ""},
+    "mg4": {"name": "MG4", "battery_kwh": 64.0, "ac_max_kw": 6.6, "kwh_per_100km": 16.0, "note": ""},
+    "kia_ev6": {"name": "Kia EV6", "battery_kwh": 77.4, "ac_max_kw": 11.0, "kwh_per_100km": 17.0, "note": ""},
+    "hyundai_kona": {"name": "Hyundai Kona Electric", "battery_kwh": 64.8, "ac_max_kw": 10.8, "kwh_per_100km": 15.0,
+                     "note": ""},
+    "nissan_leaf": {"name": "Nissan Leaf", "battery_kwh": 40.0, "ac_max_kw": 6.6, "kwh_per_100km": 16.0,
+                    "note": "the most common EV on NZ roads, mostly used imports"},
 }
 HOME_CHARGER_KW = 7.4          # 32 A single-phase wall charger; most NZ homes are single-phase
 THREE_PHASE_CHARGER_KW = 11.0  # 16 A three-phase

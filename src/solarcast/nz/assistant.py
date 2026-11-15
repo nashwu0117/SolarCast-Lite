@@ -357,8 +357,9 @@ class Assistant:
                         whole = evcalc.plan(d.get("hours", []), solar, 0, car)   # no sun left: the whole day instead
                         if whole["solar_kwh_to_battery"] > 0:
                             p = {**whole, "plugged_in_from": "sunrise (no sun left today, so this is the whole day)"}
-                    p.pop("hours")
-                    plans[car] = p
+                    plans[car] = {k: p[k] for k in ("car_name", "battery_kwh", "charger_kw", "need_kwh", "done",
+                                                    "finish_local_time", "end_pct", "km_added", "still_needed_kwh",
+                                                    "charging_hours", "saved_nzd", "grid_only_hours", "plugged_in_from")}
                 out["ev_solar_charging"] = {
                     "what": f"Charging the user's own EV only from THEIR {size:g} kW panels, "
                             "from plugged_in_from to the end of this local day, 20% -> 80% battery, "

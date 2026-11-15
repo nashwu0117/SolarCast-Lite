@@ -232,6 +232,6 @@ def test_facts_include_ev_charging_from_the_users_panels(svc):
     small, big = a.facts(t, "Wellington", system_kw=5), a.facts(t, "Wellington", system_kw=50)
     for car in ("tesla_model_y", "byd_atto_3"):
         s, b = small["ev_solar_charging"][car], big["ev_solar_charging"][car]
-        assert "hours" not in s and s["need_kwh"] == b["need_kwh"]
-        assert s["solar_kwh_to_battery"] <= b["solar_kwh_to_battery"]          # smaller panels charge less
+        assert "hours" not in s and len(small["ev_solar_charging"]) > 8 and s["need_kwh"] == b["need_kwh"]
+        assert s["end_pct"] <= b["end_pct"]          # smaller panels charge less
     assert "5 kW panels" in small["ev_solar_charging"]["what"]

@@ -51,12 +51,13 @@ decision?" below).
   the day's actual vs predicted power, and the worked example (EV advice for the next hour with its reason and the day's
   savings in kWh, NZD, kg CO2). The page opens on the sunniest region now, so this shows without a click; an animated
   picture shows the power flowing from the sun to your panels, your home and (when it is worth it) the EV.
-- **Charge your EV from your panels:** pick a Tesla Model Y or a BYD Atto 3 (New Zealand's two best-selling EVs in
-  2025), the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
+- **Charge your EV from your panels:** pick one of eight EVs common in New Zealand (Tesla Model Y and Model 3, BYD Atto 3 and Dolphin, MG4, Kia EV6, Hyundai Kona Electric, Nissan Leaf), the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
   finish (or how far they get and what is still needed), the range added, the money saved, and how long the same
   charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes (home, car, left
   over). At night it shows the whole day as if plugged in at sunrise. The AI chat can answer the same question.
-- **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
+- **Live now** or **Replay a past day** (top bar): pick a day and an hour from the test months, step hour by hour, or
+  press **Play the day** to watch the sun move across the map. At night in New Zealand, "Watch a sunny day" does this in one click.
+- **Plain language:** the Model tab explains accuracy and what the forecast pays attention to in everyday words.
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
 - **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese for your panel size, for example "how much
   will my panels make next hour in Christchurch?". It runs an open model (Qwen3 14B on Colab's T4 GPU, 8B on a smaller GPU, 1.7B on a CPU)
@@ -152,7 +153,7 @@ charging on arrival and the 10:00-14:00 habit. Reproduce: `python experiments/nz
 - **Live mode** uses Open-Meteo's forecast service (and its day-ahead forecast of the next hour), a slightly different
   source than the training data, so live accuracy may be a little lower.
 - **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code. The home EV
-  estimate uses typical published specs (Model Y RWD about 60 kWh and 11 kW AC; Atto 3 60.48 kWh and 7 kW AC), a
+  estimate uses typical published specs (for example Model Y about 60 kWh and 11 kW AC, Atto 3 60.48 kWh and 7 kW AC, Leaf 40 kWh and 6.6 kW AC), a
   0.5 kW home load, 10% charging loss and a 1.4 kW minimum charging power (`src/solarcast/nz/ev.py`); real cars vary.
 - **The nationwide grid** borrows the nearest region's climate id for each cell, and its accuracy was measured only
   at the 14 regions; each refresh uses about 270 free Open-Meteo calls, so other replay days are limited per hour.

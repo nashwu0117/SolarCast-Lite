@@ -337,7 +337,31 @@ INDEX_HTML = r"""<!doctype html>
   .yours { background: #fff8e8; border: 1px solid #f3d9a4; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
   .yours .big { font-size: 28px; font-weight: 700; color: #b45309; line-height: 1.1; }
   .yours .big small { font-size: 14px; font-weight: 500; color: var(--muted); }
-  #slider { flex: 1 1 260px; min-width: 180px; accent-color: var(--accent); }
+  #slider { flex: 1 1 160px; min-width: 110px; accent-color: var(--accent); }
+  header { background: linear-gradient(180deg, #fffaf0, #ffffff 70%); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 38px; height: 38px; flex: none; animation: spin 40s linear infinite; }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; padding: 6px 14px; }
+  .seg button.on { background: var(--ink); color: #fff; font-weight: 600; }
+  .seg #liveBtn.on { background: #d14343; }
+  .dot-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
+  #liveBtn.on .dot-live { animation: blink 1.4s ease-in-out infinite; }
+  .replay { display: flex; align-items: center; gap: 8px; flex: 1 1 440px; background: #fff8ec; border: 1px solid #f3d9a4; border-radius: 999px; padding: 4px 6px 4px 10px; }
+  .replay[hidden] { display: none; }
+  .replay input[type=date] { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; background: #fff; }
+  .replay .icon { padding: 4px 10px; }
+  .replay .play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #rHour { font-variant-numeric: tabular-nums; min-width: 44px; }
+  .sizebox { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; letter-spacing: .5px; color: #fff; vertical-align: 1px; }
+  .badge.live { background: #d14343; }
+  .badge.live i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: blink 1.4s ease-in-out infinite; }
+  .badge.replay { background: var(--accent); }
+  @keyframes blink { 50% { opacity: .25; } }
+  .note button { padding: 2px 12px; margin: 0 6px; font-size: 13px; }
+  @media (max-width: 900px) { .sizebox { margin-left: 0; } .replay { border-radius: 12px; flex-wrap: wrap; } }
+  @media (prefers-reduced-motion: reduce) { .logo, .dot-live, .badge.live i { animation: none !important; } }
   button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
   button:hover { border-color: var(--accent); }
   button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
@@ -444,9 +468,9 @@ INDEX_HTML = r"""<!doctype html>
   /* Charge your EV from your panels */
   .evc { background: #effaf2; border: 1px solid #bfe3cb; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
   .evcars { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-  .evcars button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; }
-  .evcars button.on { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
-  .evcars svg { width: 26px; height: 14px; }
+  .evcars { align-items: center; flex-wrap: nowrap; }
+  .evcars select { flex: 1; min-width: 0; font: inherit; font-weight: 600; padding: 6px 8px; border: 1px solid #bfe3cb; border-radius: 10px; background: #fff; }
+  .evcars svg { width: 34px; height: 20px; flex: none; }
   .evin { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 13px; color: var(--muted); }
   .evin input[type=range] { width: 100%; accent-color: var(--good); }
   .evin b { color: var(--ink); min-width: 38px; text-align: right; }
@@ -475,20 +499,31 @@ INDEX_HTML = r"""<!doctype html>
 <body>
 <header>
   <div class="top">
-    <div>
-      <h1>SolarCast <span>NZ</span></h1>
-      <div class="tagline">How much power your solar panels will give next hour, anywhere in New Zealand</div>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><g stroke="#f5a623" stroke-width="3" stroke-linecap="round"><path d="M20 3v5M20 32v5M3 20h5M32 20h5M8 8l3.5 3.5M28.5 28.5L32 32M8 32l3.5-3.5M28.5 11.5L32 8"/></g><circle cx="20" cy="20" r="8" fill="#f5b400"/></svg>
+      <div><h1>SolarCast <span>NZ</span></h1>
+      <div class="tagline">How much power your solar panels will give next hour, anywhere in New Zealand</div></div>
     </div>
     <div class="clock">
       <div class="nz" id="nzTime">--</div>
-      <div class="mode" id="modeLabel">Loading...</div>
+      <div class="mode"><span class="badge" id="modeBadge"></span> <span id="modeLabel">Loading...</span></div>
     </div>
   </div>
   <div class="controls">
-    <label for="slider">Replay</label>
-    <input type="range" id="slider" min="0" max="0" value="0" aria-label="Replay time">
-    <button id="liveBtn" type="button">Live</button>
-    <label for="sizeSel">Your panels</label>
+    <div class="seg" role="group" aria-label="Which hour to show">
+      <button id="liveBtn" type="button"><i class="dot-live"></i>Live now</button>
+      <button id="replayBtn" type="button">&#9194; Replay a past day</button>
+    </div>
+    <div class="replay" id="replayBox" hidden>
+      <input type="date" id="rDate" aria-label="Day to replay">
+      <button id="rPrev" type="button" class="icon" title="One hour back" aria-label="One hour back">&#9664;</button>
+      <input type="range" id="slider" min="0" max="23" value="12" aria-label="Hour of the day">
+      <b id="rHour">12:00</b>
+      <button id="rNext" type="button" class="icon" title="One hour forward" aria-label="One hour forward">&#9654;</button>
+      <button id="rPlay" type="button" class="play">&#9654; Play the day</button>
+    </div>
+    <div class="sizebox">
+    <label for="sizeSel">&#9728; Your panels</label>
     <select id="sizeSel" aria-label="Your solar system size">
       <option value="3">3 kW (small home)</option>
       <option value="5" selected>5 kW (typical home)</option>
@@ -498,6 +533,7 @@ INDEX_HTML = r"""<!doctype html>
       <option value="custom">Other size (type it)</option>
     </select>
     <input id="sizeNum" type="number" min="0.5" max="1000" step="0.5" value="5" aria-label="Your solar system size in kW"><span class="tagline">kW</span>
+    </div>
   </div>
   <div class="tabs">
     <button id="tabMap" type="button" class="on">Map</button>
@@ -514,7 +550,7 @@ INDEX_HTML = r"""<!doctype html>
       <div id="briefStats"></div>
     </div>
     <div class="maptools"><label for="colorMode">Colour circles by</label>
-      <select id="colorMode"><option value="power">Predicted next-hour power (your panels)</option><option value="accuracy">Model accuracy (error)</option></select>
+      <select id="colorMode"><option value="power">Predicted next-hour power (your panels)</option><option value="accuracy">How accurate the forecast is</option></select>
       <label class="gt" id="gridTool"><input type="checkbox" id="gridOn" checked> Nationwide grid</label></div>
     <div id="map"></div>
     <div class="legend" id="legend"></div>
@@ -526,14 +562,14 @@ INDEX_HTML = r"""<!doctype html>
 
 <section id="modelView">
   <div class="grid2">
-    <div class="card wide"><h3>How good is our model?</h3><div class="sub" id="mPeriods">Loading...</div></div>
+    <div class="card wide"><h3>How good is our forecast?</h3><div class="sub" id="mPeriods">Loading...</div></div>
     <div class="card wide"><h3 id="hVersion">Model version</h3><div id="mVersion" class="sub">Loading...</div></div>
-    <div class="card"><h3 id="hOverallKw">Overall error (kW)</h3><div class="sub">Mean absolute error, lower is better</div><div class="chartbox"><canvas id="cOverallKw"></canvas></div></div>
-    <div class="card"><h3 id="hOverallWm">Overall error (W/m&sup2;)</h3><div class="sub">Mean absolute error of sunlight, lower is better</div><div class="chartbox"><canvas id="cOverallWm"></canvas></div></div>
-    <div class="card wide"><h3>All overall metrics</h3><div id="mTable"></div></div>
-    <div class="card wide"><h3>Error per region (MAE, kW)</h3><div class="sub">Test period, lower is better</div><div class="chartbox tall"><canvas id="cRegion"></canvas></div></div>
-    <div class="card wide"><h3 id="hSample">Sample week</h3><div class="sub">Predicted vs actual power for one week</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
-    <div class="card wide"><h3>What the model looks at (top feature importances)</h3><div class="chartbox tall"><canvas id="cImp"></canvas></div></div>
+    <div class="card"><h3 id="hOverallKw">How far off, on average (kW)</h3><div class="sub">The average gap between the forecast and what the panels really made, in daytime. Shorter bar = better.</div><div class="chartbox"><canvas id="cOverallKw"></canvas></div></div>
+    <div class="card"><h3 id="hOverallWm">How far off in sunlight (W/m&sup2;)</h3><div class="sub">The same gap measured in sunlight on each square metre, the unit scientists use. Shorter bar = better.</div><div class="chartbox"><canvas id="cOverallWm"></canvas></div></div>
+    <div class="card wide"><h3>All the numbers</h3><div id="mTable"></div></div>
+    <div class="card wide"><h3>How far off in each region (kW)</h3><div class="sub">Average gap in the test months, shorter bar = better. Our forecast wins in all 14 regions.</div><div class="chartbox tall"><canvas id="cRegion"></canvas></div></div>
+    <div class="card wide"><h3 id="hSample">One example week</h3><div class="sub">What we forecast vs what the panels really made</div><div class="chartbox tall"><canvas id="cSample"></canvas></div></div>
+    <div class="card wide"><h3>What the forecast pays most attention to</h3><div class="sub">Share of the model's decisions that use each piece of information (top 10)</div><div class="chartbox tall"><canvas id="cImp"></canvas></div></div>
   </div>
 </section>
 
@@ -558,7 +594,7 @@ INDEX_HTML = r"""<!doctype html>
 
 <footer>
   AI chat: Qwen3 (Apache-2.0) running locally on the notebook's machine, safety check by Llama Guard 3 (Built with Llama); it answers only from this dashboard's data and may make mistakes.
-  Weather: Open-Meteo (CC BY 4.0), reanalysis/forecast model data. PV output derived from irradiance and scaled to the panel size you pick. Prototype; not energy or financial advice.
+  Weather: Open-Meteo (CC BY 4.0), past weather and weather forecasts. Panel power is worked out from sunlight and scaled to the panel size you pick. Prototype; not energy or financial advice.
 </footer>
 
 <script>
@@ -610,7 +646,7 @@ function tooltipHtml(r) {
     ? `<b class="gen">Your ${SIZE} kW panels: ${num(S(r.predicted_kw_next), kwd())} kW expected next hour</b>`
     : `<b class="nogen">Not generating${r.is_day ? ' (too cloudy)' : ' (night)'}: ${num(S(r.predicted_kw_next), kwd())} kW expected</b>`;
   const acc = (regionMae[r.name] !== undefined && $('colorMode').value === 'accuracy')
-    ? `Model error here: ${num(S(regionMae[r.name]), 2)} kW (MAE, your ${SIZE} kW system)<br>` : '';
+    ? `Forecast is off by ${num(S(regionMae[r.name]), 2)} kW on average here (your ${SIZE} kW system)<br>` : '';
   return `<b>${esc(r.name)}</b> &middot; ${esc(r.local_time)}<br>${acc}${gen}<br>` +
     `Cloud ${num(r.cloud_cover_pct, 0)}% &middot; ${num(r.temp_c)} &deg;C &middot; wind ${num(r.wind_kmh, 0)} km/h<br>` +
     `Sunlight now ${num(r.ghi_now_wm2, 0)} W/m&sup2; &middot; ${r.is_day ? 'daytime' : 'night'}`;
@@ -642,7 +678,7 @@ function accColor(name) {
 function fillFor(r) { return $('colorMode').value === 'accuracy' ? accColor(r.name) : colorFor(r.predicted_kw_next); }
 function drawLegend() {
   if ($('colorMode').value === 'accuracy') {
-    $('legend').innerHTML = `<b>Model error (MAE, kW, ${SIZE} kW system)</b>` + (accBins.length
+    $('legend').innerHTML = `<b>How far off the forecast is here, on average (kW, ${SIZE} kW system)</b>` + (accBins.length
       ? accBins.map(b => `<div><span class="dot" style="background:${b.color}"></span>${num(S(b.from), 2)} - ${num(S(b.to), 2)}</div>`).join('')
       : '<div>Model report not loaded</div>');
   } else {
@@ -741,9 +777,9 @@ setInterval(() => {
 }, 60000);
 
 // ---------- header: clock, mode, note ----------
-function setNote(text, kind) {
+function setNote(text, kind, html) {
   const n = $('note');
-  n.textContent = text || '';
+  if (html) n.innerHTML = text; else n.textContent = text || '';
   n.className = 'note' + (kind ? ' ' + kind : '');
   n.style.display = text ? '' : 'none';
 }
@@ -751,15 +787,16 @@ function setNote(text, kind) {
 function updateHeader(regions) {
   const local = regions.length ? regions[0].local_time : nzString(current === 'live' ? new Date().toISOString() : current);
   $('nzTime').innerHTML = esc(local) + ' <small>New Zealand time</small>';
-  $('modeLabel').textContent = current === 'live' ? 'Live mode (current hour, recent data and forecast)' : 'Replay of a past hour';
-  $('liveBtn').classList.toggle('on', current === 'live');
   const anyDay = regions.some(r => r.is_day);
   const anyGen = regions.some(r => r.generating);
+  const sunny = '<button type="button" id="sunnyBtn" class="on">&#9654; Watch a sunny day</button>';
   if (!regions.length) setNote('');
-  else if (!anyDay) setNote('It is night in New Zealand right now, so solar output is zero everywhere. Judges in the US often see NZ at night in Live mode: drag the Replay slider to a New Zealand daytime hour to see the panels generate.', 'night');
-  else if (!anyGen) setNote('Solar output is near zero in every region at this hour. Try another time with the Replay slider.', 'night');
-  else setNote('At night solar power is zero. Use the Replay slider to move through New Zealand days, or press Live for the current hour.');
+  else if (current === 'live' && !anyDay) setNote(`It is night in New Zealand right now, so solar panels make no power. ${sunny} plays a past sunny day hour by hour.`, 'night', true);
+  else if (current === 'live' && !anyGen) setNote(`Very little sun in New Zealand right now. ${sunny} plays a past sunny day hour by hour.`, 'night', true);
+  else if (!anyDay) setNote('Night at this hour, so the panels make no power. Move the hour slider or press Play.', 'night');
+  else setNote('');
 }
+$('note').addEventListener('click', e => { if (e.target.id === 'sunnyBtn') watchSunnyDay(); });
 
 // ---------- data loading ----------
 async function getJson(url) {
@@ -795,25 +832,80 @@ async function loadSnapshot(opts = {}) {
   else if (selectedPoint) loadPoint();
 }
 
+// Live now, or replay a past day: pick the day, then the hour (0-23), step an hour, or play the whole day.
+let byDay = {}, playTimer = null, lastReplay = null, DEFAULT_T = null;
+const nzFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
+function nzKey(iso) { const p = {}; nzFmt.formatToParts(new Date(iso)).forEach(x => p[x.type] = x.value); return [`${p.year}-${p.month}-${p.day}`, +p.hour]; }
+function indexTimes() {
+  byDay = {};
+  times.forEach((t, i) => { const [d, h] = nzKey(t); (byDay[d] = byDay[d] || {})[h] = i; });
+  const days = Object.keys(byDay).sort();
+  if (days.length) { $('rDate').min = days[0]; $('rDate').max = days[days.length - 1]; }
+}
+function pickHour(day, h) {
+  const m = byDay[day]; if (!m) return null;
+  if (m[h] !== undefined) return times[m[h]];
+  const best = Object.keys(m).map(Number).reduce((a, b) => Math.abs(b - h) < Math.abs(a - h) ? b : a);
+  return times[m[best]];
+}
+function syncBar() {
+  const live = current === 'live';
+  $('liveBtn').classList.toggle('on', live); $('replayBtn').classList.toggle('on', !live);
+  $('replayBox').hidden = live;
+  $('modeBadge').className = 'badge ' + (live ? 'live' : 'replay');
+  $('modeBadge').innerHTML = live ? '<i></i>LIVE' : '&#9194; REPLAY';
+  $('modeLabel').textContent = live ? 'The current hour, with the latest weather' : 'A past hour from months the model never saw';
+  if (live) stopPlay();
+  else { const [d, h] = nzKey(current); $('rDate').value = d; $('slider').value = h; $('rHour').textContent = String(h).padStart(2, '0') + ':00'; }
+  $('nzTime').innerHTML = esc(live ? 'Live' : nzString(current)) + ' <small>New Zealand time</small>';
+}
 function setTime(t) {
+  if (!t) return;
   current = t;
-  if (t === 'live') { $('slider').dataset.live = '1'; }
-  else {
-    delete $('slider').dataset.live;
-    const i = times.indexOf(t);
-    if (i >= 0) $('slider').value = i;
-  }
-  $('nzTime').innerHTML = esc(t === 'live' ? 'Live' : nzString(t)) + ' <small>New Zealand time</small>';
+  if (t !== 'live') lastReplay = t;
+  syncBar();
   loadSnapshot();
+}
+function stopPlay() {
+  if (playTimer) clearInterval(playTimer);
+  playTimer = null;
+  $('rPlay').innerHTML = '&#9654; Play the day'; $('rPlay').classList.remove('on');
+}
+function step(dir) {
+  const i = times.indexOf(current);
+  if (i < 0 || !times[i + dir]) return false;
+  setTime(times[i + dir]); return true;
+}
+function togglePlay() {
+  if (playTimer) { stopPlay(); return; }
+  if (current === 'live') setTime(lastReplay || DEFAULT_T);
+  const [d, h] = nzKey(current);
+  if (h < 5 || h >= 20) setTime(pickHour(d, 6));          // start the day at sunrise
+  $('rPlay').innerHTML = '&#10074;&#10074; Pause'; $('rPlay').classList.add('on');
+  playTimer = setInterval(() => {
+    const [d0, h0] = nzKey(current), i = times.indexOf(current);
+    if (h0 >= 21 || !times[i + 1] || nzKey(times[i + 1])[0] !== d0) { stopPlay(); return; }
+    setTime(times[i + 1]);
+  }, 1600);
+}
+function watchSunnyDay() {
+  const d = nzKey(DEFAULT_T || times[0])[0];
+  stopPlay(); setTime(pickHour(d, 6)); togglePlay();
 }
 
 $('liveBtn').onclick = () => setTime('live');
+$('replayBtn').onclick = () => { if (current === 'live') setTime(lastReplay || DEFAULT_T); };
 $('slider').addEventListener('input', () => {
-  const t = times[+$('slider').value];
-  $('nzTime').innerHTML = esc(nzString(t)) + ' <small>New Zealand time</small>';
+  stopPlay();
+  const h = +$('slider').value;
+  $('rHour').textContent = String(h).padStart(2, '0') + ':00';
   clearTimeout(debounce);
-  debounce = setTimeout(() => setTime(t), 150);
+  debounce = setTimeout(() => setTime(pickHour($('rDate').value, h)), 150);
 });
+$('rDate').addEventListener('change', () => { stopPlay(); setTime(pickHour($('rDate').value, +$('slider').value)); });
+$('rPrev').onclick = () => { stopPlay(); step(-1); };
+$('rNext').onclick = () => { stopPlay(); step(1); };
+$('rPlay').onclick = togglePlay;
 
 // ---------- detail panel ----------
 function hourLabel(h) { return (typeof h === 'number') ? String(h).padStart(2, '0') + ':00' : String(h); }
@@ -821,9 +913,9 @@ function hourLabel(h) { return (typeof h === 'number') ? String(h).padStart(2, '
 function metricsHtml(m, label) {
   if (!m || typeof m !== 'object') return '';
   const rows = Object.entries(m).filter(([, v]) => typeof v === 'number')
-    .map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, ' '))}</td><td>${num(/_kw$/.test(k) ? S(v) : v, 2)}</td></tr>`).join('');
-  return rows ? `<h3>${label || 'Model accuracy in this region (test period)'}</h3><table class="m">${rows}</table>` +
-    `<div class="sub">kW errors are scaled to your ${SIZE} kW system (the error is the same share of capacity at any size).</div>` : '';
+    .map(([k, v]) => `<tr><td>${esc(({ mae_kw: 'Average gap (kW)', rmse_kw: 'Gap that counts big misses more (kW)', mae_wm2: 'Average gap in sunlight (W/m²)' })[k] || k.replace(/_/g, ' '))}</td><td>${num(/_kw$/.test(k) ? S(v) : v, 2)}</td></tr>`).join('');
+  return rows ? `<h3>${label || 'How accurate the forecast is here (test months)'}</h3><table class="m">${rows}</table>` +
+    `<div class="sub">Gap between forecast and reality, for your ${SIZE} kW system. Smaller is better.</div>` : '';
 }
 
 async function loadDetail(name) {
@@ -885,7 +977,8 @@ function evCardHtml() {
   if (!cars.length) return '';
   return `<h3>Charge your EV from your ${SIZE} kW panels</h3>
   <div class="evc">
-    <div class="evcars">${cars.map(([k, c]) => `<button type="button" data-car="${k}" class="${k === EVS.car ? 'on' : ''}">${carIcon(k === EVS.car ? '#fff' : '#6b7684')}${esc(c.name)}</button>`).join('')}</div>
+    <div class="evcars">${carIcon('#1f8f4d')}<select id="evCar" aria-label="Your car">${cars.map(([k, c]) =>
+      `<option value="${k}" ${k === EVS.car ? 'selected' : ''}>${esc(c.name)} &middot; ${c.battery_kwh} kWh${c.note ? ' \u2014 ' + esc(c.note) : ''}</option>`).join('')}</select></div>
     <div class="evin">
       <span>Battery now</span><input type="range" id="evStart" min="0" max="95" step="5" value="${EVS.start}"><b id="evStartV">${EVS.start}%</b>
       <span>Charge to</span><input type="range" id="evTarget" min="10" max="100" step="5" value="${EVS.target}"><b id="evTargetV">${EVS.target}%</b>
@@ -901,12 +994,7 @@ let evTimer = null, evReq = 0;
 function evBind(d) {
   if (!$('evOut')) return;
   const save = () => { try { localStorage.setItem('solarcastEv', JSON.stringify(EVS)); } catch (e) {} };
-  document.querySelectorAll('.evcars button').forEach(b => b.onclick = () => {
-    EVS.car = b.dataset.car; save();
-    document.querySelectorAll('.evcars button').forEach(x => { const on = x.dataset.car === EVS.car; x.classList.toggle('on', on);
-      x.querySelector('path').setAttribute('fill', on ? '#fff' : '#6b7684'); });
-    evRun(d);
-  });
+  $('evCar').onchange = () => { EVS.car = $('evCar').value; save(); evRun(d); };
   const slide = () => {
     let a = +$('evStart').value, b = +$('evTarget').value;
     if (b <= a) { b = Math.min(100, a + 5); $('evTarget').value = b; }
@@ -1024,7 +1112,7 @@ function renderPanel(d, titleHtml, subHtml) {
   lastPanel = [d, titleHtml, subHtml];
   const panel = $('panel');
   const yes = !!d.charge_now;
-  const mlabel = d.is_point ? `Model accuracy in the nearest region (${esc(d.nearest_region)}, test period)` : null;
+  const mlabel = d.is_point ? `How accurate the forecast is in the nearest region (${esc(d.nearest_region)})` : null;
   panel.innerHTML = `
     <h2>${titleHtml}</h2>
     <div class="sub">${subHtml}</div>
@@ -1055,9 +1143,9 @@ function drawChart(d) {
     data: {
       labels,
       datasets: [
-        { type: 'line', label: 'Actual (derived from weather data)', data: (d.actual_kw || []).map(S), borderColor: '#1f8f4d', backgroundColor: '#1f8f4d', borderWidth: 2.5, pointRadius: 0, tension: 0.25, spanGaps: false, order: 1 },
-        { type: 'line', label: 'Predicted (model)', data: (d.predicted_kw || []).map(S), borderColor: '#e8890c', backgroundColor: '#e8890c', borderWidth: 2.5, borderDash: [6, 4], pointRadius: 0, tension: 0.25, order: 2 },
-        { type: 'line', label: 'Persistence (same as last hour)', data: (d.persistence_kw || []).map(S), borderColor: '#6b7684', backgroundColor: '#6b7684', borderWidth: 1.5, borderDash: [2, 3], pointRadius: 0, tension: 0.25, order: 3 },
+        { type: 'line', label: 'What the panels made (from weather data)', data: (d.actual_kw || []).map(S), borderColor: '#1f8f4d', backgroundColor: '#1f8f4d', borderWidth: 2.5, pointRadius: 0, tension: 0.25, spanGaps: false, order: 1 },
+        { type: 'line', label: 'Our forecast', data: (d.predicted_kw || []).map(S), borderColor: '#e8890c', backgroundColor: '#e8890c', borderWidth: 2.5, borderDash: [6, 4], pointRadius: 0, tension: 0.25, order: 2 },
+        { type: 'line', label: 'Simple guess: same as last hour', data: (d.persistence_kw || []).map(S), borderColor: '#6b7684', backgroundColor: '#6b7684', borderWidth: 1.5, borderDash: [2, 3], pointRadius: 0, tension: 0.25, order: 3 },
         { type: 'bar', label: 'Cloud cover (%)', data: d.cloud_cover_pct || [], yAxisID: 'y2', backgroundColor: 'rgba(93,107,122,.15)', order: 4 },
       ],
     },
@@ -1102,6 +1190,24 @@ $('tabMap').onclick = () => showTab('map');
 $('tabModel').onclick = () => showTab('model');
 
 const MODEL_COLORS = ['#e8890c', '#6b7684', '#4a90d9', '#1f8f4d', '#8e44ad'];
+// Plain-language names for the comparison methods and the model's inputs.
+const PLAIN_MODEL = { 'SolarCast model': 'SolarCast (our forecast)', 'Persistence': 'Simple guess: same power as last hour',
+  'Clear-sky persistence': 'Smarter guess: same cloudiness as last hour' };
+const pm = m => PLAIN_MODEL[m] || m;
+const PLAIN_FEATURE = {
+  cs_target: 'Sunlight on a clear day, next hour', elev_target: 'How high the sun will be', azim_target: 'Where the sun will be in the sky',
+  kt_t: 'How clear the sky is now', kt_roll24: 'How clear the sky was over the last day', cs_t: 'Sunlight on a clear day, now',
+  cloud_t: 'Cloud cover now', d_cloud_1h: 'Clouds coming or going (last hour)', ghi_t: 'Sunlight now',
+  ghi_lag1: 'Sunlight 1 hour ago', ghi_lag2: 'Sunlight 2 hours ago', ghi_lag23: 'Sunlight this time yesterday',
+  ghi_roll3: 'Average sunlight, last 3 hours', ghi_roll24: 'Average sunlight, last day', d_ghi_1h: 'Sunlight change in the last hour',
+  dni_t: 'Direct sunbeams now', dhi_t: 'Light scattered by clouds now', temp_t: 'Temperature now', d_temp_1h: 'Temperature change',
+  humidity_t: 'Humidity now', d_humidity_1h: 'Humidity change', wind_t: 'Wind now', precip_t: 'Rain now',
+  hour_sin: 'Time of day', hour_cos: 'Time of day', doy_sin: 'Time of year', doy_cos: 'Time of year',
+  region_id: 'Which region', lat: 'How far south', fc_ghi_target: "Weather service's sunlight forecast",
+  fc_cloud_target: "Weather service's cloud forecast", fc_temp_target: "Weather service's temperature forecast",
+  fc_dni_target: "Weather service's sunbeam forecast", fc_kt_target: "Weather service's clear-sky forecast",
+  clear_sky_ghi_target: 'Sunlight on a clear day, next hour', sun_elevation_target: 'How high the sun will be', cloud_cover_t: 'Cloud cover now' };
+const PLAIN_PERIOD = { train: 'Learned from', val: 'Fine-tuned on', test: 'Tested on (months it never saw)' };
 function mchart(id, config) {
   if (mcharts[id]) mcharts[id].destroy();
   mcharts[id] = new Chart($(id), config);
@@ -1110,8 +1216,8 @@ function renderModel() {
   if (!report) { $('mPeriods').textContent = 'Model report not available.'; return; }
   const p = report.periods || {};
   $('mPeriods').innerHTML = Object.entries(p).map(([k, v]) =>
-    `<b>${esc(k)}</b>: ${esc(Array.isArray(v) ? v.join(' to ') : v)}`).join(' &nbsp;|&nbsp; ') +
-    `<br>kW numbers on this tab are for the ${REF} kW reference system. Errors scale with panel size: divide by ${REF / SIZE} for your ${SIZE} kW system (2.2% of capacity at any size).`;
+    `<b>${esc(PLAIN_PERIOD[k] || k)}</b>: ${esc(Array.isArray(v) ? v.join(' to ') : v)}`).join(' &nbsp;|&nbsp; ') +
+    `<br>In short: on average the forecast is off by about 2% of what the panels can make at full sun. kW numbers on this tab are for a ${REF} kW system; for your ${SIZE} kW panels divide them by ${num(REF / SIZE, 1)}.`;
 
   const prev = report.previous;
   const mv = (o) => o ? `${num(o.mae_kw, 2)} kW (${num(o.mae_wm2, 1)} W/m&sup2;)` : '-';
@@ -1124,41 +1230,47 @@ function renderModel() {
       ['v2', 'v3', 'v4'].filter(k => report.experiments[k]).map(k => `<li><b>${k}</b>: ${esc(report.experiments[k].summary)}</li>`).join('') + '</ul>' : '');
 
   const overall = report.overall || [];
-  const names = overall.map(o => o.model);
+  const names = overall.map(o => pm(o.model));
   const colors = names.map((_, i) => MODEL_COLORS[i % MODEL_COLORS.length]);
   const bar = (id, key, title) => mchart(id, { type: 'bar',
     data: { labels: names, datasets: [{ label: title, data: overall.map(o => o[key]), backgroundColor: colors }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
   bar('cOverallKw', 'mae_kw', 'MAE (kW)');
   bar('cOverallWm', 'mae_wm2', 'MAE (W/m2)');
-  const cols = [['mae_kw', 'MAE kW'], ['mae_wm2', 'MAE W/m2'], ['rmse_kw', 'RMSE kW']];
-  $('mTable').innerHTML = '<table class="m"><tr><th>Model</th>' + cols.map(c => `<th>${c[1]}</th>`).join('') + '</tr>' +
-    overall.map(o => `<tr><td>${esc(o.model)}</td>` + cols.map(c => `<td>${num(o[c[0]], 2)}</td>`).join('') + '</tr>').join('') + '</table>';
+  const cols = [['mae_kw', 'Average gap (kW)'], ['mae_wm2', 'Average gap (W/m&sup2;)'], ['rmse_kw', 'Gap that counts big misses more (kW)']];
+  $('mTable').innerHTML = '<table class="m"><tr><th>Method</th>' + cols.map(c => `<th>${c[1]}</th>`).join('') + '</tr>' +
+    overall.map(o => `<tr><td>${esc(pm(o.model))}</td>` + cols.map(c => `<td>${num(o[c[0]], 2)}</td>`).join('') + '</tr>').join('') + '</table>';
 
   const rows = report.per_region || [];
   const regions = [...new Set(rows.map(r => r.region))];
   const models = [...new Set(rows.map(r => r.model))];
   mchart('cRegion', { type: 'bar',
-    data: { labels: regions, datasets: models.map((m, i) => ({ label: m, backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length],
+    data: { labels: regions, datasets: models.map((m, i) => ({ label: pm(m), backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length],
       data: regions.map(rg => { const r = rows.find(x => x.region === rg && x.model === m); return r ? r.mae_kw : null; }) })) },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
-      scales: { y: { beginAtZero: true, title: { display: true, text: 'MAE (kW)' } }, x: { ticks: { maxRotation: 60, minRotation: 40 } } } } });
+      scales: { y: { beginAtZero: true, title: { display: true, text: 'Average gap (kW)' } }, x: { ticks: { maxRotation: 60, minRotation: 40 } } } } });
 
   const s = report.sample || {};
   $('hSample').textContent = 'Sample week' + (s.region ? ': ' + s.region : '');
   mchart('cSample', { type: 'line',
     data: { labels: (s.times || []).map(nzString), datasets: [
-      { label: 'Actual', data: s.actual_kw || [], borderColor: '#1f8f4d', borderWidth: 2, pointRadius: 0, tension: 0.2 },
-      { label: 'Predicted (model)', data: s.predicted_kw || [], borderColor: '#e8890c', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, tension: 0.2 },
-      { label: 'Persistence', data: s.persistence_kw || [], borderColor: '#6b7684', borderWidth: 1.2, borderDash: [2, 3], pointRadius: 0, tension: 0.2 } ] },
+      { label: 'What the panels made', data: s.actual_kw || [], borderColor: '#1f8f4d', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+      { label: 'Our forecast', data: s.predicted_kw || [], borderColor: '#e8890c', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, tension: 0.2 },
+      { label: 'Simple guess: same as last hour', data: s.persistence_kw || [], borderColor: '#6b7684', borderWidth: 1.2, borderDash: [2, 3], pointRadius: 0, tension: 0.2 } ] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'bottom' } },
       scales: { y: { beginAtZero: true, title: { display: true, text: 'kW' } }, x: { ticks: { maxTicksLimit: 8 } } } } });
 
-  const imp = [...(report.importance || [])].sort((a, b) => b.importance - a.importance).slice(0, 10);
+  // Merge inputs that mean the same thing for a reader (e.g. the two "time of day" columns), show each as a % share.
+  const agg = {};
+  (report.importance || []).forEach(i => { const k = PLAIN_FEATURE[i.feature] || i.feature.replace(/_/g, ' '); agg[k] = (agg[k] || 0) + Math.max(0, i.importance); });
+  const tot = Object.values(agg).reduce((a, b) => a + b, 0) || 1;
+  const imp = Object.entries(agg).map(([k, v]) => [k, v / tot * 100]).sort((a, b) => b[1] - a[1]).slice(0, 10);
   mchart('cImp', { type: 'bar',
-    data: { labels: imp.map(i => i.feature), datasets: [{ label: 'Importance', data: imp.map(i => i.importance), backgroundColor: '#e8890c' }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } } });
+    data: { labels: imp.map(i => i[0]), datasets: [{ label: 'Share', data: imp.map(i => +i[1].toFixed(1)), backgroundColor: '#e8890c', borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: c => ` ${c.parsed.x}% of the decisions` } } },
+      scales: { x: { beginAtZero: true, grace: '8%', ticks: { callback: v => v + '%' } } } } });
 }
 
 async function loadModel() {
@@ -1264,10 +1376,9 @@ loadModel();
     times = info.times || [];
     if (info.reference_kw) REF = info.reference_kw;
     if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
-    if (info.ev_cars) { EVCARS = info.ev_cars; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
-    $('slider').max = Math.max(0, times.length - 1);
-    const i = times.indexOf(info.default);
-    $('slider').value = i >= 0 ? i : 0;              // the Replay slider starts at a sunny past midday
+    if (info.ev_cars) { EVCARS = info.ev_cars; if (!EVCARS[EVS.car]) EVS.car = Object.keys(EVCARS)[0]; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
+    indexTimes();
+    DEFAULT_T = times.includes(info.default) ? info.default : times[0];   // Replay starts at a sunny past midday
     setTime('live');                                 // but the page always opens on the current hour (Live)
   } catch (e) { setNote('Could not load the time list: ' + e.message, 'error'); }
 })();
