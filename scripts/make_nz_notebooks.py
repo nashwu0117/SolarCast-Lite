@@ -47,8 +47,8 @@ CODE_COMMENTS = {
                 "zh-TW": "這是哪一版模型、改了什麼，以及前一版模型的測試集數字作為對照。"},
     "curve": {"en": "Learning curve (measured for the first model, v1): how the error falls as it sees more training days.",
               "zh-TW": "學習曲線（針對第一版模型 v1 量測）：模型看過越多訓練天數，誤差就越小。"},
-    "sample": {"en": "One sample week: actual power vs. the model vs. the persistence baseline.",
-               "zh-TW": "取樣一週：實際發電量、模型預測、以及「持續性」基準線的比較。"},
+    "sample": {"en": "The hackathon days (14-16 Nov 2026): actual power vs. the model vs. the persistence baseline.",
+               "zh-TW": "駭客松這三天（2026 年 11 月 14–16 日）：實際發電量、模型預測、以及「持續性」基準線的比較。"},
     "ready": {"en": "Wait until the AI model is loaded and the live grid is computed, so the page opens complete (usually 2-6 minutes).",
               "zh-TW": "等 AI 模型載入完成、即時格子算好，網頁一打開就是完整的（通常 2 到 6 分鐘）。"},
     "warm": {"en": "Let the AI write the national briefing for the current hour and answer one warm-up question, so the first judge question is fast.",
@@ -204,22 +204,50 @@ display(curve[["days", "train_rows", "model_mae_wm2", "model_mae_kw", "accuracy 
 JUDGES_SAMPLE = '''
 # @@sample@@
 import matplotlib.dates as mdates
-s = meta["report"]["sample"]
-# matplotlib labels time-zone-aware dates in UTC, so drop the zone after converting: ticks then show NZ local dates.
-t = pd.to_datetime(s["times"]).tz_convert(config.LOCAL_TZ).tz_localize(None)
+from solarcast.nz import data
+from solarcast.nz.features import build_features
+
+# The hackathon days, 14-16 Nov 2026 (NZ time). The model was trained on 2022-2024 and never saw them.
+region = meta["report"]["sample"].get("region", "Nelson")
+day0, day3 = pd.Timestamp("2026-11-14", tz=config.LOCAL_TZ), pd.Timestamp("2026-11-17", tz=config.LOCAL_TZ)
+try:
+    raw = data.fetch_recent("2026-11-12", "2026-11-17", [region])     # UTC dates; a day before for the lag inputs
+    f = build_features(raw, require_target=False).loc[region]
+    f = f[(f.index >= day0) & (f.index < day3)]
+    now = pd.Timestamp.now(tz="UTC")
+    t = f.index.tz_convert(config.LOCAL_TZ).tz_localize(None)       # drop the zone so the ticks show NZ dates
+    actual = np.where(f.index <= now, f["target_kw"], np.nan)       # hours that have not happened yet stay empty
+    pred = nzmodel.to_kw(nzmodel.predict(svc.model, f), f["temp_t"])
+    pers = nzmodel.to_kw(nzmodel.persistence(f), f["temp_t"])
+    title = (f"{region}, 14-16 Nov 2026: the Veritas AI hackathon days (NZ time)\\n"
+             "Next-hour forecast vs. what really happened; the model was trained on 2022-2024 data and never saw these days")
+except Exception as exc:                                            # no internet: show the stored test week instead
+    print("Could not download 14-16 Nov 2026, showing the stored test week instead:", exc)
+    s = meta["report"]["sample"]
+    t = pd.to_datetime(s["times"]).tz_convert(config.LOCAL_TZ).tz_localize(None)
+    actual, pred, pers = (np.array(s[k], float) for k in ("actual_kw", "predicted_kw", "persistence_kw"))
+    title = f"{s['region']}, {t[0]:%d %b} - {t[-1]:%d %b %Y}: a past test week from the weather archive (NZ time)"
+
 fig, ax = plt.subplots(figsize=(11, 3.8))
-ax.plot(t, s["actual_kw"], color="black", lw=2, label="actual (derived from irradiance)")
-ax.plot(t, s["predicted_kw"], color="tab:orange", lw=1.8, label="SolarCast model")
-ax.plot(t, s["persistence_kw"], color="tab:blue", lw=1, ls="--", label="persistence")
+ax.plot(t, actual, color="black", lw=2, label="actual (derived from irradiance)")
+ax.plot(t, pred, color="tab:orange", lw=1.8, label="SolarCast model")
+ax.plot(t, pers, color="tab:blue", lw=1, ls="--", label="persistence")
 ax.set_ylabel("PV power of a 50 kW system (kW)")
-ax.set_title(f"{s['region']}, {t[0]:%d %b} - {t[-1]:%d %b %Y}: a past week replayed from the weather archive (NZ time)\n"
-             "Model trained at the Veritas AI hackathon (14-16 Nov 2026) on 2022-2024 data; this week was held out as a test")
-ax.xaxis.set_major_locator(mdates.DayLocator())
+ax.set_title(title)
+ax.xaxis.set_major_locator(mdates.DayLocator())                    # the date once a day, at NZ midnight
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%a %d %b"))
+ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18]))
+ax.xaxis.set_minor_formatter(mdates.DateFormatter("%H:%M"))
+ax.tick_params(axis="x", which="major", pad=14)
+ax.tick_params(axis="x", which="minor", labelsize=8, colors="0.4")
 ax.legend(loc="upper right")
 ax.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
+ok = ~np.isnan(actual) & (np.nan_to_num(actual) + np.nan_to_num(pred) > 0)
+if ok.any():
+    print(f"{ok.sum()} daylight hours so far: SolarCast misses by {np.mean(np.abs(pred[ok] - actual[ok])):.2f} kW on average, "
+          f"persistence by {np.mean(np.abs(pers[ok] - actual[ok])):.2f} kW (50 kW system).")
 '''
 
 JUDGES_LLM = '''
@@ -605,8 +633,8 @@ The forecast helps a little by itself; most of the extra gain comes from letting
  "region": {"en": "### Per region", "zh-TW": "### 各區域結果"},
  "curve": {"en": "### Learning curve (measured for v1)\nMore training days means a lower error, and the gain flattens after about a year of data.",
            "zh-TW": "### 學習曲線（針對 v1 量測）\n訓練天數越多，誤差越低；大約一年的資料之後，進步就趨於平緩。"},
- "sample": {"en": "### One sample week (a past week, replayed from the weather archive)\n\nWe built and trained SolarCast during the Veritas AI hackathon, 14-16 November 2026. To test it fairly we downloaded about five years of **past** weather from the Open-Meteo archive, trained on 2022-2024 and kept July 2025 - October 2026 hidden as the test period. The week below (December 2025, last NZ summer) comes from that hidden period: the model never saw it, and the real outcome is already known, so every hour can be checked. It is a replay of history, not a forecast for this December.",
-               "zh-TW": "### 取樣一週（從天氣資料庫重播的過去一週）\n\nSolarCast 是我們在 Veritas AI 駭客松期間（2026 年 11 月 14–16 日）做出來並訓練的。為了公平測試，我們從 Open-Meteo 的資料庫下載了大約五年的**過去**天氣資料，用 2022–2024 年訓練，並把 2025 年 7 月到 2026 年 10 月藏起來當測試期。下面這一週（2025 年 12 月，也就是去年紐西蘭的夏天）就來自這段被藏起來的期間：模型從沒看過它，而真實結果已經知道，所以每個小時都能對答案。這是重播過去的資料，不是預測今年 12 月。"},
+ "sample": {"en": "### The hackathon days: 14-16 November 2026\n\nWe built and trained SolarCast during the Veritas AI hackathon, 14-16 November 2026. The chart downloads the real weather for those three days in Nelson and asks the model, hour by hour, for the next hour's power. The model was trained on 2022-2024 data, so it never saw these days. Hours that have not happened yet show only the forecasts. (Without internet the cell shows a stored week from the test period, December 2025, instead.)",
+               "zh-TW": "### 駭客松這三天：2026 年 11 月 14–16 日\n\nSolarCast 是我們在 Veritas AI 駭客松期間（2026 年 11 月 14–16 日）做出來並訓練的。這張圖會下載 Nelson 這三天的真實天氣，讓模型一小時一小時地預測下一小時的發電量。模型是用 2022–2024 年的資料訓練的，從沒看過這幾天。還沒發生的小時只會顯示預測。（如果沒有網路，這一格會改成顯示測試期裡存好的一週，2025 年 12 月。）"},
  "notes": {
   "en": """## 4. Honest notes
 - The weather is **Open-Meteo modelled data (ERA5-based reanalysis)**, not measurements from real solar plants.

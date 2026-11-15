@@ -230,6 +230,31 @@ def fetch_points(points, names, start: str | None = None, end: str | None = None
     return out.reset_index(drop=True)
 
 
+def fetch_recent(start: str, end: str, regions=config.REGIONS) -> pd.DataFrame:
+    """Hourly weather + day-ahead forecasts for recent dates [start, end] (UTC dates), long format like fetch_history.
+
+    The archive lags a few days behind, so recent days come from the forecast API, which also serves the past ~3 months.
+    """
+    names = list(regions)
+    loc = {"latitude": ",".join(str(config.REGIONS[n][0]) for n in names),
+           "longitude": ",".join(str(config.REGIONS[n][1]) for n in names), "timezone": "UTC",
+           "start_date": start, "end_date": end}
+    data = _get(FORECAST_URL, {**loc, "hourly": ",".join(config.HOURLY_VARS)}, tries=3)
+    data = data if isinstance(data, list) else [data]
+    try:
+        fcd = _get(PREVIOUS_RUNS_URL, {**loc, "hourly": ",".join(config.FORECAST_VARS)}, tries=3)
+        fcd = fcd if isinstance(fcd, list) else [fcd]
+    except Exception:                                              # the model handles missing day-ahead forecasts
+        fcd = [None] * len(names)
+    parts = []
+    for name, block, fblock in zip(names, data, fcd):
+        df = _to_frame(block["hourly"], name, *config.REGIONS[name])
+        df = (df.merge(_forecast_frame(fblock["hourly"]), on="time_utc", how="left") if fblock is not None
+              else df.assign(**{c: np.nan for c in config.FORECAST_COLUMNS}))
+        parts.append(df)
+    return pd.concat(parts, ignore_index=True)
+
+
 def fetch_live(regions=config.REGIONS) -> pd.DataFrame:
     """Last 48 h plus next 24 h for all regions; `is_forecast` marks hours after the current hour.
 
