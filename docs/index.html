@@ -127,12 +127,13 @@
     <p class="lead" lang-zh>SolarCast 預測紐西蘭任何地點、任何大小的太陽能系統（從家用 5 kW 到商用 50 kW）下一小時能發多少電，讓你把電動車充電、熱水器或機器排在自家陽光最多的時候，而不是向電網買電。</p>
     <div class="cta">
       <a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">
-        <span lang-en>Open the live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
-      <a class="btn" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb"><span lang-en>Or in Kaggle</span><span lang-zh>或在 Kaggle 開啟</span></a>
+        <span lang-en>Live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
+      <a class="btn primary" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">
+        <span lang-en>Live demo in Kaggle</span><span lang-zh>在 Kaggle 開啟即時展示</span> &rarr;</a>
       <a class="btn" href="https://github.com/nashwu0117/SolarCast-Lite"><span lang-en>Source code</span><span lang-zh>原始碼</span></a>
     </div>
-    <p class="small" lang-en>The interactive dashboard runs inside the notebook (Colab: Runtime &gt; Run all; Kaggle: Settings &gt; GPU T4 x2 and Internet on, then Run All) and gives you a public link in a few minutes. This page is a static overview.</p>
-    <p class="small" lang-zh>互動儀表板在 notebook 裡執行（Colab：Runtime &gt; Run all；Kaggle：Settings 選 GPU T4 x2、開網路，再按 Run All），幾分鐘後會給你一個公開連結。這一頁是靜態介紹。</p>
+    <p class="small" lang-en>Pick whichever you prefer: both run the same notebook on a free GPU and open the same dashboard (Colab: Runtime &gt; Run all; Kaggle: Settings &gt; GPU T4 x2 and Internet on, then Run All). The public link appears once the AI is ready, in a few minutes. This page is a static overview.</p>
+    <p class="small" lang-zh>兩個選一個你喜歡的就好：跑的是同一份 notebook、都用免費 GPU，打開的儀表板也一樣（Colab：Runtime &gt; Run all；Kaggle：Settings 選 GPU T4 x2、開網路，再按 Run All）。AI 準備好後（幾分鐘）就會出現公開連結。這一頁是靜態介紹。</p>
   </div>
   <figure style="margin:0;justify-self:center;text-align:center">
     <svg id="nzmap" viewBox="0 0 300 330" role="img" aria-label="The land cells of New Zealand that SolarCast forecasts"></svg>
@@ -241,18 +242,23 @@
 
 <section id="run"><div class="wrap">
   <h2><span lang-en>Run it</span><span lang-zh>如何執行</span></h2>
+  <p class="sub" lang-en>Pick the cloud notebook you like: Google Colab or Kaggle. Both run the same notebook on a free GPU and give you the same live dashboard and AI. Use whichever you already have an account, GPU quota or a paid plan on (a bigger GPU from a paid plan is used automatically).</p>
+  <p class="sub" lang-zh>選你喜歡的雲端 notebook：Google Colab 或 Kaggle。兩個跑的是同一份 notebook、都用免費 GPU，打開的儀表板和 AI 也完全一樣。你在哪一邊有帳號、有 GPU 額度或有訂閱付費方案，就用哪一邊（付費方案給的更大 GPU 會自動用上）。</p>
   <div class="two">
     <div class="card">
-      <h3 lang-en>In Google Colab (one click)</h3><h3 lang-zh>在 Google Colab（一鍵）</h3>
-      <p lang-en>Open the judges notebook and choose Runtime &gt; Run all. It asks for a free T4 GPU (used only by the AI chat) and prints a public link to the dashboard.</p>
-      <p lang-zh>打開評審用 notebook，選 Runtime &gt; Run all。它會要求免費的 T4 GPU（只給 AI 聊天用），並印出儀表板的公開連結。</p>
+      <h3 lang-en>Google Colab</h3><h3 lang-zh>Google Colab</h3>
+      <p lang-en>Free GPU: one T4. Open the judges notebook and choose Runtime &gt; Run all. It asks for the T4 GPU (used by the AI) and prints a public link to the dashboard once the AI is ready.</p>
+      <p lang-zh>免費 GPU：一張 T4。打開評審用 notebook，選 Runtime &gt; Run all。它會要求 T4 GPU（給 AI 用），等 AI 準備好後印出儀表板的公開連結。</p>
       <div class="cta"><a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">Open in Colab &rarr;</a></div>
-      <h3 lang-en style="margin-top:18px">Or in Kaggle (when Colab has no GPU left)</h3><h3 lang-zh style="margin-top:18px">或在 Kaggle（Colab 的 GPU 用完時）</h3>
-      <p lang-en>Same notebook. In Settings choose Accelerator: GPU T4 x2 and Internet: On (needs a phone-verified Kaggle account), then Run All.</p>
-      <p lang-zh>同一份 notebook。在 Settings 選 Accelerator: GPU T4 x2、Internet: On（需要先在 Kaggle 驗證手機號碼），再按 Run All。</p>
-      <div class="cta"><a class="btn" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">Open in Kaggle &rarr;</a></div>
     </div>
     <div class="card">
+      <h3 lang-en>Kaggle</h3><h3 lang-zh>Kaggle</h3>
+      <p lang-en>Free GPU: two T4s. Open the judges notebook, in Settings choose Accelerator: GPU T4 x2 and Internet: On (needs a phone-verified Kaggle account), then Run All. It prints the same public link once the AI is ready.</p>
+      <p lang-zh>免費 GPU：兩張 T4。打開評審用 notebook，在 Settings 選 Accelerator: GPU T4 x2、Internet: On（需要先在 Kaggle 驗證手機號碼），再按 Run All。等 AI 準備好後一樣會印出公開連結。</p>
+      <div class="cta"><a class="btn primary" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">Open in Kaggle &rarr;</a></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
       <h3 lang-en>On your own computer</h3><h3 lang-zh>在你自己的電腦</h3>
       <p lang-en>Python 3.10 or newer. Open http://127.0.0.1:8000 when it is ready.</p>
       <p lang-zh>需要 Python 3.10 以上。準備好後打開 http://127.0.0.1:8000。</p>
@@ -263,7 +269,6 @@ pip install -e .
 python -m solarcast.nz</pre>
       <p class="small" lang-en>Optional AI: install <a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:1.7b</code>, then <code>python -m solarcast.nz --ai</code>.</p>
       <p class="small" lang-zh>選用 AI：安裝 <a href="https://ollama.com">Ollama</a>，執行 <code>ollama pull qwen3:1.7b</code>，再執行 <code>python -m solarcast.nz --ai</code>。</p>
-    </div>
   </div>
 </div></section>
 

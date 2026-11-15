@@ -10,7 +10,8 @@ charging as a worked example of using the forecast. Veritas AI International Hig
 **Website:** [https://nashwu0117.github.io/SolarCast-Lite/](https://nashwu0117.github.io/SolarCast-Lite/) &middot; **License:** MIT (open source)
 
 **Judges: start here** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) or [![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb)
-(Kaggle: in **Settings** choose **Accelerator: GPU T4 x2** and **Internet: On**, which needs a phone-verified account, then **Run All**. Use it when Colab has no GPU left.)
+(pick whichever you prefer, or wherever you have GPU quota or a paid plan: both run the same notebook and open the same dashboard.
+Kaggle: in **Settings** choose **Accelerator: GPU T4 x2** and **Internet: On**, which needs a phone-verified account, then **Run All**.)
 Colab: Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by the AI chat). In about three minutes the
 notebook loads our trained model from this repository, shows how accurate it is, and prints a public link (free
 Cloudflare tunnel) to the live dashboard; the AI chat is ready a few minutes later.
