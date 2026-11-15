@@ -51,3 +51,36 @@ def test_ev_plan_route():
     assert r.status_code == 200 and r.get_json()["car_name"].startswith("BYD")
     assert c.post("/api/ev_plan", json={"hours": HOURS, "solar_kw": SUNNY, "car": "nope"}).status_code == 400
     assert c.post("/api/ev_plan", json={}).status_code == 400
+
+
+def test_catalog_is_grouped_by_brand_and_complete():
+    names = [c["name"] for c in ev.CARS.values()]
+    for want in ("Tesla Model S", "Tesla Model X", "Model Y Long Range", "Model 3 Performance", "BYD Sealion 7", "Nissan Leaf"):
+        assert any(want in n for n in names), want
+    assert all(c["name"].startswith(c["brand"]) for c in ev.CARS.values())
+    assert all(k in ev.CARS for k in ev.POPULAR)
+    assert "no longer sold new" in ev.CARS["tesla_model_s"]["note"]
+
+
+def test_home_battery_stores_left_over_sun_and_tops_up_the_car():
+    p = ev.plan(HOURS, SUNNY, 8, "tesla_model_y", 20, 80, home_battery="tesla_powerwall_3")
+    hb = p["home_battery"]
+    left = sum(max(r["unused_kw"], 0) for r in p["hours"])
+    assert 0 < hb["stored_kwh"] <= min(left, 13.5) + 0.05
+    assert hb["car_end_pct"] >= p["end_pct"]                               # the car was not full, so it gets some
+    big = ev.plan(HOURS, [v * 4 for v in SUNNY], 8, "tesla_model_y", 20, 80, home_battery="tesla_powerwall_3")
+    hb = big["home_battery"]
+    assert hb["stored_kwh"] == 13.5 and hb["full_by"] is not None and hb["to_car_kwh"] == 0   # car done, battery full
+    assert hb["home_hours"] == pytest.approx(13.5 * 0.9, abs=0.1)
+    assert "home_battery" not in ev.plan(HOURS, SUNNY, 8)
+
+
+def test_ev_plan_route_with_battery():
+    pytest.importorskip("flask")
+    from test_webapp import _fake
+    from solarcast.nz.webapp import create_app
+    c = create_app(_fake.FakeService()).test_client()
+    assert "tesla_powerwall_3" in c.get("/api/times").get_json()["home_batteries"]
+    r = c.post("/api/ev_plan", json={"hours": HOURS, "solar_kw": SUNNY, "next_hour": 8, "home_battery": "tesla_powerwall_3"})
+    assert r.status_code == 200 and r.get_json()["home_battery"]["name"] == "Tesla Powerwall 3"
+    assert c.post("/api/ev_plan", json={"hours": HOURS, "solar_kw": SUNNY, "home_battery": "nope"}).status_code == 400

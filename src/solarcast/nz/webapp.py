@@ -78,7 +78,7 @@ def create_app(service, assistant=None, grid=None) -> Flask:
     def api_times():
         return _json({"times": list(service.available_times()), "default": service.default_time(),
                       "reference_kw": config.SYSTEM_KW, "grid_price_nzd": config.GRID_PRICE_NZD,
-                      "ev_cars": ev.CARS, "home_charger_kw": ev.HOME_CHARGER_KW,
+                      "ev_cars": ev.CARS, "home_batteries": ev.HOME_BATTERIES, "home_charger_kw": ev.HOME_CHARGER_KW,
                       "three_phase_charger_kw": ev.THREE_PHASE_CHARGER_KW})
 
     @app.get("/api/snapshot")
@@ -195,11 +195,12 @@ def create_app(service, assistant=None, grid=None) -> Flask:
             hours = [int(h) for h in body["hours"]][:48]
             solar = [None if v is None else float(v) for v in body["solar_kw"]][:48]
             car = str(body.get("car", "tesla_model_y"))
-            if car not in ev.CARS or len(hours) != len(solar):
+            hb = body.get("home_battery") or None
+            if car not in ev.CARS or len(hours) != len(solar) or (hb and hb not in ev.HOME_BATTERIES):
                 raise ValueError
             res = ev.plan(hours, solar, int(body.get("next_hour", 0)), car,
                           float(body.get("start_pct", 20)), float(body.get("target_pct", 80)),
-                          min(max(float(body.get("charger_kw", ev.HOME_CHARGER_KW)), 1.4), 22.0))
+                          min(max(float(body.get("charger_kw", ev.HOME_CHARGER_KW)), 1.4), 22.0), home_battery=hb)
         except (KeyError, TypeError, ValueError):
             return _json({"error": "bad EV plan request"}, 400)
         return _json(res)
@@ -468,8 +469,15 @@ INDEX_HTML = r"""<!doctype html>
   /* Charge your EV from your panels */
   .evc { background: #effaf2; border: 1px solid #bfe3cb; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
   .evcars { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-  .evcars { align-items: center; flex-wrap: nowrap; }
-  .evcars select { flex: 1; min-width: 0; font: inherit; font-weight: 600; padding: 6px 8px; border: 1px solid #bfe3cb; border-radius: 10px; background: #fff; }
+  .evcars { align-items: center; }
+  .evcars input[type=search] { flex: 1; min-width: 0; font: inherit; padding: 6px 10px; border: 1px solid #bfe3cb; border-radius: 10px; background: #fff; }
+  .evcars #evCount { flex-basis: 100%; margin: -2px 0 0 40px; }
+  .evcars #evCount:empty { display: none; }
+  .hb { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #bfe3cb; }
+  .hb h4 { margin: 0 0 6px; font-size: 14px; }
+  .hb select { width: 100%; font: inherit; font-weight: 600; padding: 6px 8px; border: 1px solid #bfe3cb; border-radius: 10px; background: #fff; }
+  .hbb .b1 { background: repeating-linear-gradient(135deg, #f5b400 0 10px, #e09b00 10px 20px); background-size: 28px 28px; }
+  .evcars select { flex: 1 1 100%; min-width: 0; font: inherit; font-weight: 600; padding: 6px 8px; border: 1px solid #bfe3cb; border-radius: 10px; background: #fff; }
   .evcars svg { width: 34px; height: 20px; flex: none; }
   .evin { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 13px; color: var(--muted); }
   .evin input[type=range] { width: 100%; accent-color: var(--good); }
@@ -968,8 +976,8 @@ function countUp(el) {
 }
 
 // ---------- charge your EV from your panels ----------
-let EVCARS = {}, HOME_CHARGER = 7.4, THREE_PHASE = 11;
-let EVS = { car: 'tesla_model_y', start: 20, target: 80, charger: 7.4 };
+let EVCARS = {}, HOMEBATT = {}, HOME_CHARGER = 7.4, THREE_PHASE = 11;
+let EVS = { car: 'tesla_model_y', start: 20, target: 80, charger: 7.4, batt: 'tesla_powerwall_3' };
 try { Object.assign(EVS, JSON.parse(localStorage.getItem('solarcastEv') || '{}')); } catch (e) {}
 const carIcon = c => `<svg viewBox="0 0 38 22"><path d="M2 12 L8 3 L26 3 L33 12 L38 13 L38 20 L0 20 L0 13 Z" fill="${c}"/><circle cx="9" cy="20" r="3.5" fill="#1c2733"/><circle cx="29" cy="20" r="3.5" fill="#1c2733"/></svg>`;
 function evCardHtml() {
@@ -977,8 +985,8 @@ function evCardHtml() {
   if (!cars.length) return '';
   return `<h3>Charge your EV from your ${SIZE} kW panels</h3>
   <div class="evc">
-    <div class="evcars">${carIcon('#1f8f4d')}<select id="evCar" aria-label="Your car">${cars.map(([k, c]) =>
-      `<option value="${k}" ${k === EVS.car ? 'selected' : ''}>${esc(c.name)} &middot; ${c.battery_kwh} kWh${c.note ? ' \u2014 ' + esc(c.note) : ''}</option>`).join('')}</select></div>
+    <div class="evcars">${carIcon('#1f8f4d')}<input type="search" id="evFind" placeholder="Find your car: type a brand or model (Tesla, BYD, Leaf...)" aria-label="Search cars" autocomplete="off">
+      <select id="evCar" aria-label="Your car">${carOptions('')}</select><span id="evCount" class="sub"></span></div>
     <div class="evin">
       <span>Battery now</span><input type="range" id="evStart" min="0" max="95" step="5" value="${EVS.start}"><b id="evStartV">${EVS.start}%</b>
       <span>Charge to</span><input type="range" id="evTarget" min="10" max="100" step="5" value="${EVS.target}"><b id="evTargetV">${EVS.target}%</b>
@@ -988,13 +996,35 @@ function evCardHtml() {
         <option value="2.3" ${EVS.charger == 2.3 ? 'selected' : ''}>2.3 kW normal wall socket (10 A)</option></select>
     </div>
     <div id="evOut"><div class="sub">Working it out...</div></div>
+    ${Object.keys(HOMEBATT).length ? `<div class="hb"><h4>&#128267; Store the left-over sun in a home battery</h4>
+      <select id="evBatt" aria-label="Home battery"><option value="">No home battery</option>${Object.entries(HOMEBATT).map(([k, b]) =>
+        `<option value="${k}" ${k === EVS.batt ? 'selected' : ''}>${esc(b.name)} &middot; ${b.capacity_kwh} kWh</option>`).join('')}</select>
+      <div id="hbOut"></div></div>` : ''}
   </div>`;
+}
+// Cars grouped by brand; `q` filters by brand or model ("tesla", "byd seal", "leaf").
+function carOptions(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean), groups = {};
+  Object.entries(EVCARS).forEach(([k, c]) => {
+    const hay = (c.name + ' ' + (c.brand || '') + ' ' + c.note).toLowerCase();
+    if (words.every(w => hay.includes(w))) (groups[c.brand || 'Other'] = groups[c.brand || 'Other'] || []).push([k, c]);
+  });
+  return Object.entries(groups).map(([b, list]) => `<optgroup label="${esc(b)}">` + list.map(([k, c]) =>
+    `<option value="${k}" ${k === EVS.car ? 'selected' : ''}>${esc(c.name)} &middot; ${c.battery_kwh} kWh${c.note ? ' \u2014 ' + esc(c.note) : ''}</option>`).join('') + '</optgroup>').join('');
 }
 let evTimer = null, evReq = 0;
 function evBind(d) {
   if (!$('evOut')) return;
   const save = () => { try { localStorage.setItem('solarcastEv', JSON.stringify(EVS)); } catch (e) {} };
   $('evCar').onchange = () => { EVS.car = $('evCar').value; save(); evRun(d); };
+  $('evFind').oninput = () => {
+    const q = $('evFind').value, sel = $('evCar');
+    sel.innerHTML = carOptions(q);
+    const n = sel.options.length;
+    $('evCount').textContent = q ? (n ? n + (n === 1 ? ' car' : ' cars') : 'No match. Try a brand: Tesla, BYD, MG, Kia, Hyundai...') : '';
+    if (n && sel.value !== EVS.car) { EVS.car = sel.value; save(); evRun(d); }
+  };
+  if ($('evBatt')) $('evBatt').onchange = () => { EVS.batt = $('evBatt').value; save(); evRun(d); };
   const slide = () => {
     let a = +$('evStart').value, b = +$('evTarget').value;
     if (b <= a) { b = Math.min(100, a + 5); $('evTarget').value = b; }
@@ -1011,7 +1041,8 @@ async function evRun(d) {
   const ask = async h => {
     const res = await fetch('/api/ev_plan', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hours: d.hours || [], solar_kw: (d.predicted_kw || []).map(v => v === null ? null : S(v)),
-        next_hour: h, car: EVS.car, start_pct: EVS.start, target_pct: EVS.target, charger_kw: EVS.charger }) });
+        next_hour: h, car: EVS.car, start_pct: EVS.start, target_pct: EVS.target, charger_kw: EVS.charger,
+        home_battery: HOMEBATT[EVS.batt] ? EVS.batt : null }) });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
     return body;
@@ -1057,6 +1088,23 @@ async function evRun(d) {
     <div class="sub" style="margin-top:4px">${name}: ${p.battery_kwh} kWh battery, charges at up to ${num(p.charger_kw)} kW here. Uses this day's forecast from ${whole ? 'sunrise' : String(nh).padStart(2, '0') + ':00'}, a 0.5 kW home load first, 10% charging loss. An estimate: real cars and weather vary.</div>`;
   requestAnimationFrame(() => { const b = out.querySelector('.b1'); if (b) b.style.width = Math.max(0, p.end_pct - p.start_pct) + '%'; });
   countUp(out.querySelector('.batt .cu'));
+  hbShow(p);
+}
+function hbShow(p) {
+  const o = $('hbOut'), h = p.home_battery;
+  if (!o) return;
+  if (!h) { o.innerHTML = '<div class="sub">Pick a battery to see how much of today\'s left-over solar it could keep for the evening.</div>'; return; }
+  if (!h.stored_kwh) { o.innerHTML = `<div class="sub">No solar left over ${p.done || p.hours.some(r => r.car_kw > 0) ? 'after the car' : 'today'} to store in the ${esc(h.name)}.</div>`; return; }
+  const pct = Math.round(h.stored_kwh / h.capacity_kwh * 100);
+  o.innerHTML = `<div class="batt hbb"><div class="b1" style="left:0"></div><div class="lbl">${num(h.stored_kwh)} of ${h.capacity_kwh} kWh</div></div>
+    <div class="stats" style="margin-top:6px">
+      <div class="stat"><b>${h.full_by ? 'Full by ' + h.full_by : pct + '% full'}</b><span>stored from left-over sun</span></div>
+      ${h.to_car_kwh > 0 ? `<div class="stat"><b>${p.end_pct}% &rarr; ${h.car_end_pct}%</b><span>the car tonight, from the battery (${num(h.to_car_kwh)} kWh)</span></div>` : ''}
+      <div class="stat"><b>${num(h.home_hours)} h</b><span>of evening home power (about ${num(1, 0)} kW), no grid</span></div>
+      <div class="stat"><b>NZD ${num(h.saved_nzd, 2)}</b><span>more grid power you don't buy</span></div>
+    </div>
+    <div class="sub">The ${esc(h.name)} starts the morning empty, takes up to its charging power from what the home and car don't use, and gives back about 90% in the evening: first to the car if it still needs charge, then to the home. Typical published sizes; an estimate.</div>`;
+  requestAnimationFrame(() => { const b = o.querySelector('.b1'); if (b) b.style.width = Math.min(100, pct) + '%'; });
 }
 // Animated picture of where the next hour's power goes: sun -> your panels -> home (-> EV when the example says charge).
 // The dots move faster and the sun is brighter when the panels give more of their rated power; at night the home runs on the grid.
@@ -1376,6 +1424,7 @@ loadModel();
     times = info.times || [];
     if (info.reference_kw) REF = info.reference_kw;
     if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
+    if (info.home_batteries) HOMEBATT = info.home_batteries;
     if (info.ev_cars) { EVCARS = info.ev_cars; if (!EVCARS[EVS.car]) EVS.car = Object.keys(EVCARS)[0]; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
     indexTimes();
     DEFAULT_T = times.includes(info.default) ? info.default : times[0];   // Replay starts at a sunny past midday

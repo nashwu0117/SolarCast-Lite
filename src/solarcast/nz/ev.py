@@ -5,28 +5,84 @@ uses a small base load first; whatever is left goes into the car, up to what the
 charger accept. An EV charger cannot start below about 1.4 kW (6 A at 230 V), so smaller surpluses are not used.
 About 10% is lost between the wall and the battery.
 
-The cars are common in New Zealand: the Tesla Model Y and BYD Atto 3 were the two best-selling new EVs in 2025, and the
-Nissan Leaf is the most common used import. Specs are typical published figures (battery size, the most AC power the
-car's on-board charger accepts, energy use); real cars and chargers vary, so the result is an estimate, not a promise.
+The cars are the EVs sold in New Zealand, new or as common used imports: the Tesla Model Y and BYD Atto 3 were the two
+best-selling new EVs in 2025, and the Nissan Leaf is the most common used import. Tesla dropped the right-hand-drive Model S
+and X in 2023, so those are older cars already here. Specs are typical published figures (usable battery size, the most AC
+power the car's on-board charger accepts, energy use); real cars and chargers vary, so the result is an estimate.
+
+A home battery (for example a Tesla Powerwall 3, 13.5 kWh, sold in NZ since 2024) can store the solar that is left over
+during the day. In the evening it first tops up the car if the panels could not finish, and the rest runs the home.
 """
 from __future__ import annotations
 
 from solarcast.nz import config
 
+_U = "older cars on NZ roads; no longer sold new in NZ"
+
+
+def _car(brand, model, battery_kwh, ac_max_kw, kwh_per_100km, note=""):
+    return {"brand": brand, "name": f"{brand} {model}", "battery_kwh": battery_kwh, "ac_max_kw": ac_max_kw,
+            "kwh_per_100km": kwh_per_100km, "note": note}
+
+
+# EVs sold in New Zealand (new, or common as used imports), grouped by brand. battery_kwh is the usable size.
 CARS = {
-    "tesla_model_y": {"name": "Tesla Model Y", "battery_kwh": 60.0, "ac_max_kw": 11.0, "kwh_per_100km": 15.0,
-                      "note": "NZ's best-selling new EV in 2025"},
-    "byd_atto_3": {"name": "BYD Atto 3", "battery_kwh": 60.48, "ac_max_kw": 7.0, "kwh_per_100km": 16.0,
-                   "note": "No. 2 new EV in NZ in 2025"},
-    "tesla_model_3": {"name": "Tesla Model 3", "battery_kwh": 57.5, "ac_max_kw": 11.0, "kwh_per_100km": 13.5, "note": ""},
-    "byd_dolphin": {"name": "BYD Dolphin", "battery_kwh": 60.4, "ac_max_kw": 11.0, "kwh_per_100km": 15.0, "note": ""},
-    "mg4": {"name": "MG4", "battery_kwh": 64.0, "ac_max_kw": 6.6, "kwh_per_100km": 16.0, "note": ""},
-    "kia_ev6": {"name": "Kia EV6", "battery_kwh": 77.4, "ac_max_kw": 11.0, "kwh_per_100km": 17.0, "note": ""},
-    "hyundai_kona": {"name": "Hyundai Kona Electric", "battery_kwh": 64.8, "ac_max_kw": 10.8, "kwh_per_100km": 15.0,
-                     "note": ""},
-    "nissan_leaf": {"name": "Nissan Leaf", "battery_kwh": 40.0, "ac_max_kw": 6.6, "kwh_per_100km": 16.0,
-                    "note": "the most common EV on NZ roads, mostly used imports"},
+    # Tesla: the Model Y and Model 3 are sold new; right-hand-drive Model S and X were dropped in 2023.
+    "tesla_model_y": _car("Tesla", "Model Y RWD", 60.0, 11.0, 15.0, "NZ's best-selling new EV in 2025"),
+    "tesla_model_y_lr": _car("Tesla", "Model Y Long Range", 75.0, 11.0, 16.0),
+    "tesla_model_y_perf": _car("Tesla", "Model Y Performance", 75.0, 11.0, 17.5),
+    "tesla_model_3": _car("Tesla", "Model 3 RWD", 57.5, 11.0, 13.5),
+    "tesla_model_3_lr": _car("Tesla", "Model 3 Long Range", 75.0, 11.0, 14.0),
+    "tesla_model_3_perf": _car("Tesla", "Model 3 Performance", 75.0, 11.0, 15.5),
+    "tesla_model_s": _car("Tesla", "Model S Long Range", 95.0, 11.0, 18.0, _U),
+    "tesla_model_x": _car("Tesla", "Model X Long Range", 95.0, 11.0, 21.0, _U),
+    # BYD
+    "byd_atto_3": _car("BYD", "Atto 3 Extended", 60.48, 7.0, 16.0, "No. 2 new EV in NZ in 2025"),
+    "byd_atto_3_std": _car("BYD", "Atto 3 Standard", 49.92, 7.0, 15.5),
+    "byd_atto_2": _car("BYD", "Atto 2", 45.12, 7.0, 14.5),
+    "byd_dolphin": _car("BYD", "Dolphin Premium", 60.48, 7.0, 15.0),
+    "byd_dolphin_std": _car("BYD", "Dolphin Dynamic", 44.9, 7.0, 14.0),
+    "byd_seal": _car("BYD", "Seal", 82.56, 7.0, 16.0),
+    "byd_sealion_7": _car("BYD", "Sealion 7", 82.56, 11.0, 19.0),
+    # MG
+    "mg4": _car("MG", "MG4 Long Range", 64.0, 6.6, 16.0),
+    "mg4_std": _car("MG", "MG4 Excite 51", 51.0, 6.6, 16.0),
+    "mg4_xpower": _car("MG", "MG4 XPOWER", 64.0, 11.0, 18.0),
+    "mg_zs_ev": _car("MG", "ZS EV Long Range", 72.6, 7.0, 17.5),
+    # Kia
+    "kia_ev3": _car("Kia", "EV3 Long Range", 81.4, 11.0, 15.0),
+    "kia_ev5": _car("Kia", "EV5", 88.1, 11.0, 18.0),
+    "kia_ev6": _car("Kia", "EV6", 77.4, 11.0, 17.0),
+    "kia_niro_ev": _car("Kia", "Niro EV", 64.8, 11.0, 16.0),
+    # Hyundai
+    "hyundai_kona": _car("Hyundai", "Kona Electric Extended", 64.8, 10.8, 15.0),
+    "hyundai_kona_std": _car("Hyundai", "Kona Electric Standard", 48.6, 10.8, 14.5),
+    "hyundai_inster": _car("Hyundai", "Inster", 49.0, 11.0, 14.5),
+    "hyundai_ioniq_5": _car("Hyundai", "Ioniq 5 Long Range", 84.0, 10.9, 17.0),
+    "hyundai_ioniq_6": _car("Hyundai", "Ioniq 6 Long Range", 77.4, 10.9, 14.5),
+    # Polestar, Volvo, Toyota, Nissan
+    "polestar_2": _car("Polestar", "Polestar 2 Long Range", 79.0, 11.0, 16.5),
+    "polestar_4": _car("Polestar", "Polestar 4 Long Range", 94.0, 11.0, 18.5),
+    "volvo_ex30": _car("Volvo", "EX30 Extended Range", 64.0, 11.0, 16.0),
+    "volvo_ex40": _car("Volvo", "EX40 Twin Motor", 79.0, 11.0, 19.0),
+    "toyota_bz4x": _car("Toyota", "bZ4X", 64.0, 6.6, 17.0),
+    "nissan_leaf": _car("Nissan", "Leaf 40 kWh", 40.0, 6.6, 16.0, "the most common EV on NZ roads, mostly used imports"),
+    "nissan_leaf_62": _car("Nissan", "Leaf e+ 62 kWh", 59.0, 6.6, 17.0),
+    "nissan_leaf_24": _car("Nissan", "Leaf 24 kWh (older)", 21.0, 3.3, 15.0, "older used imports"),
 }
+# The assistant gets plans only for these (all cars would make its facts too long).
+POPULAR = ["tesla_model_y", "byd_atto_3", "tesla_model_3", "byd_sealion_7", "mg4", "kia_ev3", "nissan_leaf"]
+
+# Home batteries sold and installed in NZ: usable size and the most power they take from the panels.
+HOME_BATTERIES = {
+    "tesla_powerwall_3": {"name": "Tesla Powerwall 3", "capacity_kwh": 13.5, "power_kw": 5.0},
+    "tesla_powerwall_3_x2": {"name": "Tesla Powerwall 3 + Expansion", "capacity_kwh": 27.0, "power_kw": 5.0},
+    "byd_hvs_10": {"name": "BYD Battery-Box Premium HVS 10.2", "capacity_kwh": 10.24, "power_kw": 5.1},
+    "sungrow_sbr096": {"name": "Sungrow SBR096", "capacity_kwh": 9.6, "power_kw": 5.0},
+    "alpha_smile5": {"name": "AlphaESS SMILE5 10.1", "capacity_kwh": 10.1, "power_kw": 5.0},
+}
+BATTERY_ROUND_TRIP = 0.9       # energy back out of a home battery for each unit put in
+EVENING_LOAD_KW = 1.0          # a typical NZ home in the evening (cooking, heat pump, lights)
 HOME_CHARGER_KW = 7.4          # 32 A single-phase wall charger; most NZ homes are single-phase
 THREE_PHASE_CHARGER_KW = 11.0  # 16 A three-phase
 MIN_CHARGE_KW = 1.4            # 6 A x 230 V: the smallest current an EV charger can run at
@@ -36,7 +92,7 @@ HOME_LOAD_KW = 0.5             # the home's own base load during the day, served
 
 def plan(hours, solar_kw, next_hour: int, car: str = "tesla_model_y", start_pct: float = 20, target_pct: float = 80,
          charger_kw: float = HOME_CHARGER_KW, home_load_kw: float = HOME_LOAD_KW,
-         price_nzd: float = config.GRID_PRICE_NZD) -> dict:
+         price_nzd: float = config.GRID_PRICE_NZD, home_battery: str | None = None) -> dict:
     """Charge `car` from start_pct to target_pct using only solar from local hour `next_hour` to the end of the day.
 
     hours: local hour of each value (0-23); solar_kw: forecast kW of the user's panels for that hour (None = no data).
@@ -67,7 +123,7 @@ def plan(hours, solar_kw, next_hour: int, car: str = "tesla_model_y", start_pct:
     end_pct = start_pct + got / spec["battery_kwh"] * 100
     left = max(need - got, 0.0)
     grid_h = need / EFFICIENCY / rate if rate else None
-    return {
+    out = {
         "car": car, "car_name": spec["name"], "battery_kwh": spec["battery_kwh"], "charger_kw": round(rate, 1),
         "start_pct": round(start_pct), "target_pct": round(target_pct), "need_kwh": round(need, 1),
         "done": need == 0 or finish is not None, "finish_local_time": finish,
@@ -79,3 +135,29 @@ def plan(hours, solar_kw, next_hour: int, car: str = "tesla_model_y", start_pct:
         "grid_only_cost_nzd": round(need / EFFICIENCY * price_nzd, 2),
         "hours": rows,
     }
+    if home_battery:
+        out["home_battery"] = store_leftover(rows, home_battery, left, spec["battery_kwh"], end_pct, price_nzd)
+    return out
+
+
+def store_leftover(rows, battery: str, car_left_kwh: float, car_battery_kwh: float, car_end_pct: float,
+                   price_nzd: float = config.GRID_PRICE_NZD) -> dict:
+    """Put each hour's left-over solar into a home battery (empty in the morning), then use it in the evening:
+    first to finish the car, then to run the home instead of buying grid power."""
+    b = HOME_BATTERIES[battery]
+    stored, full_by = 0.0, None
+    for r in rows:
+        add = min(max(r["unused_kw"], 0.0), b["power_kw"], b["capacity_kwh"] - stored)
+        if add > 0:
+            stored += add
+            if stored >= b["capacity_kwh"] - 1e-9 and full_by is None:
+                m = round(add / min(max(r["unused_kw"], 0.0), b["power_kw"]) * 60)
+                full_by = f"{(r['hour'] + m // 60) % 24:02d}:{m % 60:02d}"
+    usable = stored * BATTERY_ROUND_TRIP
+    to_car = min(usable * EFFICIENCY, car_left_kwh)                       # kWh into the car's battery
+    to_home = usable - to_car / EFFICIENCY
+    return {"battery": battery, "name": b["name"], "capacity_kwh": b["capacity_kwh"], "stored_kwh": round(stored, 1),
+            "full_by": full_by, "to_car_kwh": round(to_car, 1),
+            "car_end_pct": round(car_end_pct + to_car / car_battery_kwh * 100),
+            "to_home_kwh": round(to_home, 1), "home_hours": round(to_home / EVENING_LOAD_KW, 1),
+            "saved_nzd": round(usable * price_nzd, 2)}
