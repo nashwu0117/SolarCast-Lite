@@ -84,7 +84,7 @@ class LocalLLM(OllamaLLM):
         except Exception:
             return False
 
-    def _pull(self, model: str):
+    def _pull(self, model: str, show: bool = True):
         """Stream /api/pull and keep a progress percentage in the status."""
         req = urllib.request.Request(HOST + "/api/pull", data=json.dumps({"model": model}).encode(),
                                      headers={"Content-Type": "application/json"})
@@ -93,7 +93,7 @@ class LocalLLM(OllamaLLM):
                 ev = json.loads(line.decode() or "{}")
                 if ev.get("error"):
                     raise RuntimeError(ev["error"])
-                if ev.get("total") and ev.get("completed"):
+                if show and ev.get("total") and ev.get("completed"):
                     pct = ev["completed"] / ev["total"] * 100
                     self._state["detail"] = f"Downloading {model}: {pct:.0f}% of {ev['total'] / 1e9:.1f} GB"
 
@@ -113,16 +113,27 @@ class LocalLLM(OllamaLLM):
                     time.sleep(1)
                 else:
                     raise RuntimeError("the Ollama server did not start")
+            # The safety classifier downloads at the same time as the main model, and the main model starts loading
+            # into memory as soon as it is downloaded, so nothing waits in line.
+            guard_err: list = []
+
+            def pull_guard():
+                try:
+                    self._pull(self._guard_wanted, show=False)
+                except Exception as exc:                          # the keyword filter still runs without it
+                    guard_err.append(exc)
+            gt = threading.Thread(target=pull_guard, daemon=True) if self._guard_wanted else None
+            if gt:
+                gt.start()
             self._set("downloading", f"Downloading {self.model}...")
             self._pull(self.model)
-            if self._guard_wanted:
-                try:
-                    self._set("downloading", f"Downloading the safety classifier {self._guard_wanted}...")
-                    self._pull(self._guard_wanted)
-                    self.guard_model = self._guard_wanted
-                except Exception as exc:                          # the keyword filter still runs without it
-                    self.log.append(f"guard model skipped: {exc}")
             self._warm(self.model)
+            if gt:
+                gt.join()
+                if guard_err:
+                    self.log.append(f"guard model skipped: {guard_err[0]}")
+                else:
+                    self.guard_model = self._guard_wanted
             if self.guard_model:
                 try:
                     self._warm(self.guard_model)
