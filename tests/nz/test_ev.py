@@ -62,6 +62,12 @@ def test_catalog_is_grouped_by_brand_and_complete():
     assert "no longer sold new" in ev.CARS["tesla_model_s"]["note"]
 
 
+def test_byd_plug_in_hybrids_charge_like_evs():
+    for k in ("byd_sealion_6", "byd_sealion_5", "byd_sealion_5_std", "byd_shark_6"):
+        assert ev.CARS[k]["brand"] == "BYD" and "plug-in hybrid" in ev.CARS[k]["note"]
+    assert ev.CARS["byd_shark_6"]["battery_kwh"] == 29.58
+
+
 def test_home_battery_stores_left_over_sun_and_tops_up_the_car():
     p = ev.plan(HOURS, SUNNY, 8, "tesla_model_y", 20, 80, home_battery="tesla_powerwall_3")
     hb = p["home_battery"]

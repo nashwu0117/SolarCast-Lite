@@ -53,7 +53,7 @@ decision?" below).
   the day's actual vs predicted power, and the worked example (EV advice for the next hour with its reason and the day's
   savings in kWh, NZD, kg CO2). The page opens on the sunniest region now, so this shows without a click; an animated
   picture shows the power flowing from the sun to your panels, your home and (when it is worth it) the EV.
-- **Charge your EV from your panels:** pick your car from about 35 EVs sold in New Zealand, grouped by brand (Tesla Model 3 and Model Y in RWD, Long Range and Performance; the older Model S and X; BYD, MG, Kia, Hyundai, Polestar, Volvo, Toyota, Nissan Leaf); type a brand or model in the search box to find it fast, the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
+- **Charge your EV from your panels:** pick your car from about 40 EVs and plug-in hybrids sold in New Zealand, grouped by brand (Tesla Model 3 and Model Y in RWD, Long Range and Performance; the older Model S and X; BYD, including the Sealion 5, Sealion 6 and Shark 6 plug-in hybrids; MG, Kia, Hyundai, Polestar, Volvo, Toyota, Nissan Leaf); type a brand or model in the search box to find it fast, the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
   finish (or how far they get and what is still needed), the range added, the money saved, and how long the same
   charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes (home, car, left
   over). At night it shows the whole day as if plugged in at sunrise. The AI chat can answer the same question.

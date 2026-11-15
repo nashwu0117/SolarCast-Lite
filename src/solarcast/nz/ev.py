@@ -7,7 +7,8 @@ About 10% is lost between the wall and the battery.
 
 The cars are the EVs sold in New Zealand, new or as common used imports: the Tesla Model Y and BYD Atto 3 were the two
 best-selling new EVs in 2025, and the Nissan Leaf is the most common used import. Tesla dropped the right-hand-drive Model S
-and X in 2023, so those are older cars already here. Specs are typical published figures (usable battery size, the most AC
+and X in 2023, so those are older cars already here. BYD's plug-in hybrids (Sealion 5, Sealion 6, Shark 6) are included too:
+they charge from a wall socket like an EV, only with a smaller battery. Specs are typical published figures (usable battery size, the most AC
 power the car's on-board charger accepts, energy use); real cars and chargers vary, so the result is an estimate.
 
 A home battery (for example a Tesla Powerwall 3, 13.5 kWh, sold in NZ since 2024) can store the solar that is left over
@@ -18,6 +19,7 @@ from __future__ import annotations
 from solarcast.nz import config
 
 _U = "older cars on NZ roads; no longer sold new in NZ"
+_P = "plug-in hybrid (PHEV): petrol takes over when the battery is empty"
 
 
 def _car(brand, model, battery_kwh, ac_max_kw, kwh_per_100km, note=""):
@@ -44,6 +46,12 @@ CARS = {
     "byd_dolphin_std": _car("BYD", "Dolphin Dynamic", 44.9, 7.0, 14.0),
     "byd_seal": _car("BYD", "Seal", 82.56, 7.0, 16.0),
     "byd_sealion_7": _car("BYD", "Sealion 7", 82.56, 11.0, 19.0),
+    # BYD plug-in hybrids ("DM-i super hybrid"): they plug in like an EV and the petrol engine takes over when the battery
+    # is empty. Battery sizes are BYD's published pack sizes; energy use is from the WLTP electric range.
+    "byd_sealion_6": _car("BYD", "Sealion 6 plug-in hybrid", 18.3, 7.0, 20.0, _P),
+    "byd_sealion_5": _car("BYD", "Sealion 5 Premium plug-in hybrid", 18.3, 6.6, 19.5, _P),
+    "byd_sealion_5_std": _car("BYD", "Sealion 5 Essential plug-in hybrid", 12.9, 6.6, 19.5, _P),
+    "byd_shark_6": _car("BYD", "Shark 6 plug-in hybrid ute", 29.58, 6.6, 26.0, _P),
     # MG
     "mg4": _car("MG", "MG4 Long Range", 64.0, 6.6, 16.0),
     "mg4_std": _car("MG", "MG4 Excite 51", 51.0, 6.6, 16.0),
