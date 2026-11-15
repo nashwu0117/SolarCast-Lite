@@ -46,7 +46,7 @@ def _location(df: pd.DataFrame, region: str) -> tuple[float, float, int]:
     return float(df["loc_lat"].iloc[0]), float(df["loc_lon"].iloc[0]), int(df["loc_region_id"].iloc[0])
 
 
-def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
+def _region_features(df: pd.DataFrame, region: str, horizon: int = 1) -> pd.DataFrame:
     lat, lon, region_id = _location(df, region)
     g = df.sort_values("time_utc").set_index("time_utc")
     g = g.reindex(pd.date_range(g.index.min(), g.index.max(), freq="h", tz="UTC"))    # gaps become NaN
@@ -65,7 +65,7 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
     f["d_cloud_1h"], f["d_temp_1h"] = f["cloud_t"] - f["cloud_t"].shift(1), f["temp_t"] - f["temp_t"].shift(1)
     f["d_humidity_1h"] = f["humidity_t"] - f["humidity_t"].shift(1)
 
-    target_time = f.index + HOUR
+    target_time = f.index + horizon * HOUR
     elev, azim = data.solar_position(target_time - HALF, lat, lon)       # midpoint of the target hour
     f["elev_target"], f["azim_target"], f["cs_target"] = elev, azim, clear_sky_ghi(elev)
     mid = target_time - HALF
@@ -75,12 +75,12 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
 
     # Day-ahead forecast for the target stamp (issued ~24 h before t, see module docstring). NaN when unavailable.
     fc = {c: g[c] if c in g.columns else pd.Series(np.nan, index=g.index) for c in config.FORECAST_COLUMNS}
-    f["fc_ghi_target"], f["fc_cloud_target"] = fc["fc_ghi_wm2"].shift(-1), fc["fc_cloud_pct"].shift(-1)
-    f["fc_temp_target"], f["fc_dni_target"] = fc["fc_temp_c"].shift(-1), fc["fc_dni_wm2"].shift(-1)
+    f["fc_ghi_target"], f["fc_cloud_target"] = fc["fc_ghi_wm2"].shift(-horizon), fc["fc_cloud_pct"].shift(-horizon)
+    f["fc_temp_target"], f["fc_dni_target"] = fc["fc_temp_c"].shift(-horizon), fc["fc_dni_wm2"].shift(-horizon)
     f["fc_kt_target"] = (f["fc_ghi_target"] / f["cs_target"]).where(f["cs_target"] >= CS_MIN).clip(0, 1.5)
 
-    f["target_ghi"] = ghi.shift(-1)
-    target_temp = g["temp_c"].shift(-1)
+    f["target_ghi"] = ghi.shift(-horizon)
+    target_temp = g["temp_c"].shift(-horizon)
     f["target_kw"] = data.pv_power_kw(f["target_ghi"].fillna(0), target_temp.fillna(f["temp_t"]))
     f.loc[f["target_ghi"].isna(), "target_kw"] = np.nan
     f["meta_issue_time"], f["meta_cloud_now"] = f.index, f["cloud_t"]
@@ -89,12 +89,15 @@ def _region_features(df: pd.DataFrame, region: str) -> pd.DataFrame:
     return f
 
 
-def build_features(long_df: pd.DataFrame, require_target: bool = True) -> pd.DataFrame:
+def build_features(long_df: pd.DataFrame, require_target: bool = True, horizon: int = 1) -> pd.DataFrame:
     """Feature table indexed by (region, target_time). Columns: FEATURES, target_ghi, target_kw, meta_*.
 
     require_target=False keeps the newest issue hour (target not yet known) so live forecasts can be made.
+    horizon = how many hours ahead the target hour ends (1 = the next hour, the shipped model). The "_target" inputs
+    (sun position, clear sky, the day-ahead forecast) then describe that later hour; for horizon <= 24 the day-ahead
+    forecast was still issued before the issue hour t, so nothing from the future leaks in.
     """
-    parts = [_region_features(g, r) for r, g in long_df.groupby("region", sort=False)]
+    parts = [_region_features(g, r, horizon) for r, g in long_df.groupby("region", sort=False)]
     out = pd.concat(parts)
     if require_target:
         out = out[out["target_ghi"].notna()]
