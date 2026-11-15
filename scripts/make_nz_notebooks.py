@@ -250,11 +250,22 @@ print("live grid ready:", live_ok)
 if llm.status()["state"] == "ready" and live_ok:
     # @@warm@@
     grid.snapshot("live")                              # starts the AI national briefing for the current hour
-    while grid.snapshot("live", summarize=False)["briefing"]["mode"] != "llm" and time.time() - t0 < 1200:
+    b0 = time.time()
+    while grid.snapshot("live", summarize=False)["briefing"]["mode"] != "llm" and time.time() - b0 < 300:
         time.sleep(3)
+    # One warm-up question, at most 4 minutes and never fatal: a slow weather service must not hold back the link.
+    import threading
     w = time.time()
-    assistant.ask("How much power will Auckland give next hour?", "live", system_kw=5)
-    print(f"AI briefing written; first chat answer took {time.time() - w:.0f} s (later ones are faster)")
+    def _warm():
+        try:
+            assistant.ask("How much power will Auckland give next hour?", "live", system_kw=5)
+        except Exception as exc:
+            print("warm-up question skipped:", exc)
+    warm = threading.Thread(target=_warm, daemon=True)
+    warm.start()
+    warm.join(240)
+    print(f"AI warm-up answer took {time.time() - w:.0f} s" if not warm.is_alive()
+          else "AI warm-up is still running in the background; the dashboard works already")
 print(f"everything ready after {time.time() - t0:.0f} s")
 url = webapp.serve(svc, port=8000, tunnel=True, assistant=assistant, grid=grid)
 

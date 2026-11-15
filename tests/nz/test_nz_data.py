@@ -87,7 +87,7 @@ def test_fetch_live_has_forecast_columns_for_next_hour(monkeypatch):
     def block(vars_):
         return {"hourly": {"time": times, **{v: [100.0] * len(times) for v in vars_}}}
 
-    def fake_get(url, params, tries=6):
+    def fake_get(url, params, tries=6, timeout=180):
         vars_ = params["hourly"].split(",")
         return [block(vars_)] if url == data.FORECAST_URL else [block(vars_)]
 
@@ -96,3 +96,22 @@ def test_fetch_live_has_forecast_columns_for_next_hour(monkeypatch):
     assert set(config.FORECAST_COLUMNS) <= set(live.columns)
     nxt = live[live["time_utc"] == now + pd.Timedelta("1h")]
     assert len(nxt) == 1 and nxt["fc_ghi_wm2"].notna().all() and bool(nxt["is_forecast"].iloc[0])
+
+
+def test_cut_off_reply_is_retried(monkeypatch):
+    """A 200 reply with an empty or cut-off body is retried like a timeout."""
+    from solarcast.nz import data as nzdata
+
+    class Reply:
+        status_code = 200
+        def __init__(self, ok):
+            self.ok = ok
+        def json(self):
+            if not self.ok:
+                raise ValueError("Expecting value: line 1 column 1 (char 0)")
+            return {"hourly": {}}
+
+    replies = iter([Reply(False), Reply(True)])
+    monkeypatch.setattr(nzdata.requests, "get", lambda *a, **k: next(replies))
+    monkeypatch.setattr(nzdata.time, "sleep", lambda s: None)
+    assert nzdata._get("https://example.invalid", {}, tries=2, timeout=1) == {"hourly": {}}

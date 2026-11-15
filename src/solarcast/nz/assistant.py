@@ -426,11 +426,19 @@ class Assistant:
         region = named or (region if region in config.REGIONS else None)
         replay_shown = str(time_utc).lower() != "live"
         use = time_utc if replay_shown and asks_about_replay(q) else "live"
+        unavailable = {"en": "Live weather data is not available right now (the weather service did not answer). "
+                             "Please try again in a minute, or press \"Replay a past day\" to ask about a past hour.",
+                       "zh": "現在拿不到即時天氣資料（天氣服務沒有回應）。請一分鐘後再試，或按「Replay a past day」問過去的時段。"}[lang]
         try:
             facts = self.facts(use, region, None if named else point, system_kw)
         except Exception:                                  # live weather unavailable: fall back to the map's hour
+            if use == time_utc:                            # nothing else to fall back to: say so, never crash
+                return {"answer": unavailable, "mode": "unavailable", "region": region, "data_time": use}
             use = time_utc
-            facts = self.facts(use, region, None if named else point, system_kw)
+            try:
+                facts = self.facts(use, region, None if named else point, system_kw)
+            except Exception:
+                return {"answer": unavailable, "mode": "unavailable", "region": region, "data_time": use}
         if replay_shown and use == "live":
             facts["dashboard_time"]["note"] += (f" The map is replaying {time_utc} (UTC), but the user did not ask about "
                                                 "that past hour, so these facts are for NOW (live).")

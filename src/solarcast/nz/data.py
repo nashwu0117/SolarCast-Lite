@@ -66,18 +66,26 @@ def _to_frame(hourly: dict, region: str, lat: float, lon: float) -> pd.DataFrame
 
 
 # ---------- download ----------
-def _get(url: str, params: dict, tries: int = 6) -> dict:
-    """GET with a patient retry (HTTP 429 rate limits, 5xx errors and timeouts)."""
+LIVE_TIMEOUT_S = 30            # live requests: the dashboard is waiting, so give up quickly and keep the last good data
+def _get(url: str, params: dict, tries: int = 6, timeout: float = 180) -> dict:
+    """GET with a patient retry (HTTP 429 rate limits, 5xx errors and timeouts). Live calls pass small tries/timeout so
+    a slow Open-Meteo answer cannot block the dashboard for minutes."""
     for k in range(tries):
         try:
-            r = requests.get(url, params=params, timeout=180)
+            r = requests.get(url, params=params, timeout=timeout)
         except (requests.Timeout, requests.ConnectionError):
             if k == tries - 1:
                 raise
             time.sleep(20 * (k + 1) if tries > 2 else 3)
             continue
         if r.status_code == 200:
-            return r.json()
+            try:
+                return r.json()
+            except ValueError:                                     # empty or cut-off reply: retry like a timeout
+                if k == tries - 1:
+                    raise
+                time.sleep(3)
+                continue
         if r.status_code in (429, 500, 502, 503, 504) and k < tries - 1:
             time.sleep(30 * (k + 1) if tries > 2 else 3)
             continue
@@ -231,10 +239,10 @@ def fetch_live(regions=config.REGIONS) -> pd.DataFrame:
     names = list(regions)
     loc = {"latitude": ",".join(str(config.REGIONS[n][0]) for n in names),
            "longitude": ",".join(str(config.REGIONS[n][1]) for n in names), "timezone": "UTC", "past_days": 2, "forecast_days": 2}
-    data = _get(FORECAST_URL, {**loc, "hourly": ",".join(config.HOURLY_VARS)})
+    data = _get(FORECAST_URL, {**loc, "hourly": ",".join(config.HOURLY_VARS)}, tries=2, timeout=LIVE_TIMEOUT_S)
     data = data if isinstance(data, list) else [data]
-    try:
-        fcd = _get(PREVIOUS_RUNS_URL, {**loc, "hourly": ",".join(config.FORECAST_VARS)})
+    try:                                                           # optional extra input: one quick try only
+        fcd = _get(PREVIOUS_RUNS_URL, {**loc, "hourly": ",".join(config.FORECAST_VARS)}, tries=1, timeout=LIVE_TIMEOUT_S)
         fcd = fcd if isinstance(fcd, list) else [fcd]
     except Exception:                                              # forecasts are an extra input: NaN is handled by the model
         fcd = [None] * len(names)

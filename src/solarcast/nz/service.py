@@ -3,6 +3,7 @@
 `time_utc` is the ISSUE hour t (UTC ISO string, e.g. "2026-01-15T00:00:00Z"): we know everything up to the end of
 hour t and forecast the hour [t, t+1h). "live" means the latest real hour from the Open-Meteo forecast API.
 """
+import threading
 import time
 
 import numpy as np
@@ -57,6 +58,7 @@ class Service:
         self.regions = [r for r in config.REGIONS if r in set(history_long_df["region"])]
         self._hist = self._prepare(history_long_df)
         self._live, self._live_at = None, 0.0
+        self._live_lock = threading.Lock()
         self._report = None
         self._points: dict = {}                                    # clicked map points, cached per (lat, lon, day)
 
@@ -72,11 +74,21 @@ class Service:
         new_hour = self._live is not None and pd.Timestamp.now(tz="UTC").floor("h") > self._live["now"] \
             and time.time() - self._live_at > 120
         if self._live is None or time.time() - self._live_at > LIVE_TTL_S or new_hour:
-            live = data.fetch_live(self.regions)
-            state = self._prepare(live)
-            fc = live[live["is_forecast"]]["time_utc"]
-            state["now"] = fc.min() - HOUR if len(fc) else live["time_utc"].max()   # latest real hour
-            self._live, self._live_at = state, time.time()
+            # One download at a time. While it runs (or if it fails), other requests keep the last good live data.
+            if not self._live_lock.acquire(blocking=self._live is None):
+                return self._live
+            try:
+                live = data.fetch_live(self.regions)
+                state = self._prepare(live)
+                fc = live[live["is_forecast"]]["time_utc"]
+                state["now"] = fc.min() - HOUR if len(fc) else live["time_utc"].max()   # latest real hour
+                self._live, self._live_at = state, time.time()
+            except Exception:
+                if self._live is None:
+                    raise
+                self._live_at = time.time() - LIVE_TTL_S + 120          # keep the old hour, try again in 2 minutes
+            finally:
+                self._live_lock.release()
         return self._live
 
     def _state(self, time_utc):

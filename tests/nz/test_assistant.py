@@ -235,3 +235,15 @@ def test_facts_include_ev_charging_from_the_users_panels(svc):
         assert "hours" not in s and len(small["ev_solar_charging"]) > 8 and s["need_kwh"] == b["need_kwh"]
         assert s["end_pct"] <= b["end_pct"]          # smaller panels charge less
     assert "5 kW panels" in small["ev_solar_charging"]["what"]
+
+
+def test_live_weather_down_gives_a_polite_answer_not_a_crash(svc, monkeypatch):
+    """Kaggle once got a cut-off reply from Open-Meteo: the chat (and the notebook's warm-up) must not crash."""
+    a = asst.Assistant(svc)
+    def down(*args, **kwargs):
+        raise RuntimeError("Live data is not available right now (JSONDecodeError).")
+    monkeypatch.setattr(a, "facts", down)
+    res = a.ask("How much power will Auckland give next hour?", "live", system_kw=5)
+    assert res["mode"] == "unavailable" and "not available" in res["answer"]
+    zh = a.ask("奧克蘭下一小時能發多少電？", svc.default_time(), system_kw=5)
+    assert zh["mode"] == "unavailable" and "即時天氣" in zh["answer"]
