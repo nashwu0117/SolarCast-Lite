@@ -84,6 +84,24 @@
   ul.tick li { padding-left: 26px; position: relative; margin: 8px 0; color: var(--muted); }
   ul.tick li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); }
   footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+
+  /* Power-flow demo (the same picture as on the dashboard) */
+  .flowbox { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .flowbox .modes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .flowbox .modes button { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: 500 14px Inter, sans-serif; cursor: pointer; }
+  .flowbox .modes button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .flowbox .readout { font: 700 30px Fraunces, serif; margin-top: 4px; }
+  .flowbox .readout small { font: 400 14px Inter, sans-serif; color: var(--muted); }
+  .flow { display: block; width: 100%; height: auto; }
+  .flow text { font: 600 10px Inter, system-ui, sans-serif; fill: var(--muted); }
+  .flow .kw { fill: var(--leaf); font-size: 11px; }
+  .flow .wire { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+  .flow .juice { fill: none; stroke: var(--leaf); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 4 12; animation: flowdash var(--speed, 1.5s) linear infinite; }
+  .flow .grid-juice { fill: none; stroke: #6d83b3; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 4 12; animation: flowdash 2.2s linear infinite; }
+  .flow .sunrays { transform-origin: 30px 26px; animation: spin 14s linear infinite; }
+  @keyframes flowdash { to { stroke-dashoffset: -32; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .flow .juice, .flow .grid-juice, .flow .sunrays { animation: none; } }
 </style>
 </head>
 <body>
@@ -91,6 +109,7 @@
   <a class="logo" href="#">SolarCast <b>NZ</b></a>
   <div class="links">
     <a href="#how"><span lang-en>How it works</span><span lang-zh>運作方式</span></a>
+    <a href="#flow"><span lang-en>Power flow</span><span lang-zh>電力流向</span></a>
     <a href="#results"><span lang-en>Results</span><span lang-zh>成果</span></a>
     <a href="#ai"><span lang-en>AI</span><span lang-zh>AI</span></a>
     <a href="#run"><span lang-en>Run it</span><span lang-zh>如何執行</span></a>
@@ -144,6 +163,25 @@
     <div class="card"><div class="num">3</div><h3 lang-en>Your panels</h3><h3 lang-zh>你的太陽能板</h3>
       <p lang-en>Sunlight becomes power for the panel size you choose (3 to 100 kW): next hour in kW, the day in kWh and what it is worth. Worked example: a workshop charges its EV when solar covers the load and the car.</p>
       <p lang-zh>把日照換算成你選的系統大小（3 到 100 kW）的發電量：下一小時幾 kW、整天幾度電、值多少錢。應用範例：太陽能夠供應店裡和車子時，加工店就幫電動車充電。</p></div>
+  </div>
+</div></section>
+
+<section id="flow"><div class="wrap two">
+  <div>
+    <h2><span lang-en>See where the power goes</span><span lang-zh>看見電往哪裡流</span></h2>
+    <p class="sub" lang-en>When you pick a spot on the dashboard, an animated picture shows the next hour: sunlight hits your panels and the power flows into your home. The more of their rated power the panels give, the brighter the sun and the faster the power moves. When the worked example says "charge now", the power flows on to the EV. At night the home runs on the grid.</p>
+    <p class="sub" lang-zh>在儀表板上選一個地點，就會看到下一小時的動畫：陽光照到你的太陽能板，電流進家裡。發電量佔額定功率越高，太陽越亮、電流跑得越快。應用範例建議「現在充電」時，電會繼續流到電動車；晚上則改由電網供電。</p>
+    <p class="small" lang-en>The dashboard opens on the sunniest region right now, so the animation is there without a click. Example below: a 5 kW home system.</p>
+    <p class="small" lang-zh>儀表板一打開就會選好目前最晴朗的地區，不用點也看得到動畫。下方範例：家用 5 kW 系統。</p>
+  </div>
+  <div class="flowbox">
+    <div class="modes" id="flowModes">
+      <button type="button" data-m="sun" class="on"><span lang-en>Sunny noon</span><span lang-zh>晴天中午</span></button>
+      <button type="button" data-m="cloud"><span lang-en>Cloudy</span><span lang-zh>多雲</span></button>
+      <button type="button" data-m="night"><span lang-en>Night</span><span lang-zh>晚上</span></button>
+    </div>
+    <div id="flowPic"></div>
+    <div class="readout" id="flowRead"></div>
   </div>
 </div></section>
 
@@ -268,6 +306,53 @@ setLang(saved ? saved === 'zh' : /^zh/i.test(navigator.language || ''));
       rects.forEach((r, i) => setTimeout(() => r.setAttribute('opacity', 1), 8 * i));   // a sweep, not data
     }
   } catch (e) { svg.style.display = 'none'; }
+})();
+
+// Power-flow demo: the same picture as the dashboard, for a 5 kW home in three example hours (illustrative numbers).
+(function () {
+  const SIZE = 5, MODES = { sun: { share: 0.8, ev: true }, cloud: { share: 0.25, ev: false }, night: { share: 0, ev: false } };
+  const zh = () => document.body.classList.contains('zh');
+  function svg(share, ev) {
+    const kw = (SIZE * share).toFixed(2), on = share >= 0.02, car = on && ev;
+    const speed = (2.6 - 2.1 * share).toFixed(2) + 's';
+    const rays = [0, 45, 90, 135, 180, 225, 270, 315].map(a => {
+      const r = a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+      return `<line x1="${(30 + 15 * c).toFixed(1)}" y1="${(26 + 15 * s).toFixed(1)}" x2="${(30 + 21 * c).toFixed(1)}" y2="${(26 + 21 * s).toFixed(1)}"/>`;
+    }).join('');
+    const sun = on ? `<g opacity="${(0.35 + 0.65 * share).toFixed(2)}"><g class="sunrays" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round">${rays}</g><circle cx="30" cy="26" r="11" fill="#f5b400"/></g>`
+                   : `<path d="M36 14 a13 13 0 1 0 6 22 a10 10 0 1 1 -6 -22z" fill="#8a9bb8"/>`;
+    const juice = (p, cls) => `<path class="wire" d="${p}"/><path class="${cls}" d="${p}" style="--speed:${speed}"/>`;
+    const wire = p => `<path class="wire" d="${p}"/>`;
+    return `<svg class="flow" viewBox="0 0 330 118" role="img" aria-label="${on ? `Your ${SIZE} kW panels send about ${kw} kW to your home${car ? ' and the EV' : ''}` : 'Night: the home runs on the grid'}">
+      ${sun}${on ? juice('M52 40 L92 62', 'juice') : wire('M52 40 L92 62')}
+      <g transform="translate(92 54)"><path d="M0 22 L12 0 L44 0 L32 22 Z" fill="#1e3a5f"/><path d="M11 2 L5 20 M22 0 L16 22 M33 0 L27 22 M6 11 L38 11" stroke="#7fa7d6" stroke-width="1"/><line x1="22" y1="22" x2="22" y2="34" stroke="#6b7684" stroke-width="2"/></g>
+      <text x="114" y="104" text-anchor="middle">${zh() ? `你的 ${SIZE} kW` : `Your ${SIZE} kW`}</text>
+      ${on ? juice('M134 70 C170 70 180 70 214 70', 'juice') + `<text class="kw" x="174" y="60" text-anchor="middle">${kw} kW</text>` : wire('M134 70 C170 70 180 70 214 70')}
+      <g transform="translate(214 46)"><path d="M0 18 L22 0 L44 18 Z" fill="#c2410c"/><rect x="5" y="18" width="34" height="26" fill="#f1e4d3"/><rect x="17" y="28" width="10" height="16" fill="#8b5a2b"/><rect x="8" y="22" width="7" height="7" fill="${on ? '#fde68a' : '#93c5fd'}"/></g>
+      <text x="236" y="104" text-anchor="middle">${zh() ? '家' : 'Home'}</text>
+      ${car ? juice('M258 82 C276 86 280 92 292 92', 'juice') : wire('M258 82 C276 86 280 92 292 92')}
+      <g transform="translate(288 80)" opacity="${car ? 1 : 0.45}"><path d="M2 12 L8 3 L26 3 L33 12 L38 13 L38 20 L0 20 L0 13 Z" fill="${car ? '#15803d' : '#6b7684'}"/><circle cx="9" cy="21" r="4" fill="#1c2733"/><circle cx="29" cy="21" r="4" fill="#1c2733"/></g>
+      <text x="328" y="114" text-anchor="end">${car ? (zh() ? '電動車充電中' : 'EV charging') : (zh() ? '電動車' : 'EV')}</text>
+      ${on ? '' : `<g transform="translate(176 6)" stroke="#6d83b3" stroke-width="2" fill="none"><path d="M10 0 L2 34 M10 0 L18 34 M4 14 L16 14 M3 24 L17 24"/></g><text x="200" y="20">${zh() ? '電網' : 'Grid'}</text>${juice('M186 42 C200 56 210 60 222 62', 'grid-juice')}`}
+    </svg>`;
+  }
+  const order = ['sun', 'cloud', 'night'];
+  let mode = 'sun', timer = null;
+  function show(m) {
+    mode = m;
+    const { share, ev } = MODES[m];
+    document.getElementById('flowPic').innerHTML = svg(share, ev);
+    document.getElementById('flowRead').innerHTML = share
+      ? `${(SIZE * share).toFixed(2)} kW <small>${zh() ? `下一小時，額定功率的 ${Math.round(share * 100)}%${ev ? '，夠幫電動車充電' : ''}` : `next hour, ${Math.round(share * 100)}% of rated power${ev ? ', enough to charge the EV' : ''}`}</small>`
+      : `0 kW <small>${zh() ? '晚上沒有太陽，家裡用電網的電' : 'no sun at night, the home uses grid power'}</small>`;
+    document.querySelectorAll('#flowModes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  }
+  document.querySelectorAll('#flowModes button').forEach(b => b.onclick = () => { clearInterval(timer); show(b.dataset.m); });
+  btn.addEventListener('click', () => show(mode));                 // redraw labels in the new language
+  show('sun');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    timer = setInterval(() => show(order[(order.indexOf(mode) + 1) % order.length]), 4500);
+  }
 })();
 </script>
 </body>

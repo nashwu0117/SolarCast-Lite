@@ -728,6 +728,15 @@ async function loadSnapshot(opts = {}) {
     if (id !== reqId) return;                       // a newer request already replaced this one
     drawRegions(data.regions);
     updateHeader(data.regions);
+    // On first open, show a region right away (the sunniest one now; Auckland at night) so the panel,
+    // the power-flow animation and the chart are visible without a click.
+    if (!selected && !selectedPoint && data.regions.length) {
+      const best = data.regions.reduce((a, r) => ((r.predicted_kw_next || 0) > (a.predicted_kw_next || 0) ? r : a));
+      const name = (best.predicted_kw_next || 0) > 0 ? best.name
+        : (data.regions.find(r => r.name === 'Auckland') || data.regions[0]).name;
+      selected = name;
+      Object.entries(markers).forEach(([n, m]) => m.setStyle({ radius: n === name ? 17 : 14, color: n === name ? '#1c2733' : '#ffffff', weight: n === name ? 3 : 2 }));
+    }
   } catch (e) {
     if (id === reqId) setNote('Could not load data: ' + e.message, 'error');
   }
