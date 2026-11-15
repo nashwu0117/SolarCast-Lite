@@ -203,14 +203,18 @@ display(curve[["days", "train_rows", "model_mae_wm2", "model_mae_kw", "accuracy 
 
 JUDGES_SAMPLE = '''
 # @@sample@@
+import matplotlib.dates as mdates
 s = meta["report"]["sample"]
-t = pd.to_datetime(s["times"]).tz_convert(config.LOCAL_TZ)
+# matplotlib labels time-zone-aware dates in UTC, so drop the zone after converting: ticks then show NZ local dates.
+t = pd.to_datetime(s["times"]).tz_convert(config.LOCAL_TZ).tz_localize(None)
 fig, ax = plt.subplots(figsize=(11, 3.8))
 ax.plot(t, s["actual_kw"], color="black", lw=2, label="actual (derived from irradiance)")
 ax.plot(t, s["predicted_kw"], color="tab:orange", lw=1.8, label="SolarCast model")
 ax.plot(t, s["persistence_kw"], color="tab:blue", lw=1, ls="--", label="persistence")
 ax.set_ylabel("PV power of a 50 kW system (kW)")
 ax.set_title(f"One sample week in {s['region']}: next-hour forecast (NZ local time)")
+ax.xaxis.set_major_locator(mdates.DayLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%a %d %b"))
 ax.legend(loc="upper right")
 ax.grid(alpha=0.3)
 plt.tight_layout()
