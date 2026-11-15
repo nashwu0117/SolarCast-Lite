@@ -334,6 +334,13 @@ class Assistant:
                 "day_predicted_kwh": day_kwh, "day_value_nzd_at_grid_price": round(day_kwh * config.GRID_PRICE_NZD, 2),
                 ("day_actual_kwh_so_far" if live else "day_actual_kwh"): round(sum(act) * f, 1),
             }
+            if d.get("ahead"):
+                out["selected_region"]["next_hours_forecast"] = {
+                    "what": "SolarCast's forecast for each of the next hours (from the latest real hour). On unseen test "
+                            "data it beat the weather service's own forecast by 40% at 1 h, 16% at 2 h and 6% at 3 h; "
+                            "beyond 3 h it is no better, so SolarCast does not forecast further.",
+                    "hours": [{"hours_ahead": a["hours"], "from": a["from_local"], "to": a["to_local"], "kw": k(a["kw"])}
+                              for a in d["ahead"]]}
             out["ev_example_workshop"] = {
                 "what": f"A fixed worked example, NOT the user's system: a workshop with {config.SYSTEM_KW:g} kW of panels "
                         f"in {label}, a {config.WORKSHOP_LOAD_KW:g} kW load and a {config.CHARGER_KW:g} kW EV charger; "
@@ -431,11 +438,13 @@ class Assistant:
             return {"answer": OFF_TOPIC[lang], "mode": "refused"}
         named = find_region(q)
         region = named or (region if region in config.REGIONS else None)
+        if str(time_utc).startswith("ahead:"):             # "Predict next" shows live data: answer about now
+            time_utc = "live"
         replay_shown = str(time_utc).lower() != "live"
         use = time_utc if replay_shown and asks_about_replay(q) else "live"
         unavailable = {"en": "Live weather data is not available right now (the weather service did not answer). "
-                             "Please try again in a minute, or press \"Replay a past day\" to ask about a past hour.",
-                       "zh": "現在拿不到即時天氣資料（天氣服務沒有回應）。請一分鐘後再試，或按「Replay a past day」問過去的時段。"}[lang]
+                             "Please try again in a minute, or press \"Replay\" to ask about one of the past 24 hours.",
+                       "zh": "現在拿不到即時天氣資料（天氣服務沒有回應）。請一分鐘後再試，或按「Replay」問過去 24 小時的某個時段。"}[lang]
         try:
             facts = self.facts(use, region, None if named else point, system_kw)
         except Exception:                                  # live weather unavailable: fall back to the map's hour

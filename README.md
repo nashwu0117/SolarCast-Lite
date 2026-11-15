@@ -53,12 +53,19 @@ decision?" below).
   the day's actual vs predicted power, and the worked example (EV advice for the next hour with its reason and the day's
   savings in kWh, NZD, kg CO2). The page opens on the sunniest region now, so this shows without a click; an animated
   picture shows the power flowing from the sun to your panels, your home and (when it is worth it) the EV.
-- **Charge your EV from your panels:** pick one of eight EVs common in New Zealand (Tesla Model Y and Model 3, BYD Atto 3 and Dolphin, MG4, Kia EV6, Hyundai Kona Electric, Nissan Leaf), the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
+- **Charge your EV from your panels:** pick your car from about 35 EVs sold in New Zealand, grouped by brand (Tesla Model 3 and Model Y in RWD, Long Range and Performance; the older Model S and X; BYD, MG, Kia, Hyundai, Polestar, Volvo, Toyota, Nissan Leaf); type a brand or model in the search box to find it fast, the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
   finish (or how far they get and what is still needed), the range added, the money saved, and how long the same
   charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes (home, car, left
   over). At night it shows the whole day as if plugged in at sunrise. The AI chat can answer the same question.
-- **Live now** or **Replay a past day** (top bar): pick a day and an hour from the test months, step hour by hour, or
-  press **Play the day** to watch the sun move across the map. At night in New Zealand, "Watch a sunny day" does this in one click.
+- **Home battery:** add a home battery sold in NZ (Tesla Powerwall 3 or with an Expansion, BYD Battery-Box, Sungrow,
+  AlphaESS) to see how much of the day's left-over sun it stores, when it is full, how far it tops up the car in the
+  evening and how many hours it then runs the home.
+- **Three modes (top bar): Replay past 24 h | Live now | Predict next.** Replay steps through the last 24 hours (or
+  press **Play**) and shows our forecast next to what really happened. Live shows the current hour. Predict next shows
+  1, 2 or 3 hours ahead with how accurate each is. We stop at 3 hours because on unseen test months SolarCast beats the
+  weather service's own forecast by 40% at 1 hour, 16% at 2 hours, 6% at 3 hours and not at all from 6 hours
+  ([experiments/results/nz_horizons.md](experiments/results/nz_horizons.md)). At night, "Replay today's sun" plays the
+  past day's sunny hours in one click.
 - **Plain language:** the Model tab explains accuracy and what the forecast pays attention to in everyday words.
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
 - **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese for your panel size, for example "how much

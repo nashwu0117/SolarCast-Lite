@@ -8,4 +8,7 @@ data/raw/
 models/*
 !models/nz_model.joblib
 !models/nz_model.json
+!models/nz_model_h2.joblib
+!models/nz_model_h3.joblib
+!models/nz_horizons.json
 *.egg-info/

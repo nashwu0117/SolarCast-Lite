@@ -76,7 +76,10 @@ def create_app(service, assistant=None, grid=None) -> Flask:
 
     @app.get("/api/times")
     def api_times():
+        window = service.replay_window() if hasattr(service, "replay_window") else "history"
+        ahead = service.ahead_options() if hasattr(service, "ahead_options") else [{"hours": 1}]
         return _json({"times": list(service.available_times()), "default": service.default_time(),
+                      "replay_window": window, "ahead": ahead,
                       "reference_kw": config.SYSTEM_KW, "grid_price_nzd": config.GRID_PRICE_NZD,
                       "ev_cars": ev.CARS, "home_batteries": ev.HOME_BATTERIES, "home_charger_kw": ev.HOME_CHARGER_KW,
                       "three_phase_charger_kw": ev.THREE_PHASE_CHARGER_KW})
@@ -350,6 +353,13 @@ INDEX_HTML = r"""<!doctype html>
   #liveBtn.on .dot-live { animation: blink 1.4s ease-in-out infinite; }
   .replay { display: flex; align-items: center; gap: 8px; flex: 1 1 440px; background: #fff8ec; border: 1px solid #f3d9a4; border-radius: 999px; padding: 4px 6px 4px 10px; }
   .replay[hidden] { display: none; }
+  .predict { background: #eef4ff; border-color: #bcd0f5; flex-wrap: wrap; border-radius: 16px; }
+  .predict .plabel { font-size: 13px; color: var(--muted); }
+  .predict .ah { padding: 4px 12px; border-radius: 999px; }
+  .predict .ah.on { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
+  .predict .anote { font-size: 12px; color: var(--muted); flex: 1 1 220px; }
+  .seg #predictBtn.on { background: #2563eb; }
+  .badge.predict { background: #2563eb; }
   .replay input[type=date] { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; background: #fff; }
   .replay .icon { padding: 4px 10px; }
   .replay .play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -519,16 +529,19 @@ INDEX_HTML = r"""<!doctype html>
   </div>
   <div class="controls">
     <div class="seg" role="group" aria-label="Which hour to show">
+      <button id="replayBtn" type="button">&#9194; Replay past 24 h</button>
       <button id="liveBtn" type="button"><i class="dot-live"></i>Live now</button>
-      <button id="replayBtn" type="button">&#9194; Replay a past day</button>
+      <button id="predictBtn" type="button">&#128302; Predict next</button>
     </div>
     <div class="replay" id="replayBox" hidden>
-      <input type="date" id="rDate" aria-label="Day to replay">
       <button id="rPrev" type="button" class="icon" title="One hour back" aria-label="One hour back">&#9664;</button>
-      <input type="range" id="slider" min="0" max="23" value="12" aria-label="Hour of the day">
-      <b id="rHour">12:00</b>
+      <input type="range" id="slider" min="0" max="23" value="12" aria-label="Which of the past hours">
+      <b id="rHour">--</b>
       <button id="rNext" type="button" class="icon" title="One hour forward" aria-label="One hour forward">&#9654;</button>
-      <button id="rPlay" type="button" class="play">&#9654; Play the day</button>
+      <button id="rPlay" type="button" class="play">&#9654; Play</button>
+    </div>
+    <div class="replay predict" id="predictBox" hidden>
+      <span class="plabel">How far ahead?</span><span id="aheadBtns"></span><span id="aheadNote" class="anote"></span>
     </div>
     <div class="sizebox">
     <label for="sizeSel">&#9728; Your panels</label>
@@ -651,7 +664,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 function tooltipHtml(r) {
   const gen = r.generating
-    ? `<b class="gen">Your ${SIZE} kW panels: ${num(S(r.predicted_kw_next), kwd())} kW expected next hour</b>`
+    ? `<b class="gen">Your ${SIZE} kW panels: ${num(S(r.predicted_kw_next), kwd())} kW expected ${whenText()}</b>`
     : `<b class="nogen">Not generating${r.is_day ? ' (too cloudy)' : ' (night)'}: ${num(S(r.predicted_kw_next), kwd())} kW expected</b>`;
   const acc = (regionMae[r.name] !== undefined && $('colorMode').value === 'accuracy')
     ? `Forecast is off by ${num(S(regionMae[r.name]), 2)} kW on average here (your ${SIZE} kW system)<br>` : '';
@@ -781,9 +794,9 @@ $('gridOn').onchange = () => drawGrid(lastGrid);
 
 // Live mode refreshes itself: the map is checked every minute and switches when the server's new hour is ready.
 setInterval(() => {
-  if (current === 'live' && document.visibilityState === 'visible') loadSnapshot({ panel: false });
+  if (!isReplay() && document.visibilityState === 'visible') loadSnapshot({ panel: false });
 }, 60000);
-setInterval(() => { if (current === 'live') headerClock(); }, 15000);       // keep the Live clock ticking
+setInterval(() => { if (!isReplay()) headerClock(); }, 15000);       // keep the Live clock ticking
 
 // ---------- header: clock, mode, note ----------
 function setNote(text, kind, html) {
@@ -797,11 +810,12 @@ function updateHeader(regions) {
   headerClock();
   const anyDay = regions.some(r => r.is_day);
   const anyGen = regions.some(r => r.generating);
-  const sunny = '<button type="button" id="sunnyBtn" class="on">&#9654; Watch a sunny day</button>';
+  const sunny = '<button type="button" id="sunnyBtn" class="on">&#9654; Replay today\'s sun</button>';
   if (!regions.length) setNote('');
-  else if (current === 'live' && !anyDay) setNote(`It is night in New Zealand right now, so solar panels make no power. ${sunny} plays a past sunny day hour by hour.`, 'night', true);
-  else if (current === 'live' && !anyGen) setNote(`Very little sun in New Zealand right now. ${sunny} plays a past sunny day hour by hour.`, 'night', true);
-  else if (!anyDay) setNote('Night at this hour, so the panels make no power. Move the hour slider or press Play.', 'night');
+  else if (current === 'live' && !anyDay) setNote(`It is night in New Zealand right now, so solar panels make no power. ${sunny} plays the sunny hours of the past 24 hours.`, 'night', true);
+  else if (current === 'live' && !anyGen) setNote(`Very little sun in New Zealand right now. ${sunny} plays the sunny hours of the past 24 hours.`, 'night', true);
+  else if (isAhead() && !anyDay) setNote('It will be night at that hour, so the panels will make no power.', 'night');
+  else if (!anyDay) setNote('Night at this hour, so the panels make no power. Move the slider or press Play.', 'night');
   else setNote('');
 }
 $('note').addEventListener('click', e => { if (e.target.id === 'sunnyBtn') watchSunnyDay(); });
@@ -840,83 +854,133 @@ async function loadSnapshot(opts = {}) {
   else if (selectedPoint) loadPoint();
 }
 
-// Live now, or replay a past day: pick the day, then the hour (0-23), step an hour, or play the whole day.
-let byDay = {}, playTimer = null, lastReplay = null, DEFAULT_T = null;
+// Three modes: Replay the past 24 hours (what really happened), Live now, or Predict the next 1-3 hours.
+let playTimer = null, lastReplay = null, DEFAULT_T = null, RECENT = true, AHEAD = [{ hours: 1 }], aheadH = 1;
 const nzFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
 function nzKey(iso) { const p = {}; nzFmt.formatToParts(new Date(iso)).forEach(x => p[x.type] = x.value); return [`${p.year}-${p.month}-${p.day}`, +p.hour]; }
-function indexTimes() {
-  byDay = {};
-  times.forEach((t, i) => { const [d, h] = nzKey(t); (byDay[d] = byDay[d] || {})[h] = i; });
-  const days = Object.keys(byDay).sort();
-  if (days.length) { $('rDate').min = days[0]; $('rDate').max = days[days.length - 1]; }
+const NZ_SHORT = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+const isAhead = () => String(current).startsWith('ahead:');
+const isReplay = () => current !== 'live' && !isAhead();
+function hoursAgo(t) {                     // the newest replay hour is the hour just before the live one
+  if (!times.length) return null;
+  return Math.round((Date.parse(times[times.length - 1]) + 3600e3 - Date.parse(t)) / 3600e3);
 }
-function pickHour(day, h) {
-  const m = byDay[day]; if (!m) return null;
-  if (m[h] !== undefined) return times[m[h]];
-  const best = Object.keys(m).map(Number).reduce((a, b) => Math.abs(b - h) < Math.abs(a - h) ? b : a);
-  return times[m[best]];
+function hhmm(ms) { return new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms)); }
+// What the "expected ..." numbers refer to in the current mode.
+function whenText() {
+  if (!isAhead()) return 'next hour';
+  const a = (lastAhead || []).find(x => x.hours === aheadH);
+  return aheadH === 1 ? 'next hour' + (a ? ` (${a.from_local}-${a.to_local})` : '')
+    : `in ${aheadH} hours` + (a ? ` (${a.from_local}-${a.to_local})` : '');
 }
+let lastAhead = null;
+// Predict mode: the panel's headline number becomes the forecast for the chosen hour.
+function withAhead(d) {
+  if (d && d.ahead) lastAhead = d.ahead;
+  if (!isAhead() || !d || !d.ahead) return d;
+  const a = d.ahead.find(x => x.hours === aheadH);
+  return a ? { ...d, predicted_kw_next: a.kw, generating: (a.kw || 0) > 1, charge_now: aheadH === 1 ? d.charge_now : false } : d;
+}
+function aheadButtons() {
+  $('aheadBtns').innerHTML = AHEAD.map(a => `<button type="button" class="ah ${a.hours === aheadH ? 'on' : ''}" data-h="${a.hours}">+${a.hours} h</button>`).join(' ');
+  const a = AHEAD.find(x => x.hours === aheadH) || {};
+  const max = Math.max(...AHEAD.map(x => x.hours));
+  $('aheadNote').innerHTML = (typeof a.pct_of_capacity === 'number'
+    ? `Average error ${num(a.pct_of_capacity, 1)}% of your panels' size on unseen test months; ` +
+      (a.better_than_weather_service_pct >= 10 ? `${num(a.better_than_weather_service_pct, 0)}% better than the weather service's own forecast.`
+        : `about as good as the weather service's own forecast.`)
+    : 'Most accurate one hour ahead.') +
+    ` We stop at ${max} hour${max > 1 ? 's' : ''}: further ahead, the weather service is just as good.`;
+}
+$('aheadBtns').addEventListener('click', e => {
+  const b = e.target.closest('.ah'); if (!b) return;
+  aheadH = +b.dataset.h; setTime('ahead:' + aheadH);
+});
 function syncBar() {
-  const live = current === 'live';
-  $('liveBtn').classList.toggle('on', live); $('replayBtn').classList.toggle('on', !live);
-  $('replayBox').hidden = live;
-  $('modeBadge').className = 'badge ' + (live ? 'live' : 'replay');
-  $('modeBadge').innerHTML = live ? '<i></i>LIVE' : '&#9194; REPLAY';
-  $('modeLabel').textContent = live ? 'The current hour, with the latest weather' : 'A past hour from months the model never saw';
-  if (live) stopPlay();
-  else { const [d, h] = nzKey(current); $('rDate').value = d; $('slider').value = h; $('rHour').textContent = String(h).padStart(2, '0') + ':00'; }
+  const mode = current === 'live' ? 'live' : isAhead() ? 'predict' : 'replay';
+  $('liveBtn').classList.toggle('on', mode === 'live'); $('replayBtn').classList.toggle('on', mode === 'replay');
+  $('predictBtn').classList.toggle('on', mode === 'predict');
+  $('replayBox').hidden = mode !== 'replay'; $('predictBox').hidden = mode !== 'predict';
+  $('modeBadge').className = 'badge ' + mode;
+  $('modeBadge').innerHTML = { live: '<i></i>LIVE', replay: '&#9194; REPLAY', predict: '&#128302; PREDICT' }[mode];
+  $('modeLabel').textContent = {
+    live: 'The current hour, with the latest weather',
+    replay: RECENT ? 'One of the past 24 hours: our forecast vs. what really happened' : 'A past hour from months the model never saw (live data unavailable)',
+    predict: `Our forecast for ${aheadH === 1 ? 'the next hour' : 'the hour ' + aheadH + ' hours from now'}` }[mode];
+  if (mode !== 'replay') stopPlay();
+  if (mode === 'predict') aheadButtons();
+  if (mode === 'replay') {
+    const i = times.indexOf(current), ago = hoursAgo(current);
+    $('slider').max = Math.max(0, times.length - 1); $('slider').value = Math.max(0, i);
+    $('rHour').textContent = NZ_SHORT.format(new Date(current)) + (RECENT && ago !== null ? ` · ${ago} h ago` : '');
+  }
   headerClock();
 }
-// Top-right clock, always in one format: the real NZ time in Live, the replayed hour (clearly marked) in Replay.
+// Top-right clock, always in one format: the real NZ time in Live and Predict, the replayed hour (marked) in Replay.
 function headerClock() {
-  const live = current === 'live';
-  $('nzTime').innerHTML = (live ? '' : '<small>Replaying</small> ') + esc(nzString(live ? new Date().toISOString() : current)) +
-    ` <small>${live ? 'New Zealand time now' : 'New Zealand time (a past day)'}</small>`;
+  const rep = isReplay();
+  $('nzTime').innerHTML = (rep ? '<small>Replaying</small> ' : '') + esc(nzString(rep ? current : new Date().toISOString())) +
+    ` <small>${rep ? (RECENT ? 'New Zealand time (' + hoursAgo(current) + ' h ago)' : 'New Zealand time (a past day)') : 'New Zealand time now'}</small>`;
 }
 function setTime(t) {
   if (!t) return;
   current = t;
-  if (t !== 'live') lastReplay = t;
+  if (isReplay()) lastReplay = t;
   syncBar();
   loadSnapshot();
 }
 function stopPlay() {
   if (playTimer) clearInterval(playTimer);
   playTimer = null;
-  $('rPlay').innerHTML = '&#9654; Play the day'; $('rPlay').classList.remove('on');
+  $('rPlay').innerHTML = '&#9654; Play'; $('rPlay').classList.remove('on');
 }
 function step(dir) {
   const i = times.indexOf(current);
   if (i < 0 || !times[i + dir]) return false;
   setTime(times[i + dir]); return true;
 }
+// Play: hour by hour through the daylight of the past 24 hours (from the first hour after 05:00).
+function firstMorning() {
+  const i = times.findIndex(t => { const h = nzKey(t)[1]; return h >= 5 && h < 20; });
+  return times[Math.max(0, i)];
+}
 function togglePlay() {
   if (playTimer) { stopPlay(); return; }
-  if (current === 'live') setTime(lastReplay || DEFAULT_T);
-  const [d, h] = nzKey(current);
-  if (h < 5 || h >= 20) setTime(pickHour(d, 6));          // start the day at sunrise
+  if (!isReplay()) setTime(lastReplay || DEFAULT_T);
+  const h = nzKey(current)[1], i = times.indexOf(current);
+  if (h < 5 || h >= 21 || i === times.length - 1) setTime(firstMorning());
   $('rPlay').innerHTML = '&#10074;&#10074; Pause'; $('rPlay').classList.add('on');
   playTimer = setInterval(() => {
-    const [d0, h0] = nzKey(current), i = times.indexOf(current);
-    if (h0 >= 21 || !times[i + 1] || nzKey(times[i + 1])[0] !== d0) { stopPlay(); return; }
+    const i = times.indexOf(current);
+    if (!times[i + 1] || nzKey(current)[1] >= 21) { stopPlay(); return; }
     setTime(times[i + 1]);
   }, 1600);
 }
-function watchSunnyDay() {
-  const d = nzKey(DEFAULT_T || times[0])[0];
-  stopPlay(); setTime(pickHour(d, 6)); togglePlay();
+function watchSunnyDay() { stopPlay(); setTime(firstMorning()); togglePlay(); }
+// The past 24 hours move with the clock: ask the server for the current list when Replay opens.
+async function refreshTimes() {
+  try {
+    const info = await getJson('/api/times');
+    if (info.times && info.times.length) { times = info.times; RECENT = info.replay_window !== 'history'; }
+    if (info.default && times.includes(info.default)) DEFAULT_T = info.default;
+  } catch (e) {}
 }
 
 $('liveBtn').onclick = () => setTime('live');
-$('replayBtn').onclick = () => { if (current === 'live') setTime(lastReplay || DEFAULT_T); };
+$('replayBtn').onclick = async () => {
+  if (isReplay()) return;
+  await refreshTimes();
+  setTime(lastReplay && times.includes(lastReplay) ? lastReplay : DEFAULT_T);
+};
+$('predictBtn').onclick = () => { if (!isAhead()) setTime('ahead:' + aheadH); };
 $('slider').addEventListener('input', () => {
   stopPlay();
-  const h = +$('slider').value;
-  $('rHour').textContent = String(h).padStart(2, '0') + ':00';
+  const t = times[+$('slider').value];
+  if (!t) return;
+  $('rHour').textContent = NZ_SHORT.format(new Date(t));
   clearTimeout(debounce);
-  debounce = setTimeout(() => setTime(pickHour($('rDate').value, h)), 150);
+  debounce = setTimeout(() => setTime(t), 150);
 });
-$('rDate').addEventListener('change', () => { stopPlay(); setTime(pickHour($('rDate').value, +$('slider').value)); });
 $('rPrev').onclick = () => { stopPlay(); step(-1); };
 $('rNext').onclick = () => { stopPlay(); step(1); };
 $('rPlay').onclick = togglePlay;
@@ -940,7 +1004,7 @@ async function loadDetail(name) {
   try { d = await getJson('/api/detail?region=' + encodeURIComponent(name) + '&t=' + encodeURIComponent(current)); }
   catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load ${esc(name)}: ${esc(e.message)}</div>`; return; }
   if (id !== detailId) return;
-  renderPanel(d, esc(name), `Local day, hourly power of your ${SIZE} kW rooftop system`);
+  renderPanel(withAhead(d), esc(name), `Local day, hourly power of your ${SIZE} kW rooftop system`);
 }
 
 // ---------- any point in New Zealand ----------
@@ -952,8 +1016,9 @@ async function loadPoint() {
   try { d = await getJson(`/api/point?lat=${p.lat}&lon=${p.lon}&t=` + encodeURIComponent(current)); }
   catch (e) { if (id === detailId) panel.innerHTML = `<div class="empty">Could not load this point: ${esc(e.message)}</div>`; return; }
   if (id !== detailId) return;
-  const gen = d.generating ? `<b style="color:var(--good)">Your ${SIZE} kW panels: ${num(S(d.predicted_kw_next), kwd())} kW expected next hour</b>`
-                           : `<b>Not generating: ${num(S(d.predicted_kw_next), kwd())} kW expected next hour</b>`;
+  d = withAhead(d);
+  const gen = d.generating ? `<b style="color:var(--good)">Your ${SIZE} kW panels: ${num(S(d.predicted_kw_next), kwd())} kW expected ${whenText()}</b>`
+                           : `<b>Not generating: ${num(S(d.predicted_kw_next), kwd())} kW expected ${whenText()}</b>`;
   pin.setTooltipContent(`<b>${num(d.lat, 2)}, ${num(d.lon, 2)}</b><br>${gen}`);
   renderPanel(d, `Point ${num(d.lat, 2)}, ${num(d.lon, 2)}`,
     `${esc(d.local_time)} NZ &middot; ${gen}<br>Cloud ${num(d.cloud_now_pct, 0)}% &middot; ${num(d.temp_c)} &deg;C &middot; wind ${num(d.wind_kmh, 0)} km/h &middot; sunlight now ${num(d.ghi_now_wm2, 0)} W/m&sup2;<br>` +
@@ -1153,7 +1218,7 @@ function flowSvg(d) {
 function yoursHtml(d) {
   const sum = a => (a || []).reduce((t, v) => t + (typeof v === 'number' ? v : 0), 0);
   const day = S(sum(d.predicted_kw)), done = (d.actual_kw || []).some(v => typeof v === 'number') ? S(sum(d.actual_kw)) : null;
-  return `<div class="yours"><div class="sub">Your ${SIZE} kW panels, next hour</div>
+  return `<div class="yours"><div class="sub">Your ${SIZE} kW panels, ${whenText()}</div>
     ${flowSvg(d)}
     <div class="big"><span class="cu" data-v="${S(d.predicted_kw_next) || 0}" data-d="${kwd()}">${num(S(d.predicted_kw_next), kwd())}</span> kW <small>&asymp; ${num(S(d.predicted_kw_next), kwd())} kWh over the hour</small></div>
     <div class="stats" style="margin-top:8px">
@@ -1346,7 +1411,7 @@ function addMsg(role, html, cls = '') {
   return d;
 }
 function chatContext() {
-  const when = current === 'live' ? 'live data for the current hour'
+  const when = !isReplay() ? 'live data for the current hour'
     : `live data; ask about "the replayed hour" to get the one on the map (${nzString(current)} NZ)`;
   $('chatCtx').textContent = `Answers use your ${SIZE} kW panels and ${when}` + (selected ? ` and the selected region (${selected}).`
     : selectedPoint ? ` and the clicked point (${selectedPoint.lat.toFixed(2)}, ${selectedPoint.lon.toFixed(2)}).` : '.');
@@ -1432,8 +1497,9 @@ loadModel();
     if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
     if (info.home_batteries) HOMEBATT = info.home_batteries;
     if (info.ev_cars) { EVCARS = info.ev_cars; if (!EVCARS[EVS.car]) EVS.car = Object.keys(EVCARS)[0]; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
-    indexTimes();
-    DEFAULT_T = times.includes(info.default) ? info.default : times[0];   // Replay starts at a sunny past midday
+    RECENT = info.replay_window !== 'history';
+    if (info.ahead && info.ahead.length) AHEAD = info.ahead;
+    DEFAULT_T = times.includes(info.default) ? info.default : times[0];   // Replay starts at the sunniest past hour
     setTime('live');                                 // but the page always opens on the current hour (Live)
   } catch (e) { setNote('Could not load the time list: ' + e.message, 'error'); }
 })();

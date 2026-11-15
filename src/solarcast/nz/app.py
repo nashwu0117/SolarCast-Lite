@@ -49,4 +49,27 @@ def load_service(replay_path=REPLAY_PATH, model_path=None, meta_path=None) -> Se
         want = nzmodel.load_meta(meta_path).get("sklearn_version", "?")
         raise RuntimeError(f"Could not load the model (installed scikit-learn {sklearn.__version__}, "
                            f"model saved with {want}). Run: pip install scikit-learn=={want}  and restart the runtime.")
-    return _SafeLiveService(model, load_replay(replay_path), meta=nzmodel.load_meta(meta_path))
+    ahead, info = load_ahead_models()
+    return _SafeLiveService(model, load_replay(replay_path), meta=nzmodel.load_meta(meta_path),
+                            ahead_models=ahead, ahead_info=info, recent_replay=True)
+
+
+def load_ahead_models() -> tuple[dict, dict]:
+    """The 2- and 3-hours-ahead models (scripts/train_horizons.py) for "Predict next"; missing ones are skipped."""
+    import json
+    import joblib
+    import sklearn
+    info_path = config.ROOT / "models" / "nz_horizons.json"
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, ValueError):
+        return {}, {}
+    if info.get("sklearn_version") != sklearn.__version__:
+        return {}, info
+    models = {}
+    for h in (2, 3):
+        try:
+            models[h] = joblib.load(config.ROOT / "models" / f"nz_model_h{h}.joblib")
+        except Exception:                                          # noqa: BLE001  that horizon is simply not offered
+            pass
+    return models, info

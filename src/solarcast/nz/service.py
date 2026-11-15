@@ -2,6 +2,10 @@
 
 `time_utc` is the ISSUE hour t (UTC ISO string, e.g. "2026-01-15T00:00:00Z"): we know everything up to the end of
 hour t and forecast the hour [t, t+1h). "live" means the latest real hour from the Open-Meteo forecast API.
+"ahead:h" (h = 1..3) is "Predict next": from the latest real hour, the hour that ends h hours later.
+
+With recent_replay=True (the dashboard) Replay covers the PAST 24 HOURS of live data, with what really happened; if the
+live download fails it falls back to the replay history file.
 """
 import threading
 import time
@@ -52,8 +56,12 @@ def _num(x, nd=2):
 
 
 class Service:
-    def __init__(self, model, history_long_df: pd.DataFrame, meta: dict | None = None):
+    def __init__(self, model, history_long_df: pd.DataFrame, meta: dict | None = None,
+                 ahead_models: dict | None = None, ahead_info: dict | None = None, recent_replay: bool = False):
         self.model = model
+        self.ahead_models = {1: model, **(ahead_models or {})}             # hours ahead -> model
+        self._ahead_info = ahead_info or {}
+        self.recent_replay = recent_replay
         self.meta = nzmodel.load_meta() if meta is None else meta
         self.regions = [r for r in config.REGIONS if r in set(history_long_df["region"])]
         self._hist = self._prepare(history_long_df)
@@ -80,6 +88,7 @@ class Service:
             try:
                 live = data.fetch_live(self.regions)
                 state = self._prepare(live)
+                state["long"] = live
                 fc = live[live["is_forecast"]]["time_utc"]
                 state["now"] = fc.min() - HOUR if len(fc) else live["time_utc"].max()   # latest real hour
                 self._live, self._live_at = state, time.time()
@@ -93,16 +102,69 @@ class Service:
 
     def _state(self, time_utc):
         """(state, issue time t, live?)"""
-        if str(time_utc).lower() == "live":
+        if str(time_utc).lower() == "live" or str(time_utc).startswith("ahead:"):
             st = self._live_state()
             return st, st["now"], True
         t = pd.Timestamp(time_utc)
-        t = t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
-        return self._hist, t.floor("h"), False
+        t = (t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")).floor("h")
+        if self.recent_replay and self._live is not None and self._live["now"] - pd.Timedelta("47h") <= t < self._live["now"]:
+            return self._live, t, False                                  # one of the past 24 hours (all real data)
+        return self._hist, t, False
+
+    @staticmethod
+    def hours_ahead(time_utc) -> int:
+        """1 for "live" and replay hours; h for "ahead:h"."""
+        s = str(time_utc)
+        return int(s.split(":", 1)[1]) if s.startswith("ahead:") else 1
+
+    def ahead_options(self) -> list[dict]:
+        """The "Predict next" choices: hours ahead with a model, and how accurate each was on the unseen test period."""
+        test = self._ahead_info.get("test", {})
+        return [{"hours": h, **test.get(str(h), {})} for h in sorted(self.ahead_models)]
+
+    def _ahead_feat(self, h: int) -> pd.DataFrame:
+        """Live features and predictions for the hour ending h hours after each issue hour (cached per live download)."""
+        st = self._live_state()
+        cache = st.setdefault("ahead", {1: st["feat"]})
+        if h not in cache:
+            feat = build_features(st["long"], require_target=False, horizon=h)
+            feat["pred_ghi"] = nzmodel.predict(self.ahead_models[h], feat)
+            cache[h] = feat
+        return cache[h]
+
+    def ahead(self, region: str) -> list[dict]:
+        """From the latest real hour: the forecast for each of the next hours that has a model (Predict next)."""
+        st = self._live_state()
+        out = []
+        for h in sorted(self.ahead_models):
+            key = (region, st["now"] + h * HOUR)
+            f = self._ahead_feat(h)
+            if key not in f.index:
+                continue
+            row = f.loc[key]
+            start = (st["now"] + (h - 1) * HOUR).tz_convert(config.LOCAL_TZ)
+            out.append({"hours": h, "from_local": start.strftime("%H:%M"),
+                        "to_local": (start + HOUR).strftime("%H:%M"),
+                        "kw": _num(nzmodel.to_kw(row["pred_ghi"], row["temp_t"])),
+                        "cloud_cover_pct": _num(row["fc_cloud_target"] if "fc_cloud_target" in row else None, 0)})
+        return out
 
     # ----- times -----
+    def replay_window(self) -> str:
+        """"past_24h" when Replay shows the last 24 hours of live data, "history" for the saved history file."""
+        if self.recent_replay:
+            try:
+                self._live_state()
+                return "past_24h"
+            except Exception:
+                pass
+        return "history"
+
     def available_times(self) -> list[str]:
-        """Replay hours in the test period where it is daytime in most regions (so the map is not all dark)."""
+        """Replay hours: the past 24 hours (recent_replay), else test-period hours where most regions have daylight."""
+        if self.replay_window() == "past_24h":
+            now = self._live["now"]
+            return [(now - k * HOUR).strftime(ISO) for k in range(24, 0, -1)]
         feat = self._hist["feat"]
         t0, t1 = (pd.Timestamp(x, tz="UTC") for x in config.SPLITS["test"])
         day = daytime_mask(feat).groupby(level="target_time").mean()
@@ -113,7 +175,12 @@ class Service:
         return [t.strftime(ISO) for t in issue[ok]]
 
     def default_time(self) -> str:
-        """A local midday in the test summer with mixed cloud (mean cloud near 50 % and large spread)."""
+        """Past 24 hours: the sunniest hour. History: a local midday in the test summer with mixed cloud."""
+        if self.replay_window() == "past_24h":
+            f, now = self._live["feat"], self._live["now"]
+            tm = f.index.get_level_values("target_time")
+            sun = f[(tm > now - 24 * HOUR) & (tm <= now)]["pred_ghi"].groupby(level="target_time").mean()
+            return (sun.idxmax() - HOUR).strftime(ISO) if len(sun) else (now - 3 * HOUR).strftime(ISO)
         times = pd.DatetimeIndex([pd.Timestamp(t) for t in self.available_times()])
         local = times.tz_convert(config.LOCAL_TZ)
         mid = times[(local.hour == 12) & np.isin(local.month, [12, 1, 2])]
@@ -127,10 +194,12 @@ class Service:
     # ----- snapshot -----
     def snapshot(self, time_utc) -> list[dict]:
         st, t, live = self._state(time_utc)
+        h = self.hours_ahead(time_utc)
+        feat = self._ahead_feat(h) if h > 1 else st["feat"]
         out = []
         for r in self.regions:
             lat, lon = config.REGIONS[r]
-            row = st["feat"].loc[(r, t + HOUR)] if (r, t + HOUR) in st["feat"].index else None
+            row = feat.loc[(r, t + h * HOUR)] if (r, t + h * HOUR) in feat.index else None
             if row is None:
                 continue
             raw = st["raw"].loc[(r, t)] if (r, t) in st["raw"].index else None
@@ -138,11 +207,11 @@ class Service:
             pred = float(nzmodel.to_kw(row["pred_ghi"], row["temp_t"]))
             pers = float(nzmodel.to_kw(max(row["ghi_t"], 0), row["temp_t"])) if pd.notna(row["ghi_t"]) else 0.0
             actual = None if live or pd.isna(row["target_kw"]) else float(row["target_kw"])
-            out.append({"name": r, "lat": lat, "lon": lon,
+            out.append({"name": r, "lat": lat, "lon": lon, "hours_ahead": h,
                         "local_time": t.tz_convert(config.LOCAL_TZ).strftime("%Y-%m-%d %H:%M"),
                         "cloud_cover_pct": _num(row["cloud_t"], 0), "temp_c": temp,
                         "wind_kmh": _num(row["wind_t"], 1), "ghi_now_wm2": _num(row["ghi_t"], 0),
-                        "is_day": bool(raw["is_day"]) if raw is not None and pd.notna(raw["is_day"]) else bool(row["elev_target"] > 0),
+                        "is_day": bool(row["elev_target"] > 0) if h > 1 else bool(raw["is_day"]) if raw is not None and pd.notna(raw["is_day"]) else bool(row["elev_target"] > 0),
                         "predicted_kw_next": _num(pred), "persistence_kw_next": _num(pers),
                         "actual_kw_next": _num(actual), "generating": bool(pred > 1)})
         return out
@@ -151,7 +220,11 @@ class Service:
     def detail(self, region: str, time_utc) -> dict:
         st, t, live = self._state(time_utc)
         metrics = self.meta.get("metrics", {}).get("test", {}).get("per_region", {}).get(region, {})
-        return self._day_detail(st["feat"].loc[region].copy(), region, t, live, metrics)
+        known = st["now"] if (not live and "now" in st) else None        # past 24 h: what happened up to now
+        res = self._day_detail(st["feat"].loc[region].copy(), region, t, live, metrics, known)
+        if live:
+            res["ahead"] = self.ahead(region)
+        return res
 
     # ----- any clicked point in New Zealand -----
     def point(self, lat: float, lon: float, time_utc) -> dict:
@@ -163,14 +236,15 @@ class Service:
         lat, lon = float(lat), float(lon)
         if not (NZ_BOX[0] <= lat <= NZ_BOX[1] and NZ_BOX[2] <= lon <= NZ_BOX[3]):
             raise ValueError("Please click inside New Zealand.")
-        live = str(time_utc).lower() == "live"
-        t = None if live else self._state(time_utc)[1]
-        key = (round(lat, 2), round(lon, 2), "live" if live else t.tz_convert(config.LOCAL_TZ).date())
+        live = str(time_utc).lower() == "live" or str(time_utc).startswith("ahead:")
+        st0, t, _ = (None, None, None) if live else self._state(time_utc)
+        recent = not live and st0 is self._live                          # one of the past 24 hours: live download
+        key = (round(lat, 2), round(lon, 2), "live" if live or recent else t.tz_convert(config.LOCAL_TZ).date())
         st = self._points.get(key)
-        if st is None or (live and time.time() - st["at"] > LIVE_TTL_S):
+        if st is None or ((live or recent) and time.time() - st["at"] > LIVE_TTL_S):
             nearest, dist = nearest_region(lat, lon)
             name = f"Point {lat:.2f}, {lon:.2f}"
-            if live:
+            if live or recent:
                 raw = data.fetch_point(lat, lon, name)
                 fc = raw[raw["is_forecast"]]["time_utc"]
                 now = fc.min() - HOUR if len(fc) else raw["time_utc"].max()
@@ -193,9 +267,9 @@ class Service:
             raise ValueError("No weather data for this point at this time.")
         row = f.loc[t + HOUR]
         pred = float(nzmodel.to_kw(row["pred_ghi"], row["temp_t"]))
-        actual = None if live or pd.isna(row["target_kw"]) else float(row["target_kw"])
+        actual = None if live or pd.isna(row["target_kw"]) or (recent and t + HOUR > st["now"]) else float(row["target_kw"])
         metrics = self.meta.get("metrics", {}).get("test", {}).get("per_region", {}).get(st["nearest"], {})
-        res = self._day_detail(f, st["name"], t, live, metrics)
+        res = self._day_detail(f, st["name"], t, live, metrics, st["now"] if recent else None)
         res.update({"name": st["name"], "lat": lat, "lon": lon, "nearest_region": st["nearest"],
                     "distance_km": round(st["dist"], 1), "is_point": True,
                     "local_time": t.tz_convert(config.LOCAL_TZ).strftime("%Y-%m-%d %H:%M"),
@@ -204,7 +278,7 @@ class Service:
                     "predicted_kw_next": _num(pred), "actual_kw_next": _num(actual), "generating": bool(pred > 1)})
         return res
 
-    def _day_detail(self, f: pd.DataFrame, region: str, t, live: bool, metrics: dict) -> dict:
+    def _day_detail(self, f: pd.DataFrame, region: str, t, live: bool, metrics: dict, known_until=None) -> dict:
         """The local day of one location (feature rows indexed by target_time) -> chart lists, EV advice, savings."""
         nxt = f.loc[t + HOUR] if t + HOUR in f.index else None     # the next hour, shown first in the panel
         next_kw = None if nxt is None else float(nzmodel.to_kw(nxt["pred_ghi"], nxt["temp_t"]))
@@ -213,7 +287,7 @@ class Service:
         day = t.tz_convert(config.LOCAL_TZ).date()                 # local day of the NEXT hour is t's local day
         f = f[local.date == day]
         local = local[local.date == day]
-        known = (f.index <= t) if live else np.ones(len(f), bool)   # live: no actuals for hours not yet over
+        known = (f.index <= t) if live else (f.index <= known_until) if known_until is not None else np.ones(len(f), bool)
         pred_kw = nzmodel.to_kw(f["pred_ghi"], f["temp_t"])
         pers_kw = nzmodel.to_kw(f["ghi_t"].clip(lower=0), f["temp_t"])
         actual_kw = np.where(known, f["target_kw"], np.nan)

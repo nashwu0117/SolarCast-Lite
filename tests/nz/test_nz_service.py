@@ -117,3 +117,36 @@ def test_point_anywhere_in_nz(service, monkeypatch):
 def test_nearest_region():
     assert svc.nearest_region(-43.5, 172.6)[0] == "Christchurch"
     assert svc.nearest_region(-45.0, 168.7)[0] == "Queenstown"
+
+
+def test_replay_past_24_hours_and_predict_next(long_df, monkeypatch):
+    """Replay = the past 24 hours of live data (with what really happened); Predict next = 1-3 hours ahead."""
+    feat = build_features(long_df)
+    m = nzmodel.train(feat[feat.index.get_level_values("target_time") < "2025-12-01"], max_iter=30)
+    feat2 = build_features(long_df, horizon=2)
+    m2 = nzmodel.train(feat2[feat2.index.get_level_values("target_time") < "2025-12-01"], max_iter=30)
+    s = svc.Service(m, long_df, meta={}, ahead_models={2: m2},
+                    ahead_info={"test": {"2": {"pct_of_capacity": 3.2}}}, recent_replay=True)
+    now = pd.Timestamp("2026-01-15 03:00", tz="UTC")
+    live = make_long("2026-01-13 03:00", "2026-01-16 04:00")
+    live = live[live["time_utc"] <= now + pd.Timedelta("24h")]
+    live["is_forecast"] = live["time_utc"] > now
+    monkeypatch.setattr(data, "fetch_live", lambda regions=None: live)
+    assert s.replay_window() == "past_24h"
+    times = s.available_times()
+    assert len(times) == 24 and pd.Timestamp(times[-1]) == now - svc.HOUR and pd.Timestamp(times[0]) == now - 24 * svc.HOUR
+    assert s.default_time() in times
+    snap = s.snapshot(times[-1])
+    assert all(x["actual_kw_next"] is not None for x in snap)          # the past: what really happened is known
+    d = s.detail("Auckland", times[-1])
+    hours_after = [a for a, t in zip(d["actual_kw"], range(len(d["actual_kw"]))) if a is not None]
+    assert hours_after and d["actual_kw"][-1] is None                  # nothing after now
+    assert [o["hours"] for o in s.ahead_options()] == [1, 2] and s.ahead_options()[1]["pct_of_capacity"] == 3.2
+    two = s.snapshot("ahead:2")
+    assert len(two) == 3 and all(x["hours_ahead"] == 2 and x["actual_kw_next"] is None for x in two)
+    ld = s.detail("Auckland", "live")
+    assert [a["hours"] for a in ld["ahead"]] == [1, 2] and ld["ahead"][0]["kw"] == ld["predicted_kw_next"]
+    # live data down: Replay falls back to the saved history
+    monkeypatch.setattr(data, "fetch_live", lambda regions=None: (_ for _ in ()).throw(RuntimeError("down")))
+    s2 = svc.Service(m, long_df, meta={}, recent_replay=True)
+    assert s2.replay_window() == "history" and len(s2.available_times()) > 1000

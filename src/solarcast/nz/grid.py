@@ -151,8 +151,24 @@ class NationalGrid:
     def refresh_live(self) -> None:
         raw = data.fetch_points([(c.get("qlat", c["lat"]), c.get("qlon", c["lon"])) for c in self.cells], self.names)
         frame = self._compute(raw)
-        frame["actual"] = np.nan                               # live: the next hour has not happened yet
-        self._live = {"frame": frame, "at": time.time()}
+        now = pd.Timestamp.now(tz="UTC").floor("h")
+        frame.loc[frame.index.get_level_values(1) > now, "actual"] = np.nan    # hours that have not happened yet
+        self._live = {"frame": frame, "at": time.time(), "raw": raw, "ahead": {}}
+
+    def _ahead_frame(self, h: int) -> pd.DataFrame:
+        """Live cells for the hour ending h hours after each issue hour (the service's h-hours-ahead model)."""
+        cache = self._live.setdefault("ahead", {})
+        if h not in cache:
+            info = pd.DataFrame.from_dict(self._info, orient="index")
+            raw = self._live["raw"]
+            raw = raw.assign(loc_lat=raw["region"].map(lambda n: self.cells[int(n[4:])].get("qlat", info.at[n, "lat"])),
+                             loc_lon=raw["region"].map(lambda n: self.cells[int(n[4:])].get("qlon", info.at[n, "lon"])),
+                             loc_region_id=raw["region"].map(info["region_id"]))
+            feat = build_features(raw, require_target=False, horizon=h)
+            pred = nzmodel.predict(self.service.ahead_models[h], feat)
+            cache[h] = pd.DataFrame({"kw": nzmodel.to_kw(pred, feat["temp_t"]), "cloud": feat["cloud_t"],
+                                     "actual": np.nan}, index=feat.index)
+        return cache[h]
 
     def _day_frame(self, t: pd.Timestamp, budget: bool = True) -> pd.DataFrame:
         day = t.tz_convert(config.LOCAL_TZ).normalize()
@@ -221,7 +237,10 @@ class NationalGrid:
         else:
             self._refresh_live_safe()
             done["live"] = "ok" if self._live is not None else self.status.get("error")
-        if replay_time:
+        recent = replay_time and self._issue(replay_time) > pd.Timestamp.now(tz="UTC") - pd.Timedelta("47h")
+        if recent:
+            done["replay_day"] = "the past 24 hours come with the live download"
+        elif replay_time:
             try:
                 self._day_frame(self._issue(replay_time), budget=False)
                 done["replay_day"] = "ok"
@@ -275,7 +294,12 @@ class NationalGrid:
 
     def snapshot(self, time_utc, at: str | None = None, summarize: bool = True) -> dict:
         """All cells for one issue hour t (forecast for [t, t+1h)), with national numbers and the briefing."""
-        live = str(time_utc).lower() == "live"
+        ahead = int(str(time_utc).split(":", 1)[1]) if str(time_utc).startswith("ahead:") else 1
+        live = str(time_utc).lower() == "live" or ahead > 1 or str(time_utc) == "ahead:1"
+        recent = False
+        if not live and self._live is not None:
+            t0 = self._issue(time_utc)
+            recent = (t0 + HOUR) in set(self._live["frame"].index.get_level_values(1)) and t0 < pd.Timestamp.now(tz="UTC").floor("h")
         if live:
             if self._live is None:
                 if self._live_busy.is_set():
@@ -291,10 +315,15 @@ class NationalGrid:
             times = frame.index.get_level_values(1)
             if t + HOUR not in set(times):                     # e.g. data older than expected: newest available
                 t = times.max() - HOUR
+            if ahead > 1 and ahead in getattr(self.service, "ahead_models", {}):
+                frame = self._ahead_frame(ahead)
+        elif recent:                                           # one of the past 24 hours: the live download has it
+            t, frame = self._issue(time_utc), self._live["frame"]
         else:
             t = self._issue(time_utc)
             frame = self._day_frame(t)
-        rows = frame.xs(t + HOUR, level=1, drop_level=True) if (t + HOUR) in set(frame.index.get_level_values(1)) else None
+        tt = t + (ahead if live else 1) * HOUR
+        rows = frame.xs(tt, level=1, drop_level=True) if tt in set(frame.index.get_level_values(1)) else None
         cells = []
         if rows is not None:
             for name, r in rows.iterrows():
@@ -305,7 +334,7 @@ class NationalGrid:
                               "actual": None if pd.isna(r["actual"]) else round(float(r["actual"]), 1)})
         local = t.tz_convert(config.LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
         stats = national_stats(cells)
-        key = ("live|" if live else "replay|") + t.strftime(ISO)
+        key = ("live|" if live else "replay|") + t.strftime(ISO) + (f"|ahead{ahead}" if ahead > 1 else "")
         res = {"time": t.strftime(ISO), "local_time": local, "live": live, "step": self.step, "cells": cells,
                "stats": stats, "briefing": {"text": template_summary(stats, local), "mode": "template"},
                "updated_at": self.status.get("updated_at"), "next_update": self.status.get("next_update"),

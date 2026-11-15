@@ -1,0 +1,61 @@
+{
+  "sklearn_version": "1.6.1",
+  "features": [
+    "ghi_t",
+    "ghi_lag1",
+    "ghi_lag2",
+    "ghi_lag23",
+    "ghi_roll3",
+    "ghi_roll24",
+    "d_ghi_1h",
+    "kt_t",
+    "kt_roll24",
+    "cs_t",
+    "dni_t",
+    "dhi_t",
+    "cloud_t",
+    "d_cloud_1h",
+    "temp_t",
+    "d_temp_1h",
+    "humidity_t",
+    "d_humidity_1h",
+    "wind_t",
+    "precip_t",
+    "elev_target",
+    "azim_target",
+    "cs_target",
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos",
+    "region_id",
+    "lat",
+    "fc_ghi_target",
+    "fc_cloud_target",
+    "fc_temp_target",
+    "fc_dni_target",
+    "fc_kt_target"
+  ],
+  "trained_on": [
+    "2022-01-01",
+    "2025-01-01"
+  ],
+  "source": "experiments/results/nz_horizons.md",
+  "test": {
+    "1": {
+      "pct_of_capacity": 2.24,
+      "weather_service_pct_of_capacity": 3.76,
+      "better_than_weather_service_pct": 40.3
+    },
+    "2": {
+      "pct_of_capacity": 3.18,
+      "weather_service_pct_of_capacity": 3.77,
+      "better_than_weather_service_pct": 15.7
+    },
+    "3": {
+      "pct_of_capacity": 3.55,
+      "weather_service_pct_of_capacity": 3.79,
+      "better_than_weather_service_pct": 6.2
+    }
+  }
+}

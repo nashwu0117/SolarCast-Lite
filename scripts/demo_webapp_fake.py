@@ -30,7 +30,7 @@ def _rand(*key) -> float:
 
 
 def _parse(t: str) -> datetime:
-    if t == "live":
+    if t == "live" or t.startswith("ahead:"):
         return datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     return datetime.fromisoformat(t.replace("Z", "+00:00")).astimezone(timezone.utc)
 
@@ -53,22 +53,32 @@ def _weather(region: str, when_utc: datetime) -> dict:
 class FakeService:
     """Same interface as solarcast.nz.service.Service, with synthetic data."""
 
-    def __init__(self):
-        self.start = datetime(2026, 1, 12, 0, tzinfo=timezone.utc)
-        self._times = [(self.start + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M:%SZ") for h in range(24 * 7)]
+    ahead_models = {1: None, 2: None, 3: None}
+
+    def replay_window(self):
+        return "past_24h"
+
+    def ahead_options(self):
+        return [{"hours": 1, "pct_of_capacity": 2.24, "better_than_weather_service_pct": 40.3},
+                {"hours": 2, "pct_of_capacity": 3.18, "better_than_weather_service_pct": 15.7},
+                {"hours": 3, "pct_of_capacity": 3.55, "better_than_weather_service_pct": 6.2}]
 
     def available_times(self):
-        return self._times
+        """The past 24 hours, like the real service."""
+        now = _parse("live")
+        return [(now - timedelta(hours=k)).strftime("%Y-%m-%dT%H:%M:%SZ") for k in range(24, 0, -1)]
 
     def default_time(self):
-        return "2026-01-15T23:00:00Z"  # 12:00 NZ local time on 16 January
+        times = self.available_times()
+        return max(times, key=lambda t: _weather("Auckland", _parse(t) + timedelta(hours=1))["ghi"])
 
     def snapshot(self, time_utc):
         now = _parse(time_utc)
-        live = time_utc == "live"
+        live = time_utc == "live" or time_utc.startswith("ahead:")
+        h = int(time_utc.split(":")[1]) if time_utc.startswith("ahead:") else 1
         rows = []
         for name, (lat, lon) in REGIONS.items():
-            w, nxt, prev = _weather(name, now), _weather(name, now + timedelta(hours=1)), _weather(name, now)
+            w, nxt, prev = _weather(name, now), _weather(name, now + timedelta(hours=h)), _weather(name, now)
             predicted = max(0.0, nxt["kw"] * (0.9 + 0.2 * _rand(name, "p", now.isoformat())))
             rows.append({
                 "name": name, "lat": lat, "lon": lon, "local_time": w["local"].strftime("%a %d %b %H:%M"),
@@ -88,7 +98,8 @@ class FakeService:
             t = (midnight + timedelta(hours=h)).astimezone(timezone.utc)
             w, prev = _weather(region, t), _weather(region, t - timedelta(hours=1))
             hours.append(h)
-            actual.append(None if (time_utc == "live" and t > now) else w["kw"])
+            real_now = _parse("live")
+            actual.append(None if t > real_now or (time_utc == "live" and t > now) else w["kw"])
             pred.append(max(0.0, w["kw"] * (0.9 + 0.2 * _rand(region, "p", t.isoformat()))))
             pers.append(prev["kw"])
             cloud.append(w["cloud"])
@@ -97,7 +108,14 @@ class FakeService:
         reason = (f"Predicted solar {nxt['kw']:.1f} kW covers the 11 kW charger, so charge now."
                   if charge else f"Predicted solar only {nxt['kw']:.1f} kW; waiting for a sunnier hour saves grid power.")
         kwh = sum(x for x in pred[8:18]) * 0.5
-        return {"region": region, "hours": hours, "actual_kw": actual, "predicted_kw": pred, "persistence_kw": pers,
+        ahead = []
+        if time_utc == "live" or time_utc.startswith("ahead:"):
+            for k in (1, 2, 3):
+                a = now + timedelta(hours=k - 1)
+                ahead.append({"hours": k, "from_local": a.astimezone(NZ).strftime("%H:%M"),
+                              "to_local": (a + timedelta(hours=1)).astimezone(NZ).strftime("%H:%M"),
+                              "kw": _weather(region, a + timedelta(hours=1))["kw"]})
+        return {"region": region, "hours": hours, "ahead": ahead, "actual_kw": actual, "predicted_kw": pred, "persistence_kw": pers,
                 "predicted_kw_next": nxt["kw"], "next_local_hour": now.astimezone(NZ).hour,
                 "cloud_cover_pct": cloud, "charge_now": charge, "reason": reason,
                 "grid_kwh_saved": kwh, "money_saved_nzd": kwh * 0.30, "co2_saved_kg": kwh * 0.10,
