@@ -280,7 +280,10 @@ class Assistant:
             "dashboard_time": {"mode": "live" if live else "REPLAY of a past hour (not now)",
                                "shown_nz_local_time": snap[0]["local_time"] if snap else None,
                                "real_nz_time_now": real_now,
-                               "note": "Forecasts are for the NEXT hour after the shown time." + ("" if live else
+                               "note": ("In live mode the shown time is the latest hour of weather data, so the "
+                                        "'next hour' forecasts are for the hour going on NOW (call it 'this hour'); "
+                                        "next_hours_forecast has the hours after it." if live else
+                                        "Forecasts are for the hour starting at the shown time.") + ("" if live else
                                        " The map is replaying a past hour; the user can press Live to see the current "
                                        "hour. Never call the shown time 'now'.")},
             "your_system": {"size_kw": round(size, 2),
@@ -336,9 +339,10 @@ class Assistant:
             }
             if d.get("ahead"):
                 out["selected_region"]["next_hours_forecast"] = {
-                    "what": "SolarCast's forecast for each of the next hours (from the latest real hour). On unseen test "
-                            "data it beat the weather service's own forecast by 40% at 1 h, 16% at 2 h and 6% at 3 h; "
-                            "beyond 3 h it is no better, so SolarCast does not forecast further.",
+                    "what": "SolarCast's forecast for the hour going on now (hours_ahead 1) and the next hours after it "
+                            "(2 = next hour, 3 = the hour after next), counted from the latest hour of weather data. "
+                            "On unseen test data it beat the weather service's own forecast by 40%, 16% and 6%; "
+                            "further ahead it is no better, so SolarCast does not forecast further.",
                     "hours": [{"hours_ahead": a["hours"], "from": a["from_local"], "to": a["to_local"], "kw": k(a["kw"])}
                               for a in d["ahead"]]}
             out["ev_example_workshop"] = {

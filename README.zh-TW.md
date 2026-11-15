@@ -52,8 +52,8 @@ Colab：Runtime > **Run all**（notebook 會要求免費的 T4 GPU，只給 AI �
 - **家用電池**：加上紐西蘭有賣的家用電池（特斯拉 Powerwall 3 或加擴充電池、BYD Battery-Box、Sungrow、AlphaESS），
   看白天多出來的太陽能能存多少、幾點充滿、晚上能幫車子多充多少，以及能供家裡用幾小時。
 - **上方三個模式：Replay past 24 h｜Live now｜Predict next。** Replay 可以一小時一小時看過去 24 小時（或按 **Play**），
-  並對照我們的預測和實際發電。Live 顯示現在這一小時。Predict next 預測未來 1、2、3 小時，並標出各自的準確度。
-  只做到 3 小時，是因為在模型沒看過的測試期，SolarCast 比天氣服務自己的預報好 40%（1 小時）、16%（2 小時）、6%（3 小時），
+  並對照我們的預測和實際發電。Live 顯示現在正在進行的這一小時（從最新天氣資料往後 1 小時）。Predict next 預測下一小時和再下一小時，
+  並標出各自的準確度。只做到這裡，是因為從最新天氣資料往後算，在模型沒看過的測試期，SolarCast 比天氣服務自己的預報好 40%（1 小時）、16%（2 小時）、6%（3 小時），
   6 小時以後就沒有比較好（[experiments/results/nz_horizons.md](experiments/results/nz_horizons.md)）。
   晚上可以按「Replay today's sun」一鍵播放過去一天有太陽的時段。
 - **白話說明**：模型分頁用日常用語解釋準確度，以及預測最看重哪些資訊。

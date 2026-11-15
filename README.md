@@ -61,9 +61,10 @@ decision?" below).
   AlphaESS) to see how much of the day's left-over sun it stores, when it is full, how far it tops up the car in the
   evening and how many hours it then runs the home.
 - **Three modes (top bar): Replay past 24 h | Live now | Predict next.** Replay steps through the last 24 hours (or
-  press **Play**) and shows our forecast next to what really happened. Live shows the current hour. Predict next shows
-  1, 2 or 3 hours ahead with how accurate each is. We stop at 3 hours because on unseen test months SolarCast beats the
-  weather service's own forecast by 40% at 1 hour, 16% at 2 hours, 6% at 3 hours and not at all from 6 hours
+  press **Play**) and shows our forecast next to what really happened. Live shows the hour going on now (forecast 1 hour
+  after the latest weather data). Predict next shows the next hour and the hour after it, with how accurate each is. We
+  stop there because, counted from the latest weather data, SolarCast beats the weather service's own forecast by 40%
+  at 1 hour, 16% at 2 hours, 6% at 3 hours and not at all from 6 hours
   ([experiments/results/nz_horizons.md](experiments/results/nz_horizons.md)). At night, "Replay today's sun" plays the
   past day's sunny hours in one click.
 - **Plain language:** the Model tab explains accuracy and what the forecast pays attention to in everyday words.

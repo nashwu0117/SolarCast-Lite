@@ -520,7 +520,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="brand">
       <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><g stroke="#f5a623" stroke-width="3" stroke-linecap="round"><path d="M20 3v5M20 32v5M3 20h5M32 20h5M8 8l3.5 3.5M28.5 28.5L32 32M8 32l3.5-3.5M28.5 11.5L32 8"/></g><circle cx="20" cy="20" r="8" fill="#f5b400"/></svg>
       <div><h1>SolarCast <span>NZ</span></h1>
-      <div class="tagline">How much power your solar panels will give next hour, anywhere in New Zealand</div></div>
+      <div class="tagline">How much power your solar panels give this hour and the next ones, anywhere in New Zealand</div></div>
     </div>
     <div class="clock">
       <div class="nz" id="nzTime">--</div>
@@ -571,7 +571,7 @@ INDEX_HTML = r"""<!doctype html>
       <div id="briefStats"></div>
     </div>
     <div class="maptools"><label for="colorMode">Colour circles by</label>
-      <select id="colorMode"><option value="power">Predicted next-hour power (your panels)</option><option value="accuracy">How accurate the forecast is</option></select>
+      <select id="colorMode"><option value="power">Predicted power (your panels)</option><option value="accuracy">How accurate the forecast is</option></select>
       <label class="gt" id="gridTool"><input type="checkbox" id="gridOn" checked> Nationwide grid</label></div>
     <div id="map"></div>
     <div class="legend" id="legend"></div>
@@ -703,7 +703,7 @@ function drawLegend() {
       ? accBins.map(b => `<div><span class="dot" style="background:${b.color}"></span>${num(S(b.from), 2)} - ${num(S(b.to), 2)}</div>`).join('')
       : '<div>Model report not loaded</div>');
   } else {
-    $('legend').innerHTML = `<b>Your ${SIZE} kW panels, next hour</b>` +
+    $('legend').innerHTML = `<b>Your ${SIZE} kW panels, ${whenText()}</b>` +
       BINS.map((b, i) => `<div><span class="dot" style="background:${b.color}"></span>${binLabel(i)}</div>`).join('');
   }
 }
@@ -746,7 +746,7 @@ function drawGrid(g) {
     return L.rectangle([[c.lat - h, c.lon - h], [c.lat + h, c.lon + h]], { renderer: gridRenderer, color: '#ffffff', weight: 0.6,
         opacity: 0.7, fillColor: colorFor(c.kw), fillOpacity: on ? 0.55 : 0.2 })
       .bindTooltip(`<b>Around ${esc(c.near)}</b> &middot; cell ${num(c.lat, 2)}, ${num(c.lon, 2)}<br>` +
-        `<b class="${on ? 'gen' : 'nogen'}">Your ${SIZE} kW panels: ${num(S(c.kw), kwd())} kW next hour</b>` +
+        `<b class="${on ? 'gen' : 'nogen'}">Your ${SIZE} kW panels: ${num(S(c.kw), kwd())} kW ${whenText()}</b>` +
         (c.actual !== null && c.actual !== undefined ? `<br>Actual ${num(S(c.actual), kwd())} kW (derived from weather data)` : '') +
         `<br>Cloud ${num(c.cloud, 0)}% &middot; click for this spot's hourly detail`, { sticky: true, className: 'tip' });
   })).addTo(map);
@@ -761,7 +761,7 @@ function renderBrief(g) {
   $('briefMeta').textContent = ai ? `written by ${b.model || 'the local AI model'} from the grid numbers below`
     : g.briefing_pending ? 'the AI model is writing a briefing...' : 'fixed template (the AI model is not ready)';
   $('briefText').textContent = b.text || '';
-  const parts = [`${g.local_time} NZ, next hour`, `${s.cells || 0} cells`,
+  const parts = [`Your panels ${whenText()}`, `${s.cells || 0} cells`,
                  `your ${SIZE} kW panels: NZ average ${num(S(s.mean_kw), kwd())} kW, best ${num(S(s.max_kw), kwd())} kW`,
                  `${s.share_generating_pct ?? '--'}% generating`];
   if (s.mean_abs_error_kw !== undefined) parts.push(`grid error this hour ${num(S(s.mean_abs_error_kw), 2)} kW`);
@@ -855,7 +855,7 @@ async function loadSnapshot(opts = {}) {
 }
 
 // Three modes: Replay the past 24 hours (what really happened), Live now, or Predict the next 1-3 hours.
-let playTimer = null, lastReplay = null, DEFAULT_T = null, RECENT = true, AHEAD = [{ hours: 1 }], aheadH = 1;
+let playTimer = null, lastReplay = null, DEFAULT_T = null, RECENT = true, AHEAD = [], aheadH = 2;
 const nzFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
 function nzKey(iso) { const p = {}; nzFmt.formatToParts(new Date(iso)).forEach(x => p[x.type] = x.value); return [`${p.year}-${p.month}-${p.day}`, +p.hour]; }
 const NZ_SHORT = new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -867,24 +867,32 @@ function hoursAgo(t) {                     // the newest replay hour is the hour
 }
 function hhmm(ms) { return new Intl.DateTimeFormat('en-NZ', { timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms)); }
 // What the "expected ..." numbers refer to in the current mode.
+// Live = the hour that is going on now; Predict = the hours after it; Replay = the replayed hour.
 function whenText() {
-  if (!isAhead()) return 'next hour';
-  const a = (lastAhead || []).find(x => x.hours === aheadH);
-  return aheadH === 1 ? 'next hour' + (a ? ` (${a.from_local}-${a.to_local})` : '')
-    : `in ${aheadH} hours` + (a ? ` (${a.from_local}-${a.to_local})` : '');
+  if (isReplay()) { const t = Date.parse(current); return `${hhmm(t)}-${hhmm(t + 3600e3)}`; }
+  if (current === 'live') {
+    const a = (lastAhead || []).find(x => x.hours === 1);
+    const t = Math.floor(Date.now() / 3600e3) * 3600e3;
+    return `this hour (${a ? a.from_local + '-' + a.to_local : hhmm(t) + '-' + hhmm(t + 3600e3)})`;
+  }
+  const a = (lastAhead || []).find(x => x.hours === aheadH), n = aheadH - 1;
+  return (n === 1 ? 'next hour' : `in ${n} hours`) + (a ? ` (${a.from_local}-${a.to_local})` : '');
 }
 let lastAhead = null;
 // Predict mode: the panel's headline number becomes the forecast for the chosen hour.
 function withAhead(d) {
-  if (d && d.ahead) lastAhead = d.ahead;
+  if (d && d.ahead) { lastAhead = d.ahead; drawLegend(); if (isAhead()) aheadButtons(); }
   if (!isAhead() || !d || !d.ahead) return d;
   const a = d.ahead.find(x => x.hours === aheadH);
   return a ? { ...d, predicted_kw_next: a.kw, generating: (a.kw || 0) > 1, charge_now: aheadH === 1 ? d.charge_now : false } : d;
 }
+// Live already shows the hour going on now (1 hour after the latest weather data), so Predict offers the hours after it.
 function aheadButtons() {
-  $('aheadBtns').innerHTML = AHEAD.map(a => `<button type="button" class="ah ${a.hours === aheadH ? 'on' : ''}" data-h="${a.hours}">+${a.hours} h</button>`).join(' ');
+  $('aheadBtns').innerHTML = AHEAD.map(a => {
+    const r = (lastAhead || []).find(x => x.hours === a.hours);
+    return `<button type="button" class="ah ${a.hours === aheadH ? 'on' : ''}" data-h="${a.hours}">+${a.hours - 1} h${r ? ` <small>${r.from_local}-${r.to_local}</small>` : ''}</button>`; }).join(' ');
   const a = AHEAD.find(x => x.hours === aheadH) || {};
-  const max = Math.max(...AHEAD.map(x => x.hours));
+  const max = Math.max(...AHEAD.map(x => x.hours)) - 1;
   $('aheadNote').innerHTML = (typeof a.pct_of_capacity === 'number'
     ? `Average error ${num(a.pct_of_capacity, 1)}% of your panels' size on unseen test months; ` +
       (a.better_than_weather_service_pct >= 10 ? `${num(a.better_than_weather_service_pct, 0)}% better than the weather service's own forecast.`
@@ -904,11 +912,12 @@ function syncBar() {
   $('modeBadge').className = 'badge ' + mode;
   $('modeBadge').innerHTML = { live: '<i></i>LIVE', replay: '&#9194; REPLAY', predict: '&#128302; PREDICT' }[mode];
   $('modeLabel').textContent = {
-    live: 'The current hour, with the latest weather',
+    live: 'The hour going on now, from the latest weather',
     replay: RECENT ? 'One of the past 24 hours: our forecast vs. what really happened' : 'A past hour from months the model never saw (live data unavailable)',
-    predict: `Our forecast for ${aheadH === 1 ? 'the next hour' : 'the hour ' + aheadH + ' hours from now'}` }[mode];
+    predict: `Our forecast for ${aheadH === 2 ? 'the next hour' : 'the hour after next'}, after the one going on now` }[mode];
   if (mode !== 'replay') stopPlay();
   if (mode === 'predict') aheadButtons();
+  drawLegend();
   if (mode === 'replay') {
     const i = times.indexOf(current), ago = hoursAgo(current);
     $('slider').max = Math.max(0, times.length - 1); $('slider').value = Math.max(0, i);
@@ -1194,8 +1203,8 @@ function flowSvg(d) {
     : `<path d="M36 14 a13 13 0 1 0 6 22 a10 10 0 1 1 -6 -22z" fill="#8a9bb8"/>`;
   const juice = (p, cls) => `<path class="wire" d="${p}"/><path class="${cls}" d="${p}" style="--speed:${speed}"/>`;
   return `<svg class="flow" viewBox="0 0 330 118" role="img" aria-label="${on
-      ? `Power flow: your ${SIZE} kW panels send about ${num(S(kw), kwd())} kW to your home${car ? ' and the EV' : ''} next hour`
-      : 'No solar power next hour: the home runs on the grid'}">
+      ? `Power flow: your ${SIZE} kW panels send about ${num(S(kw), kwd())} kW to your home${car ? ' and the EV' : ''} ${whenText()}`
+      : 'No solar power ' + whenText() + ': the home runs on the grid'}">
     ${sun}
     ${on ? juice('M52 40 L92 62', 'juice') : '<path class="wire" d="M52 40 L92 62"/>'}
     <g transform="translate(92 54)"><path d="M0 22 L12 0 L44 0 L32 22 Z" fill="#1e3a5f"/>
@@ -1498,7 +1507,9 @@ loadModel();
     if (info.home_batteries) HOMEBATT = info.home_batteries;
     if (info.ev_cars) { EVCARS = info.ev_cars; if (!EVCARS[EVS.car]) EVS.car = Object.keys(EVCARS)[0]; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
     RECENT = info.replay_window !== 'history';
-    if (info.ahead && info.ahead.length) AHEAD = info.ahead;
+    AHEAD = (info.ahead || []).filter(a => a.hours > 1);
+    $('predictBtn').hidden = !AHEAD.length;
+    if (AHEAD.length && !AHEAD.some(a => a.hours === aheadH)) aheadH = AHEAD[0].hours;
     DEFAULT_T = times.includes(info.default) ? info.default : times[0];   // Replay starts at the sunniest past hour
     setTime('live');                                 // but the page always opens on the current hour (Live)
   } catch (e) { setNote('Could not load the time list: ' + e.message, 'error'); }
