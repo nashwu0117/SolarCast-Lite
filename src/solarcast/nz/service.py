@@ -228,7 +228,8 @@ class Service:
         res = {"region": region, "local_date": str(day), "hours": [int(h) for h in local.hour],
                "actual_kw": [_num(v) for v in actual_kw], "predicted_kw": [_num(v) for v in pred_kw],
                "persistence_kw": [_num(v) for v in pers_kw], "cloud_cover_pct": [_num(v, 0) for v in f["cloud_t"]],
-               "predicted_kw_next": _num(next_kw), "totals_estimated": bool(live), **advice,
+               "predicted_kw_next": _num(next_kw), "next_local_hour": int(t.tz_convert(config.LOCAL_TZ).hour),
+               "totals_estimated": bool(live), **advice,
                **{k: round(float(v), 2) for k, v in saved.items()},
                "metrics": metrics}
         return res

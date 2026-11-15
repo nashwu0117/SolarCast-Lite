@@ -49,7 +49,13 @@ decision?" below).
   Open-Meteo and runs the same model (it borrows the nearest region's climate id; its accuracy is shown for that region).
 - **Click** a region: your panels' power next hour, the day's forecast in kWh and what it is worth at the grid price,
   the day's actual vs predicted power, and the worked example (EV advice for the next hour with its reason and the day's
-  savings in kWh, NZD, kg CO2).
+  savings in kWh, NZD, kg CO2). The page opens on the sunniest region now, so this shows without a click; an animated
+  picture shows the power flowing from the sun to your panels, your home and (when it is worth it) the EV.
+- **Charge your EV from your panels:** pick a Tesla Model Y or a BYD Atto 3 (New Zealand's two best-selling EVs in
+  2025), the battery level now and the target, and the charger. Hour by hour, the forecast says when your panels would
+  finish (or how far they get and what is still needed), the range added, the money saved, and how long the same
+  charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes (home, car, left
+  over). At night it shows the whole day as if plugged in at sunrise. The AI chat can answer the same question.
 - **Replay** any hour of the test period, or **Live** (New Zealand time; at night solar is zero).
 - **Model tab:** our model's accuracy against two baselines, per region, a sample week, and what the model relies on.
 - **Ask SolarCast AI** (bottom right): a chat that explains the data in English or Chinese for your panel size, for example "how much
@@ -145,7 +151,9 @@ charging on arrival and the 10:00-14:00 habit. Reproduce: `python experiments/nz
   smoother than reality, so a real plant would be harder to forecast.
 - **Live mode** uses Open-Meteo's forecast service (and its day-ahead forecast of the next hour), a slightly different
   source than the training data, so live accuracy may be a little lower.
-- **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code.
+- **The workshop and EV are assumptions** (load, charger, prices, CO2 factor), stated in the code. The home EV
+  estimate uses typical published specs (Model Y RWD about 60 kWh and 11 kW AC; Atto 3 60.48 kWh and 7 kW AC), a
+  0.5 kW home load, 10% charging loss and a 1.4 kW minimum charging power (`src/solarcast/nz/ev.py`); real cars vary.
 - **The nationwide grid** borrows the nearest region's climate id for each cell, and its accuracy was measured only
   at the 14 regions; each refresh uses about 270 free Open-Meteo calls, so other replay days are limited per hour.
 - **The AI chat can still be wrong.** A small language model can misread the facts, and no safety filter is perfect.

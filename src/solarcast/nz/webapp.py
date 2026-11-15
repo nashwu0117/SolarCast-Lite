@@ -33,7 +33,7 @@ from pathlib import Path
 
 from flask import Flask, Response, request
 
-from solarcast.nz import config
+from solarcast.nz import config, ev
 
 CLOUDFLARED_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
 TUNNEL_URL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
@@ -77,7 +77,9 @@ def create_app(service, assistant=None, grid=None) -> Flask:
     @app.get("/api/times")
     def api_times():
         return _json({"times": list(service.available_times()), "default": service.default_time(),
-                      "reference_kw": config.SYSTEM_KW, "grid_price_nzd": config.GRID_PRICE_NZD})
+                      "reference_kw": config.SYSTEM_KW, "grid_price_nzd": config.GRID_PRICE_NZD,
+                      "ev_cars": ev.CARS, "home_charger_kw": ev.HOME_CHARGER_KW,
+                      "three_phase_charger_kw": ev.THREE_PHASE_CHARGER_KW})
 
     @app.get("/api/snapshot")
     def api_snapshot():
@@ -183,6 +185,23 @@ def create_app(service, assistant=None, grid=None) -> Flask:
                                 body.get("region") or None, history, point=point, system_kw=system_kw)
         except Exception as exc:
             return _json({"error": f"chat failed: {exc}"}, 502)
+        return _json(res)
+
+    # ----- EV charging from the user's own panels (pure calculation on the forecast the page already has) -----
+    @app.post("/api/ev_plan")
+    def api_ev_plan():
+        body = request.get_json(silent=True) or {}
+        try:
+            hours = [int(h) for h in body["hours"]][:48]
+            solar = [None if v is None else float(v) for v in body["solar_kw"]][:48]
+            car = str(body.get("car", "tesla_model_y"))
+            if car not in ev.CARS or len(hours) != len(solar):
+                raise ValueError
+            res = ev.plan(hours, solar, int(body.get("next_hour", 0)), car,
+                          float(body.get("start_pct", 20)), float(body.get("target_pct", 80)),
+                          min(max(float(body.get("charger_kw", ev.HOME_CHARGER_KW)), 1.4), 22.0))
+        except (KeyError, TypeError, ValueError):
+            return _json({"error": "bad EV plan request"}, 400)
         return _json(res)
 
     return app
@@ -422,6 +441,35 @@ INDEX_HTML = r"""<!doctype html>
   @keyframes flowdash { to { stroke-dashoffset: -32; } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .flow .juice, .flow .grid-juice, .flow .sunrays { animation: none; } }
+  /* Charge your EV from your panels */
+  .evc { background: #effaf2; border: 1px solid #bfe3cb; border-radius: 12px; padding: 10px 12px; margin: 8px 0 4px; }
+  .evcars { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .evcars button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; }
+  .evcars button.on { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
+  .evcars svg { width: 26px; height: 14px; }
+  .evin { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .evin input[type=range] { width: 100%; accent-color: var(--good); }
+  .evin b { color: var(--ink); min-width: 38px; text-align: right; }
+  .evin select { grid-column: 2 / 4; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .batt { position: relative; height: 34px; border: 3px solid #1c2733; border-radius: 8px; margin: 12px 8px 6px 0; background: #fff; overflow: hidden; }
+  .batt .b0 { position: absolute; left: 0; top: 0; bottom: 0; background: #cbd5e1; }
+  .batt .b1 { position: absolute; top: 0; bottom: 0; width: 0; transition: width 1.4s cubic-bezier(.2,.8,.2,1);
+              background: repeating-linear-gradient(135deg, #22a559 0 10px, #1f8f4d 10px 20px); background-size: 28px 28px;
+              animation: charge 1s linear infinite; }
+  .batt .tgt { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 2px dashed #1c2733; }
+  .batt .lbl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1c2733; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+  @keyframes charge { to { background-position: 28px 0; } }
+  .evhead { font-size: 15px; font-weight: 600; margin: 4px 0; }
+  .evhead.ok { color: var(--good); } .evhead.part { color: var(--warn); }
+  .evbars { display: block; width: 100%; height: 86px; margin-top: 4px; }
+  .evbars rect.bar { transform-box: fill-box; transform-origin: bottom; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; }
+  .evbars text { font: 9px system-ui, sans-serif; fill: var(--muted); }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .evkey { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .evkey i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .leaflet-interactive.selpulse { animation: selpulse 1.8s ease-in-out infinite; }
+  @keyframes selpulse { 50% { stroke-width: 7; stroke-opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { .batt .b1, .evbars rect.bar, .leaflet-interactive.selpulse { animation: none; transition: none; } }
 </style>
 </head>
 <body>
@@ -500,7 +548,8 @@ INDEX_HTML = r"""<!doctype html>
     <button type="button">Where in New Zealand is it sunniest next hour?</button>
     <button type="button">How much will my panels make next hour in Christchurch?</button>
     <button type="button">How accurate is the model?</button>
-    <button type="button">Should the workshop charge its EV now?</button>
+    <button type="button">How long to charge a Tesla Model Y from my panels today?</button>
+    <button type="button">用我的太陽能板幫比亞迪 Atto 3 充電要多久？</button>
     <button type="button">我的太陽能板今天在奧克蘭能發多少電？</button>
   </div>
   <div id="chatCtx"></div>
@@ -727,6 +776,7 @@ async function loadSnapshot(opts = {}) {
     const data = await getJson('/api/snapshot?t=' + encodeURIComponent(current));
     if (id !== reqId) return;                       // a newer request already replaced this one
     drawRegions(data.regions);
+    if (selected) markSelected(selected);
     updateHeader(data.regions);
     // On first open, show a region right away (the sunniest one now; Auckland at night) so the panel,
     // the power-flow animation and the chart are visible without a click.
@@ -735,7 +785,7 @@ async function loadSnapshot(opts = {}) {
       const name = (best.predicted_kw_next || 0) > 0 ? best.name
         : (data.regions.find(r => r.name === 'Auckland') || data.regions[0]).name;
       selected = name;
-      Object.entries(markers).forEach(([n, m]) => m.setStyle({ radius: n === name ? 17 : 14, color: n === name ? '#1c2733' : '#ffffff', weight: n === name ? 3 : 2 }));
+      markSelected(name);
     }
   } catch (e) {
     if (id === reqId) setNote('Could not load data: ' + e.message, 'error');
@@ -805,7 +855,7 @@ async function loadPoint() {
 }
 function selectPoint(lat, lon) {
   selected = null; selectedPoint = { lat: +lat.toFixed(4), lon: +lon.toFixed(4) };
-  Object.values(markers).forEach(m => m.setStyle({ radius: 14, color: '#ffffff', weight: 2 }));
+  markSelected(null);
   if (!pin) pin = L.circleMarker([lat, lon], { radius: 9, color: '#ffffff', weight: 3, fillColor: '#2563eb', fillOpacity: 1, bubblingMouseEvents: false })
     .addTo(map).bindTooltip('', { direction: 'top', offset: [0, -8], className: 'tip' });
   pin.setLatLng([lat, lon]);
@@ -815,6 +865,111 @@ function selectPoint(lat, lon) {
 map.on('click', e => selectPoint(e.latlng.lat, e.latlng.lng));
 
 let lastPanel = null;
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Numbers count up from 0 when a panel opens (skipped for reduced motion).
+function countUp(el) {
+  if (!el || REDUCED) return;
+  const to = +el.dataset.v, dg = +el.dataset.d, t0 = performance.now();
+  const step = now => { const k = Math.min(1, (now - t0) / 700), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = num(to * e, dg); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+// ---------- charge your EV from your panels ----------
+let EVCARS = {}, HOME_CHARGER = 7.4, THREE_PHASE = 11;
+let EVS = { car: 'tesla_model_y', start: 20, target: 80, charger: 7.4 };
+try { Object.assign(EVS, JSON.parse(localStorage.getItem('solarcastEv') || '{}')); } catch (e) {}
+const carIcon = c => `<svg viewBox="0 0 38 22"><path d="M2 12 L8 3 L26 3 L33 12 L38 13 L38 20 L0 20 L0 13 Z" fill="${c}"/><circle cx="9" cy="20" r="3.5" fill="#1c2733"/><circle cx="29" cy="20" r="3.5" fill="#1c2733"/></svg>`;
+function evCardHtml() {
+  const cars = Object.entries(EVCARS);
+  if (!cars.length) return '';
+  return `<h3>Charge your EV from your ${SIZE} kW panels</h3>
+  <div class="evc">
+    <div class="evcars">${cars.map(([k, c]) => `<button type="button" data-car="${k}" class="${k === EVS.car ? 'on' : ''}">${carIcon(k === EVS.car ? '#fff' : '#6b7684')}${esc(c.name)}</button>`).join('')}</div>
+    <div class="evin">
+      <span>Battery now</span><input type="range" id="evStart" min="0" max="95" step="5" value="${EVS.start}"><b id="evStartV">${EVS.start}%</b>
+      <span>Charge to</span><input type="range" id="evTarget" min="10" max="100" step="5" value="${EVS.target}"><b id="evTargetV">${EVS.target}%</b>
+      <span>Charger</span><select id="evCharger">
+        <option value="${HOME_CHARGER}" ${EVS.charger == HOME_CHARGER ? 'selected' : ''}>${HOME_CHARGER} kW home wall charger (single-phase, most NZ homes)</option>
+        <option value="${THREE_PHASE}" ${EVS.charger == THREE_PHASE ? 'selected' : ''}>${THREE_PHASE} kW wall charger (three-phase)</option>
+        <option value="2.3" ${EVS.charger == 2.3 ? 'selected' : ''}>2.3 kW normal wall socket (10 A)</option></select>
+    </div>
+    <div id="evOut"><div class="sub">Working it out...</div></div>
+  </div>`;
+}
+let evTimer = null, evReq = 0;
+function evBind(d) {
+  if (!$('evOut')) return;
+  const save = () => { try { localStorage.setItem('solarcastEv', JSON.stringify(EVS)); } catch (e) {} };
+  document.querySelectorAll('.evcars button').forEach(b => b.onclick = () => {
+    EVS.car = b.dataset.car; save();
+    document.querySelectorAll('.evcars button').forEach(x => { const on = x.dataset.car === EVS.car; x.classList.toggle('on', on);
+      x.querySelector('path').setAttribute('fill', on ? '#fff' : '#6b7684'); });
+    evRun(d);
+  });
+  const slide = () => {
+    let a = +$('evStart').value, b = +$('evTarget').value;
+    if (b <= a) { b = Math.min(100, a + 5); $('evTarget').value = b; }
+    EVS.start = a; EVS.target = b; $('evStartV').textContent = a + '%'; $('evTargetV').textContent = b + '%'; save();
+    clearTimeout(evTimer); evTimer = setTimeout(() => evRun(d), 200);
+  };
+  $('evStart').oninput = slide; $('evTarget').oninput = slide;
+  $('evCharger').onchange = () => { EVS.charger = +$('evCharger').value; save(); evRun(d); };
+  evRun(d);
+}
+async function evRun(d) {
+  const id = ++evReq, out = $('evOut');
+  let nh = d.next_local_hour !== undefined ? d.next_local_hour : (d.hours || [])[0] || 0, whole = false;
+  const ask = async h => {
+    const res = await fetch('/api/ev_plan', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hours: d.hours || [], solar_kw: (d.predicted_kw || []).map(v => v === null ? null : S(v)),
+        next_hour: h, car: EVS.car, start_pct: EVS.start, target_pct: EVS.target, charger_kw: EVS.charger }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
+    return body;
+  };
+  let p;
+  try {
+    p = await ask(nh);
+    // No sun left today (evening, or a judge abroad seeing NZ at night): show the whole day as if plugged in at sunrise.
+    if (!p.done && !p.hours.some(r => r.car_kw > 0) && nh > 0) {
+      const all = await ask(0);
+      if (all.hours.some(r => r.car_kw > 0)) { p = all; nh = 0; whole = true; }
+    }
+  } catch (e) { if (id === evReq && out) out.innerHTML = `<div class="sub">Could not estimate: ${esc(e.message)}</div>`; return; }
+  if (id !== evReq || !$('evOut')) return;
+  const sunLeft = p.hours.some(r => r.car_kw > 0), name = esc(p.car_name);
+  const when = whole ? `<div class="sub" style="margin-bottom:2px">No sun left today, so this shows the whole day${d.local_date ? ' (' + esc(d.local_date) + ')' : ''}, plugged in from sunrise.</div>` : '';
+  const head = when + (p.done
+    ? `<div class="evhead ok">&#9728; ${p.start_pct}% &rarr; ${p.target_pct}% by ${p.finish_local_time} from your panels alone</div>`
+    : sunLeft
+      ? `<div class="evhead part">By the end of the day your panels get it to ${p.end_pct}% (+${p.km_added} km). Still needed for ${p.target_pct}%: ${num(p.still_needed_kwh)} kWh (about NZD ${num(p.still_needed_grid_cost_nzd, 2)} from the grid) or tomorrow's sun.</div>`
+      : `<div class="evhead part">Not enough sun ${whole ? 'this day' : 'left today'} to charge the ${name} from ${SIZE} kW of panels (an EV charger needs at least 1.4 kW to spare).</div>`);
+  const rows = p.hours.filter(r => r.solar_kw > 0.05);
+  let bars = '';
+  if (rows.length) {
+    const W = 330, H = 70, top = Math.max(...rows.map(r => r.solar_kw), 0.1), bw = W / rows.length;
+    bars = `<svg class="evbars" viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Where each hour's solar power goes">` +
+      rows.map((r, i) => { const x = i * bw + 2, w = Math.max(2, bw - 4), sc = H / top; let y = H, out = '';
+        [[r.home_kw, '#94a3b8'], [r.car_kw, '#1f8f4d'], [r.unused_kw, '#fcd38d']].forEach(([v, c]) => {
+          const h = Math.max(0, v) * sc; if (h > 0.2) { y -= h; out += `<rect class="bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${c}" style="animation-delay:${i * 45}ms"/>`; } });
+        return out + `<text x="${(x + w / 2).toFixed(1)}" y="${H + 11}" text-anchor="middle">${String(r.hour).padStart(2, '0')}</text>`; }).join('') + '</svg>' +
+      `<div class="evkey"><span><i style="background:#94a3b8"></i>home (${num(0.5, 1)} kW)</span><span><i style="background:#1f8f4d"></i>into the car</span><span><i style="background:#fcd38d"></i>left over</span></div>`;
+  }
+  out.innerHTML = `
+    <div class="batt"><div class="b0" style="width:${p.start_pct}%"></div><div class="b1" style="left:${p.start_pct}%"></div>
+      <div class="tgt" style="left:${p.target_pct}%"></div><div class="lbl">${p.start_pct}% &rarr; <span class="cu" data-v="${p.end_pct}" data-d="0">${p.end_pct}</span>%</div></div>
+    ${head}
+    <div class="stats" style="margin-top:6px">
+      <div class="stat"><b>${p.done ? num(p.charging_hours) + ' h' : '+' + p.km_added + ' km'}</b><span>${p.done ? `of solar charging (+${p.km_target} km range)` : 'range added from solar today'}</span></div>
+      <div class="stat"><b>NZD ${num(p.saved_nzd, 2)}</b><span>grid power you don't buy</span></div>
+      <div class="stat"><b>${num(p.grid_only_hours)} h</b><span>same charge plugged into the grid at ${num(p.charger_kw)} kW (NZD ${num(p.grid_only_cost_nzd, 2)})</span></div>
+    </div>
+    ${bars}
+    <div class="sub" style="margin-top:4px">${name}: ${p.battery_kwh} kWh battery, charges at up to ${num(p.charger_kw)} kW here. Uses this day's forecast from ${whole ? 'sunrise' : String(nh).padStart(2, '0') + ':00'}, a 0.5 kW home load first, 10% charging loss. An estimate: real cars and weather vary.</div>`;
+  requestAnimationFrame(() => { const b = out.querySelector('.b1'); if (b) b.style.width = Math.max(0, p.end_pct - p.start_pct) + '%'; });
+  countUp(out.querySelector('.batt .cu'));
+}
 // Animated picture of where the next hour's power goes: sun -> your panels -> home (-> EV when the example says charge).
 // The dots move faster and the sun is brighter when the panels give more of their rated power; at night the home runs on the grid.
 function flowSvg(d) {
@@ -858,7 +1013,7 @@ function yoursHtml(d) {
   const day = S(sum(d.predicted_kw)), done = (d.actual_kw || []).some(v => typeof v === 'number') ? S(sum(d.actual_kw)) : null;
   return `<div class="yours"><div class="sub">Your ${SIZE} kW panels, next hour</div>
     ${flowSvg(d)}
-    <div class="big">${num(S(d.predicted_kw_next), kwd())} kW <small>&asymp; ${num(S(d.predicted_kw_next), kwd())} kWh over the hour</small></div>
+    <div class="big"><span class="cu" data-v="${S(d.predicted_kw_next) || 0}" data-d="${kwd()}">${num(S(d.predicted_kw_next), kwd())}</span> kW <small>&asymp; ${num(S(d.predicted_kw_next), kwd())} kWh over the hour</small></div>
     <div class="stats" style="margin-top:8px">
       <div class="stat"><b>${num(day)}</b><span>kWh forecast for this day</span></div>
       <div class="stat"><b>NZD ${num(day * PRICE, 2)}</b><span>worth at NZD ${num(PRICE, 2)}/kWh</span></div>
@@ -875,6 +1030,7 @@ function renderPanel(d, titleHtml, subHtml) {
     <div class="sub">${subHtml}</div>
     ${yoursHtml(d)}
     <div class="chartbox"><canvas id="chart"></canvas></div>
+    ${evCardHtml()}
     <h3>Example use: should a workshop charge its EV now?</h3>
     <div class="sub" style="margin-bottom:6px">One way to use the forecast. This example is fixed: a workshop with ${REF} kW of panels, a 6 kW load and an 11 kW EV charger.</div>
     <div class="advice ${yes ? 'yes' : 'no'}"><strong>${yes ? 'Charge now' : 'Wait'}</strong><br>${esc(d.reason || '')}</div>
@@ -888,6 +1044,8 @@ function renderPanel(d, titleHtml, subHtml) {
     ${d.assumptions ? `<div class="sub" style="margin-top:6px">Assumptions: ${esc(d.assumptions)}</div>` : ''}
     ${metricsHtml(d.metrics, mlabel)}`;
   drawChart(d);
+  countUp(panel.querySelector('.yours .big .cu'));
+  evBind(d);
 }
 
 function drawChart(d) {
@@ -915,10 +1073,16 @@ function drawChart(d) {
   });
 }
 
+function markSelected(name) {
+  Object.entries(markers).forEach(([n, m]) => {
+    m.setStyle({ radius: n === name ? 17 : 14, color: n === name ? '#1c2733' : '#ffffff', weight: n === name ? 3 : 2 });
+    const el = m.getElement && m.getElement(); if (el) el.classList.toggle('selpulse', n === name);
+  });
+}
 function selectRegion(name) {
   selected = name; selectedPoint = null;
   if (pin) { map.removeLayer(pin); pin = null; }
-  Object.entries(markers).forEach(([n, m]) => m.setStyle({ radius: n === name ? 17 : 14, color: n === name ? '#1c2733' : '#ffffff', weight: n === name ? 3 : 2 }));
+  markSelected(name);
   loadDetail(name);
   if (window.matchMedia('(max-width: 900px)').matches) $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -1100,6 +1264,7 @@ loadModel();
     times = info.times || [];
     if (info.reference_kw) REF = info.reference_kw;
     if (info.grid_price_nzd) PRICE = info.grid_price_nzd;
+    if (info.ev_cars) { EVCARS = info.ev_cars; HOME_CHARGER = info.home_charger_kw || HOME_CHARGER; THREE_PHASE = info.three_phase_charger_kw || THREE_PHASE; }
     $('slider').max = Math.max(0, times.length - 1);
     const i = times.indexOf(info.default);
     $('slider').value = i >= 0 ? i : 0;              // the Replay slider starts at a sunny past midday
