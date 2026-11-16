@@ -623,8 +623,6 @@ INDEX_HTML = r"""<!doctype html>
     <button type="button">How much will my panels make next hour in Christchurch?</button>
     <button type="button">How accurate is the model?</button>
     <button type="button">How long to charge a Tesla Model Y from my panels today?</button>
-    <button type="button">用我的太陽能板幫比亞迪 Atto 3 充電要多久？</button>
-    <button type="button">我的太陽能板今天在奧克蘭能發多少電？</button>
   </div>
   <div id="chatCtx"></div>
   <form class="cform" id="chatForm"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Ask about this data..." aria-label="Your question"><button id="chatSend" type="submit">Send</button></form>

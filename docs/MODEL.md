@@ -1,6 +1,5 @@
 # How the SolarCast NZ model works
 
-**English** | [繁體中文](MODEL.zh-TW.md)
 
 This page explains, step by step, what data the model uses, how it is trained, and how we measured its accuracy
 honestly. Every number here comes from a run on Google Colab; the code that produced it is linked.
