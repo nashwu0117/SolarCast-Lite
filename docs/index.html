@@ -108,12 +108,11 @@
 <nav><div class="wrap">
   <a class="logo" href="#">SolarCast <b>NZ</b></a>
   <div class="links">
+    <a href="#problem"><span lang-en>Problem</span><span lang-zh>問題</span></a>
     <a href="#how"><span lang-en>How it works</span><span lang-zh>運作方式</span></a>
-    <a href="#flow"><span lang-en>Power flow</span><span lang-zh>電力流向</span></a>
     <a href="#results"><span lang-en>Results</span><span lang-zh>成果</span></a>
-    <a href="#ai"><span lang-en>AI</span><span lang-zh>AI</span></a>
-    <a href="#run"><span lang-en>Run it</span><span lang-zh>如何執行</span></a>
-    <a href="https://github.com/nashwu0117/SolarCast-Lite">GitHub</a>
+    <a href="#limits"><span lang-en>Limits</span><span lang-zh>限制</span></a>
+    <a href="#run"><span lang-en>Try it &amp; code</span><span lang-zh>試用與程式碼</span></a>
   </div>
   <button class="lang" id="lang" type="button">中文</button>
 </div></nav>
@@ -121,19 +120,12 @@
 <header class="hero"><div class="wrap grid">
   <div>
     <div class="eyebrow">Veritas AI Hackathon 2026 &middot; AI + Climate</div>
-    <h1 lang-en>How much power will your <em>panels</em> give next hour?</h1>
-    <h1 lang-zh>你的<em>太陽能板</em>，下一小時能發多少電？</h1>
-    <p class="lead" lang-en>SolarCast forecasts the next hour of solar power for any spot in New Zealand and any panel size, from a 5 kW home to a 50 kW business, so you can run the EV charger, hot water or machines on your own sunshine instead of the grid.</p>
-    <p class="lead" lang-zh>SolarCast 預測紐西蘭任何地點、任何大小的太陽能系統（從家用 5 kW 到商用 50 kW）下一小時能發多少電，讓你把電動車充電、熱水器或機器排在自家陽光最多的時候，而不是向電網買電。</p>
-    <div class="cta">
-      <a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">
-        <span lang-en>Live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
-      <a class="btn primary" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">
-        <span lang-en>Live demo in Kaggle</span><span lang-zh>在 Kaggle 開啟即時展示</span> &rarr;</a>
-      <a class="btn" href="https://github.com/nashwu0117/SolarCast-Lite"><span lang-en>Source code</span><span lang-zh>原始碼</span></a>
-    </div>
-    <p class="small" lang-en>Pick whichever you prefer: both run the same notebook on a free GPU and open the same dashboard (Colab: Runtime &gt; Run all; Kaggle: Settings &gt; GPU T4 x2 and Internet on, then Run All). The public link appears once the AI is ready, in a few minutes. Kaggle shows an empty page for 15-30 seconds while it copies the notebook from GitHub: wait, don't reload. If it stays empty, sign in to Kaggle and open the link again, or use File &gt; Import Notebook and paste the notebook's GitHub link. This page is a static overview.</p>
-    <p class="small" lang-zh>兩個選一個你喜歡的就好：跑的是同一份 notebook、都用免費 GPU，打開的儀表板也一樣（Colab：Runtime &gt; Run all；Kaggle：Settings 選 GPU T4 x2、開網路，再按 Run All）。AI 準備好後（幾分鐘）就會出現公開連結。Kaggle 從 GitHub 複製 notebook 時，頁面會空白 15～30 秒，請等一下、不要重新整理。如果一直空白，先登入 Kaggle 再開一次連結，或在 Kaggle 用 File &gt; Import Notebook 貼上 notebook 的 GitHub 連結。這一頁是靜態介紹。</p>
+    <h1 lang-en>How much power will your <em>panels</em> give this hour?</h1>
+    <h1 lang-zh>你的<em>太陽能板</em>，這一小時能發多少電？</h1>
+    <p class="lead" lang-en>SolarCast tells anyone in New Zealand with rooftop solar how much power their panels will make this hour and the next two, so they can run the EV charger, hot water or machines on their own sunshine instead of buying from the grid.</p>
+    <p class="lead" lang-zh>SolarCast 告訴紐西蘭每一個有屋頂太陽能的人，他們的太陽能板這一小時和接下來兩小時能發多少電，讓大家把電動車充電、熱水器或機器排在自家陽光最多的時候，而不是向電網買電。</p>
+    <p class="small" lang-en>A write-up of our Veritas AI Hackathon 2026 project (AI + Climate), built 14-16 November 2026. Scroll down to read it; the live demo and the code are at the end.</p>
+    <p class="small" lang-zh>我們 Veritas AI 駭客松 2026（AI + 氣候）作品的說明文章，2026 年 11 月 14–16 日做出來。往下捲就能讀；即時展示和程式碼在最後。</p>
   </div>
   <figure style="margin:0;justify-self:center;text-align:center">
     <svg id="nzmap" viewBox="0 0 300 330" role="img" aria-label="The land cells of New Zealand that SolarCast forecasts"></svg>
@@ -148,6 +140,30 @@
     <div class="stat"><b>137</b><span lang-en>land cells covering all of New Zealand</span><span lang-zh>個陸地格子涵蓋全紐西蘭</span></div>
     <div class="stat"><b>:50</b><span lang-en>every hour the whole country is recomputed, before the next hour starts</span><span lang-zh>每小時 50 分重算全國，趕在下一小時開始前</span></div>
   </div>
+</div></section>
+
+<section id="problem"><div class="wrap">
+  <h2><span lang-en>The problem</span><span lang-zh>問題</span></h2>
+  <p class="sub" lang-en>More and more New Zealand homes, schools and businesses have rooftop solar. To get the most from it, they should run big loads (an EV charger, a hot-water cylinder, a heat pump, a workshop machine) in the hours when the sun is actually there, and buy less power from the grid. But clouds come and go, so it is hard to know how much power the panels will make in the next few hours. Weather apps show cloud and temperature, not kilowatts for your own roof. SolarCast answers one question for any spot in the country: how many kW will my panels give this hour?</p>
+  <p class="sub" lang-zh>紐西蘭越來越多家庭、學校和公司裝了屋頂太陽能。要用得最划算，就該把電動車充電、熱水器、熱泵或工廠機器排在真的有太陽的時候，少向電網買電。但雲飄來飄去，很難知道接下來幾小時太陽能板能發多少電。天氣 App 只告訴你雲量和氣溫，不會告訴你自己屋頂有幾 kW。SolarCast 回答一個問題：全國任何地點，我的太陽能板這一小時能發幾 kW？</p>
+</div></section>
+
+<section id="built"><div class="wrap">
+  <h2><span lang-en>What we built</span><span lang-zh>我們做了什麼</span></h2>
+  <p class="sub" lang-en>A dashboard that opens from a notebook (Colab or Kaggle) and gives a public link. Pick your panel size (3 to 100 kW) and click anywhere in New Zealand.</p>
+  <p class="sub" lang-zh>一個從 notebook（Colab 或 Kaggle）打開、並給你公開連結的儀表板。選好太陽能板大小（3 到 100 kW），再點紐西蘭任何地方就行。</p>
+  <ul class="tick">
+    <li lang-en><b>Three modes:</b> Replay the past 24 hours (forecast next to what really happened), Live now (the hour going on now) and Predict next (the next two hours, with how accurate each is).</li>
+    <li lang-zh><b>三種模式：</b>回放過去 24 小時（預測和實際發電並排）、Live now（正在進行的這一小時）、Predict next（接下來兩小時，並標明各自準不準）。</li>
+    <li lang-en><b>Nationwide map:</b> the same model for 137 land cells (about 50 km each), recomputed every hour.</li>
+    <li lang-zh><b>全國地圖：</b>同一個模型涵蓋 137 個陸地格子（每格約 50 公里），每小時重算。</li>
+    <li lang-en><b>Charge your EV from your panels:</b> pick one of about 40 EVs and plug-in hybrids sold in New Zealand, the battery level and the charger; it shows when the panels finish, the range added and the money saved. A home battery option (for example a Tesla Powerwall 3) shows how much left-over sun it could store for the evening.</li>
+    <li lang-zh><b>用太陽能板幫電動車充電：</b>從紐西蘭有賣的約 40 款電動車和插電式油電混合車選你的車，設定電量和充電器；它會算出太陽能板什麼時候能充完、增加多少續航、省多少錢。加上家用電池（例如特斯拉 Powerwall 3），還能看到多出來的陽光能存多少給晚上用。</li>
+    <li lang-en><b>SolarCast AI:</b> a chat that explains the numbers. It runs on the notebook's own GPU, with no internet or tools; the server looks up the facts with the same code as the map, and the model only explains them.</li>
+    <li lang-zh><b>SolarCast AI：</b>解釋數字的聊天助理。它跑在 notebook 自己的 GPU 上，不能上網也沒有任何工具；事實由伺服器用和地圖同一套程式查好，模型只負責解釋。</li>
+  </ul>
+  <p class="sub" lang-en style="margin-top:24px"><b>What we added.</b> The suggested project forecasts one solar site one day ahead. We changed three things: the time (people decide what to run in the next few hours, so we forecast this hour and the next two, and tested how far ahead the forecast stays useful), the place and the user (any spot and any panel size in New Zealand), and the question behind the forecast (we measured whether it changes a real decision, not only whether it is accurate).</p>
+  <p class="sub" lang-zh style="margin-top:24px"><b>我們加了什麼。</b>題目建議的做法是預測單一太陽能場站的隔天發電。我們改了三件事：時間（大家決定要開什麼是看接下來幾小時，所以我們預測這一小時和接下來兩小時，並測試預測能準到幾小時）、地點和使用者（紐西蘭任何地點、任何大小的系統），以及預測背後的問題（我們量測它會不會改變真實決策，而不只是準不準）。</p>
 </div></section>
 
 <section id="how"><div class="wrap">
@@ -244,8 +260,36 @@
   </ul>
 </div></section>
 
+<section id="limits"><div class="wrap">
+  <h2><span lang-en>Where it fails</span><span lang-zh>哪裡會出錯</span></h2>
+  <ul class="tick">
+    <li lang-en><b>Cloudy hours are much harder.</b> The error is 15.8 W/m&sup2; when cloud cover is at most 60%, and 41.1 W/m&sup2; above that.</li>
+    <li lang-zh><b>多雲的小時難很多。</b>雲量不超過 60% 時誤差是 15.8 W/m&sup2;，超過就變成 41.1 W/m&sup2;。</li>
+    <li lang-en><b>Modelled weather, not real panels.</b> We had no measured output from real New Zealand solar sites. Modelled weather is smoother than reality, so a real rooftop would be harder to forecast than our numbers suggest.</li>
+    <li lang-zh><b>用的是模擬天氣，不是真的太陽能板。</b>我們沒有紐西蘭真實場站的實測發電量。模擬的天氣比現實平滑，所以真實屋頂會比我們的數字更難預測。</li>
+    <li lang-en><b>Our validation rule was too loose for longer horizons.</b> On the validation months every horizon up to 24 hours passed our rule (at least 10% better than the weather service), but on the test months only 1-2 hours were clearly better. We report the test result and only offer this hour and the next two.</li>
+    <li lang-zh><b>我們的驗證規則對較長的預測時距太寬鬆。</b>在驗證月份，直到 24 小時的每個時距都過了我們的門檻（至少比天氣服務好 10%），但在測試月份只有 1–2 小時明顯更好。我們報告的是測試結果，所以只提供這一小時和接下來兩小時。</li>
+    <li lang-en><b>Two later model versions did not help.</b> New inputs and a GPU-trained XGBoost model gained less than our bar on validation, so we kept the simpler model. The error left seems to be mostly in the weather data itself.</li>
+    <li lang-zh><b>後來的兩個模型版本沒有更好。</b>新增輸入和用 GPU 訓練的 XGBoost 在驗證集上的進步都沒達到門檻，所以我們保留較簡單的模型。剩下的誤差似乎大多來自天氣資料本身。</li>
+    <li lang-en><b>The AI chat can still be wrong.</b> A small language model can misread the facts, and no safety filter is perfect. This is a prototype: the numbers are estimates, not advice to buy equipment.</li>
+    <li lang-zh><b>AI 聊天仍然可能出錯。</b>小型語言模型可能會誤讀事實，也沒有任何安全過濾器是完美的。這是原型：數字只是估計，不是買設備的建議。</li>
+  </ul>
+</div></section>
+
+<section id="next"><div class="wrap">
+  <h2><span lang-en>What we'd do next</span><span lang-zh>下一步</span></h2>
+  <ul class="tick">
+    <li lang-en>Test against real output from New Zealand homes and schools with solar, with their permission.</li>
+    <li lang-zh>在對方同意下，用紐西蘭有太陽能的家庭和學校的真實發電量來測試。</li>
+    <li lang-en>Add real household loads and power prices that change by the hour, so the advice says when to run each appliance.</li>
+    <li lang-zh>加入真實的家庭用電和隨小時變動的電價，讓建議能說出每個電器該什麼時候開。</li>
+    <li lang-en>Try SolarCast with a few families and a school, and find out whether it changes when they charge and heat.</li>
+    <li lang-zh>讓幾個家庭和一所學校試用 SolarCast，看看它是否改變他們充電和燒熱水的時間。</li>
+  </ul>
+</div></section>
+
 <section id="run"><div class="wrap">
-  <h2><span lang-en>Run it</span><span lang-zh>如何執行</span></h2>
+  <h2><span lang-en>Try it and read the code</span><span lang-zh>試用和閱讀程式碼</span></h2>
   <p class="sub" lang-en>Pick the cloud notebook you like: Google Colab or Kaggle. Both run the same notebook on a free GPU and give you the same live dashboard and AI. Use whichever you already have an account, GPU quota or a paid plan on (a bigger GPU from a paid plan is used automatically).</p>
   <p class="sub" lang-zh>選你喜歡的雲端 notebook：Google Colab 或 Kaggle。兩個跑的是同一份 notebook、都用免費 GPU，打開的儀表板和 AI 也完全一樣。你在哪一邊有帳號、有 GPU 額度或有訂閱付費方案，就用哪一邊（付費方案給的更大 GPU 會自動用上）。</p>
   <div class="two">
@@ -273,6 +317,12 @@ pip install -e .
 python -m solarcast.nz</pre>
       <p class="small" lang-en>Optional AI: install <a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:1.7b</code>, then <code>python -m solarcast.nz --ai</code>.</p>
       <p class="small" lang-zh>選用 AI：安裝 <a href="https://ollama.com">Ollama</a>，執行 <code>ollama pull qwen3:1.7b</code>，再執行 <code>python -m solarcast.nz --ai</code>。</p>
+  </div>
+  <div class="card" style="margin-top:16px;text-align:center">
+    <h3 lang-en>Read the code on GitHub</h3><h3 lang-zh>在 GitHub 閱讀程式碼</h3>
+    <p lang-en>Everything is open source: the model, the dashboard, the tests, the experiments and the notebooks.</p>
+    <p lang-zh>全部都是開源：模型、儀表板、測試、實驗和 notebook。</p>
+    <div class="cta" style="justify-content:center"><a class="btn primary" href="https://github.com/nashwu0117/SolarCast-Lite"><span lang-en>View the source code on GitHub</span><span lang-zh>到 GitHub 看原始碼</span> &rarr;</a></div>
   </div>
 </div></section>
 
