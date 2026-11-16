@@ -1,5 +1,6 @@
 # Third-party notices and credits
 
+**English** | [繁體中文](NOTICE.zh-TW.md)
 
 SolarCast NZ's own code, notebooks, documentation and trained model are open source under the [MIT License](LICENSE).
 The MIT License does not cover the third-party material below (the language models are downloaded at run time and are not

@@ -1,5 +1,6 @@
 # Colab guide for the team
 
+**English** | [繁體中文](COLAB_GUIDE.zh-TW.md)
 
 Everyone works in Google Colab; nothing needs to run on your own computer. The code lives in the **public** GitHub repo
 `nashwu0117/SolarCast-Lite`. Read this once, then keep it open.
@@ -9,12 +10,13 @@ few hours early, then resubmit if you improve it.
 
 ## 1. The two notebooks
 
-| Notebook | What it does | Colab |
-|---|---|---|
-| **Judges** (submission) | Loads our trained model from GitHub, shows the test results, opens the map dashboard with the AI chat | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) |
-| **Train** | Downloads Open-Meteo history, trains and evaluates the model, backs it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) |
+| Notebook | What it does | English | 繁體中文 |
+|---|---|---|---|
+| **Judges** (submission) | Loads our trained model from GitHub, shows the test results, opens the map dashboard with the AI chat | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) |
+| **Train** | Downloads Open-Meteo history, trains and evaluates the model, backs it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) |
 
-The **Judges notebook is the one we submit.**
+The **English Judges notebook is the one we submit.** The zh-TW one is the same code with Chinese explanations, for
+testing and learning.
 
 ## 2. Run the Judges notebook
 
@@ -29,7 +31,7 @@ The **Judges notebook is the one we submit.**
 
 Things to try on the dashboard: drag the **Replay** slider to a New Zealand daytime hour (in Live mode at night every
 region shows 0 kW, which is correct), hover a region, click it for the detail panel, open the **Model** tab, and ask the
-chat "Which region generates the most solar power next hour?".
+chat "Which region generates the most solar power next hour?" or「基督城今天可以省多少錢？」.
 
 ## 3. Run the Train notebook
 
@@ -45,7 +47,8 @@ chat "Which region generates the most solar power next hour?".
   llm_setup). Open the file browser (folder icon), go to `/content/SolarCast-Lite/src/solarcast/nz`, double-click a file,
   save with Ctrl/Cmd+S, then Runtime > **Restart session** and run again (autoreload does not work on Colab's Python 3.13).
 - **Notebooks are generated.** Do not edit the `.ipynb` files by hand: change `scripts/make_nz_notebooks.py` (code cells
-  are shared, the text is written in English there) and run `python scripts/make_nz_notebooks.py`.
+  are shared, the text is written in English and zh-TW there) and run `python scripts/make_nz_notebooks.py`. That keeps
+  the two languages identical.
 - Module interfaces are written down in `docs/NZ_CONTRACT.md`. If you change one, update that file first and tell the team.
 
 ## 5. Run the tests in Colab
@@ -84,7 +87,7 @@ def git(*args):
 
 git("config", "user.name", NAME)
 git("config", "user.email", EMAIL)
-git("add", "src", "tests", "docs", "scripts", "notebooks", "README.md")
+git("add", "src", "tests", "docs", "scripts", "notebooks", "README.md", "README.zh-TW.md")
 git("commit", "-m", MESSAGE)
 git("pull", "--rebase", url, "main")
 git("push", url, "HEAD:main")

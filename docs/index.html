@@ -21,6 +21,9 @@
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Inter, system-ui, sans-serif; }
   a { color: inherit; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  [lang-zh] { display: none; }
+  body.zh [lang-zh] { display: revert; }
+  body.zh [lang-en] { display: none; }
 
   nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--paper) 82%, transparent); border-bottom: 1px solid var(--line); }
   nav .wrap { display: flex; align-items: center; gap: 18px; height: 58px; }
@@ -28,7 +31,8 @@
   .logo b { color: var(--sun); }
   nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
   nav .links a { text-decoration: none; } nav .links a:hover { color: var(--ink); }
-  @media (max-width: 720px) { nav .links { display: none; } }
+  .lang { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: 500 13px Inter, sans-serif; cursor: pointer; }
+  @media (max-width: 720px) { nav .links { display: none; } .lang { margin-left: auto; } }
 
   header.hero { position: relative; overflow: hidden; padding: 72px 0 56px; }
   header.hero::before { content: ""; position: absolute; width: 760px; height: 760px; right: -220px; top: -300px; border-radius: 50%;
@@ -65,6 +69,7 @@
   th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); }
   th { font-size: 13px; color: var(--muted); font-weight: 600; }
   td:not(:first-child), th:not(:first-child) { text-align: right; }
+  td[lang-zh], th[lang-zh] { text-align: left !important; }
   @media (max-width: 600px) { th, td { padding: 10px 8px; font-size: 14px; } .bar { display: none; }
     table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); } .stat { padding: 14px; min-width: 0; }
@@ -103,81 +108,82 @@
 <nav><div class="wrap">
   <a class="logo" href="#">SolarCast <b>NZ</b></a>
   <div class="links">
-    <a href="#how"><span>How it works</span></a>
-    <a href="#flow"><span>Power flow</span></a>
-    <a href="#results"><span>Results</span></a>
-    <a href="#ai"><span>AI</span></a>
-    <a href="#run"><span>Run it</span></a>
+    <a href="#how"><span lang-en>How it works</span><span lang-zh>運作方式</span></a>
+    <a href="#flow"><span lang-en>Power flow</span><span lang-zh>電力流向</span></a>
+    <a href="#results"><span lang-en>Results</span><span lang-zh>成果</span></a>
+    <a href="#ai"><span lang-en>AI</span><span lang-zh>AI</span></a>
+    <a href="#run"><span lang-en>Run it</span><span lang-zh>如何執行</span></a>
     <a href="https://github.com/nashwu0117/SolarCast-Lite">GitHub</a>
   </div>
+  <button class="lang" id="lang" type="button">中文</button>
 </div></nav>
 
 <header class="hero"><div class="wrap grid">
   <div>
     <div class="eyebrow">Veritas AI Hackathon 2026 &middot; AI + Climate</div>
-    <h1>How much power will your <em>panels</em> give next hour?</h1>
-    
-    <p class="lead">SolarCast forecasts the next hour of solar power for any spot in New Zealand and any panel size, from a 5 kW home to a 50 kW business, so you can run the EV charger, hot water or machines on your own sunshine instead of the grid.</p>
-    
+    <h1 lang-en>How much power will your <em>panels</em> give next hour?</h1>
+    <h1 lang-zh>你的<em>太陽能板</em>，下一小時能發多少電？</h1>
+    <p class="lead" lang-en>SolarCast forecasts the next hour of solar power for any spot in New Zealand and any panel size, from a 5 kW home to a 50 kW business, so you can run the EV charger, hot water or machines on your own sunshine instead of the grid.</p>
+    <p class="lead" lang-zh>SolarCast 預測紐西蘭任何地點、任何大小的太陽能系統（從家用 5 kW 到商用 50 kW）下一小時能發多少電，讓你把電動車充電、熱水器或機器排在自家陽光最多的時候，而不是向電網買電。</p>
     <div class="cta">
       <a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">
-        <span>Live demo in Colab</span> &rarr;</a>
+        <span lang-en>Live demo in Colab</span><span lang-zh>在 Colab 開啟即時展示</span> &rarr;</a>
       <a class="btn primary" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">
-        <span>Live demo in Kaggle</span> &rarr;</a>
-      <a class="btn" href="https://github.com/nashwu0117/SolarCast-Lite"><span>Source code</span></a>
+        <span lang-en>Live demo in Kaggle</span><span lang-zh>在 Kaggle 開啟即時展示</span> &rarr;</a>
+      <a class="btn" href="https://github.com/nashwu0117/SolarCast-Lite"><span lang-en>Source code</span><span lang-zh>原始碼</span></a>
     </div>
-    <p class="small">Pick whichever you prefer: both run the same notebook on a free GPU and open the same dashboard (Colab: Runtime &gt; Run all; Kaggle: Settings &gt; GPU T4 x2 and Internet on, then Run All). The public link appears once the AI is ready, in a few minutes. Kaggle shows an empty page for 15-30 seconds while it copies the notebook from GitHub: wait, don't reload. If it stays empty, sign in to Kaggle and open the link again, or use File &gt; Import Notebook and paste the notebook's GitHub link. This page is a static overview.</p>
-    
+    <p class="small" lang-en>Pick whichever you prefer: both run the same notebook on a free GPU and open the same dashboard (Colab: Runtime &gt; Run all; Kaggle: Settings &gt; GPU T4 x2 and Internet on, then Run All). The public link appears once the AI is ready, in a few minutes. Kaggle shows an empty page for 15-30 seconds while it copies the notebook from GitHub: wait, don't reload. If it stays empty, sign in to Kaggle and open the link again, or use File &gt; Import Notebook and paste the notebook's GitHub link. This page is a static overview.</p>
+    <p class="small" lang-zh>兩個選一個你喜歡的就好：跑的是同一份 notebook、都用免費 GPU，打開的儀表板也一樣（Colab：Runtime &gt; Run all；Kaggle：Settings 選 GPU T4 x2、開網路，再按 Run All）。AI 準備好後（幾分鐘）就會出現公開連結。Kaggle 從 GitHub 複製 notebook 時，頁面會空白 15～30 秒，請等一下、不要重新整理。如果一直空白，先登入 Kaggle 再開一次連結，或在 Kaggle 用 File &gt; Import Notebook 貼上 notebook 的 GitHub 連結。這一頁是靜態介紹。</p>
   </div>
   <figure style="margin:0;justify-self:center;text-align:center">
     <svg id="nzmap" viewBox="0 0 300 330" role="img" aria-label="The land cells of New Zealand that SolarCast forecasts"></svg>
-    <figcaption class="small"><span>The 137 land cells the model forecasts every hour (colours on the live map show predicted power).</span></figcaption>
+    <figcaption class="small"><span lang-en>The 137 land cells the model forecasts every hour (colours on the live map show predicted power).</span><span lang-zh>模型每小時預測的 137 個陸地格子（即時地圖上的顏色代表預測發電量）。</span></figcaption>
   </figure>
 </div></header>
 
 <section><div class="wrap">
   <div class="stats">
-    <div class="stat"><b>1.12 kW</b><span>average error for a 50 kW system on 16 unseen months: 2.2% of capacity at any size (0.11 kW for a 5 kW home)</span></div>
-    <div class="stat"><b>32.6%</b><span>lower error than clear-sky persistence, the strongest simple baseline</span></div>
-    <div class="stat"><b>137</b><span>land cells covering all of New Zealand</span></div>
-    <div class="stat"><b>:50</b><span>every hour the whole country is recomputed, before the next hour starts</span></div>
+    <div class="stat"><b>1.12 kW</b><span lang-en>average error for a 50 kW system on 16 unseen months: 2.2% of capacity at any size (0.11 kW for a 5 kW home)</span><span lang-zh>50 kW 系統在 16 個月沒看過的資料上的平均誤差：任何大小都是容量的 2.2%（家用 5 kW 約 0.11 kW）</span></div>
+    <div class="stat"><b>32.6%</b><span lang-en>lower error than clear-sky persistence, the strongest simple baseline</span><span lang-zh>誤差比最強的簡單基準（晴空 Persistence）低</span></div>
+    <div class="stat"><b>137</b><span lang-en>land cells covering all of New Zealand</span><span lang-zh>個陸地格子涵蓋全紐西蘭</span></div>
+    <div class="stat"><b>:50</b><span lang-en>every hour the whole country is recomputed, before the next hour starts</span><span lang-zh>每小時 50 分重算全國，趕在下一小時開始前</span></div>
   </div>
 </div></section>
 
 <section id="how"><div class="wrap">
-  <h2><span>How it works</span></h2>
-  <p class="sub">Our own machine-learning model makes every forecast. It only uses what is known at the end of the current hour, and it was tested once, on 16 months it had never seen.</p>
-  
+  <h2><span lang-en>How it works</span><span lang-zh>運作方式</span></h2>
+  <p class="sub" lang-en>Our own machine-learning model makes every forecast. It only uses what is known at the end of the current hour, and it was tested once, on 16 months it had never seen.</p>
+  <p class="sub" lang-zh>每一個預測都來自我們自己的機器學習模型。它只用「這一小時結束時」已知的資訊，並且只在它從沒看過的 16 個月資料上測試一次。</p>
   <div class="cards">
-    <div class="card"><div class="num">1</div><h3>Weather in</h3>
-      <p>Hourly sunlight, cloud, temperature and wind from Open-Meteo, plus its day-ahead forecast for the next hour (issued 24 hours earlier, so no peeking at the future).</p>
-      </div>
-    <div class="card"><div class="num">2</div><h3>Forecast</h3>
-      <p>Two gradient-boosted tree models, one for sunlight and one for cloudiness (the clear-sky index), averaged. Trained 2022-2024, tuned on early 2025.</p>
-      </div>
-    <div class="card"><div class="num">3</div><h3>Your panels</h3>
-      <p>Sunlight becomes power for the panel size you choose (3 to 100 kW): next hour in kW, the day in kWh and what it is worth. Worked example: a workshop charges its EV when solar covers the load and the car.</p>
-      </div>
+    <div class="card"><div class="num">1</div><h3 lang-en>Weather in</h3><h3 lang-zh>輸入天氣</h3>
+      <p lang-en>Hourly sunlight, cloud, temperature and wind from Open-Meteo, plus its day-ahead forecast for the next hour (issued 24 hours earlier, so no peeking at the future).</p>
+      <p lang-zh>Open-Meteo 的逐時日照、雲量、氣溫和風，加上它對下一小時的前一天預報（24 小時前就發布，所以沒有偷看未來）。</p></div>
+    <div class="card"><div class="num">2</div><h3 lang-en>Forecast</h3><h3 lang-zh>預測</h3>
+      <p lang-en>Two gradient-boosted tree models, one for sunlight and one for cloudiness (the clear-sky index), averaged. Trained 2022-2024, tuned on early 2025.</p>
+      <p lang-zh>兩個梯度提升樹模型，一個預測日照、一個預測雲量（晴空指數），再取平均。用 2022–2024 年訓練，2025 年上半年調參。</p></div>
+    <div class="card"><div class="num">3</div><h3 lang-en>Your panels</h3><h3 lang-zh>你的太陽能板</h3>
+      <p lang-en>Sunlight becomes power for the panel size you choose (3 to 100 kW): next hour in kW, the day in kWh and what it is worth. Worked example: a workshop charges its EV when solar covers the load and the car.</p>
+      <p lang-zh>把日照換算成你選的系統大小（3 到 100 kW）的發電量：下一小時幾 kW、整天幾度電、值多少錢。應用範例：太陽能夠供應店裡和車子時，加工店就幫電動車充電。</p></div>
   </div>
 </div></section>
 
 <section id="flow"><div class="wrap two">
   <div>
-    <h2><span>See where the power goes</span></h2>
-    <p class="sub">When you pick a spot on the dashboard, an animated picture shows the next hour: sunlight hits your panels and the power flows into your home. The more of their rated power the panels give, the brighter the sun and the faster the power moves. When the worked example says "charge now", the power flows on to the EV. At night the home runs on the grid.</p>
-    
-    <p class="sub" style="margin-top:-16px"><b>Charge your EV from your panels.</b> Pick your car from about 40 EVs and plug-in hybrids sold in New Zealand (type a brand or model to find it: Tesla Model 3 and Y in every version, the older Model S and X, BYD including the Sealion 5, Sealion 6 and Shark 6 plug-in hybrids, MG, Kia, Hyundai, Polestar, Volvo, Toyota, Nissan Leaf), the battery level now and the target. From the hourly forecast the dashboard works out when your panels would finish, or how far they get today and what is still needed, the range added and the money saved, next to how long the same charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes. Add a home battery such as a Tesla Powerwall 3 to see how much left-over sun it stores for the evening, for the car and the home.</p>
-    <p class="sub" style="margin-top:-16px"><b>Replay past 24 h | Live now | Predict next.</b> Replay the last 24 hours to compare our forecast with what really happened, see the hour going on now, or predict the next hour and the hour after it. We stop there: counted from the latest weather data, on unseen test months SolarCast beats the weather service's own forecast by 40% at 1 hour, 16% at 2 hours and 6% at 3 hours, and not at all from 6 hours.</p>
-    
-    <p class="small">The dashboard opens on the sunniest region right now, so the animation is there without a click. Example below: a 5 kW home system.</p>
-    
-    
+    <h2><span lang-en>See where the power goes</span><span lang-zh>看見電往哪裡流</span></h2>
+    <p class="sub" lang-en>When you pick a spot on the dashboard, an animated picture shows the next hour: sunlight hits your panels and the power flows into your home. The more of their rated power the panels give, the brighter the sun and the faster the power moves. When the worked example says "charge now", the power flows on to the EV. At night the home runs on the grid.</p>
+    <p class="sub" lang-zh>在儀表板上選一個地點，就會看到下一小時的動畫：陽光照到你的太陽能板，電流進家裡。發電量佔額定功率越高，太陽越亮、電流跑得越快。應用範例建議「現在充電」時，電會繼續流到電動車；晚上則改由電網供電。</p>
+    <p class="sub" lang-en style="margin-top:-16px"><b>Charge your EV from your panels.</b> Pick your car from about 40 EVs and plug-in hybrids sold in New Zealand (type a brand or model to find it: Tesla Model 3 and Y in every version, the older Model S and X, BYD including the Sealion 5, Sealion 6 and Shark 6 plug-in hybrids, MG, Kia, Hyundai, Polestar, Volvo, Toyota, Nissan Leaf), the battery level now and the target. From the hourly forecast the dashboard works out when your panels would finish, or how far they get today and what is still needed, the range added and the money saved, next to how long the same charge takes from the grid. An animated battery fills up and bars show where each hour's solar goes. Add a home battery such as a Tesla Powerwall 3 to see how much left-over sun it stores for the evening, for the car and the home.</p>
+    <p class="sub" lang-en style="margin-top:-16px"><b>Replay past 24 h | Live now | Predict next.</b> Replay the last 24 hours to compare our forecast with what really happened, see the hour going on now, or predict the next hour and the hour after it. We stop there: counted from the latest weather data, on unseen test months SolarCast beats the weather service's own forecast by 40% at 1 hour, 16% at 2 hours and 6% at 3 hours, and not at all from 6 hours.</p>
+    <p class="sub" lang-zh style="margin-top:-16px"><b>Replay past 24 h｜Live now｜Predict next。</b>回放過去 24 小時，對照我們的預測和實際發電；即時看現在正在進行的這一小時；或預測下一小時和再下一小時。只做到這裡：從最新天氣資料往後算，在模型沒看過的測試期，SolarCast 比天氣服務自己的預報好 40%（1 小時）、16%（2 小時）、6%（3 小時），6 小時以後就沒有比較好。</p>
+    <p class="small" lang-en>The dashboard opens on the sunniest region right now, so the animation is there without a click. Example below: a 5 kW home system.</p>
+    <p class="sub" lang-zh style="margin-top:-16px"><b>用你的太陽能板幫電動車充電。</b>從紐西蘭有賣的約 40 款電動車和插電式油電混合車選你的車（打品牌或車名就能找到：特斯拉 Model 3、Y 各版本，較舊的 Model S、X，比亞迪（包括 Sealion 5、Sealion 6、Shark 6 插電式油電混合車）、MG、Kia、Hyundai、Polestar、Volvo、Toyota、Nissan Leaf），再設定現在的電量和要充到多少。儀表板依每小時預測算出太陽能板什麼時候能充完，或今天能充到哪裡、還差多少，增加多少續航、省多少錢，並和改用電網要充多久比較。電池會有充電動畫，長條圖顯示每小時的太陽能用在哪裡。加上家用電池（例如特斯拉 Powerwall 3），就能看到白天多的太陽能能存多少，晚上給車子和家裡用。</p>
+    <p class="small" lang-zh>儀表板一打開就會選好目前最晴朗的地區，不用點也看得到動畫。下方範例：家用 5 kW 系統。</p>
   </div>
   <div class="flowbox">
     <div class="modes" id="flowModes">
-      <button type="button" data-m="sun" class="on"><span>Sunny noon</span></button>
-      <button type="button" data-m="cloud"><span>Cloudy</span></button>
-      <button type="button" data-m="night"><span>Night</span></button>
+      <button type="button" data-m="sun" class="on"><span lang-en>Sunny noon</span><span lang-zh>晴天中午</span></button>
+      <button type="button" data-m="cloud"><span lang-en>Cloudy</span><span lang-zh>多雲</span></button>
+      <button type="button" data-m="night"><span lang-en>Night</span><span lang-zh>晚上</span></button>
     </div>
     <div id="flowPic"></div>
     <div class="readout" id="flowRead"></div>
@@ -185,97 +191,110 @@
 </div></section>
 
 <section id="results"><div class="wrap">
-  <h2><span>Results</span></h2>
-  <p class="sub">Test period July 2025 to October 2026 (16 months the model never saw), daytime hours, all 14 regions. Average error of the next-hour forecast, lower is better. Output scales with panel size, so the error as a share of capacity is the same for a 5 kW home and a 50 kW business.</p>
-  
+  <h2><span lang-en>Results</span><span lang-zh>成果</span></h2>
+  <p class="sub" lang-en>Test period July 2025 to October 2026 (16 months the model never saw), daytime hours, all 14 regions. Average error of the next-hour forecast, lower is better. Output scales with panel size, so the error as a share of capacity is the same for a 5 kW home and a 50 kW business.</p>
+  <p class="sub" lang-zh>測試期 2025 年 7 月到 2026 年 10 月（模型沒看過的 16 個月），白天時段，全部 14 個地區。下一小時預測的平均誤差，越小越好。發電量和板子大小成正比，所以「誤差佔容量的比例」對家用 5 kW 和商用 50 kW 都一樣。</p>
   <table>
-    <tr><th>Method</th><th>50 kW business</th><th>5 kW home</th><th>% of capacity</th></tr>
-    <tr><td>Persistence (same as last hour)</td><td>4.03 kW</td><td>0.40 kW</td><td>8.1%<span class="bar" style="width:120px;opacity:0.35"></span></td></tr>
-    <tr><td>Open-Meteo day-ahead forecast alone</td><td>1.88 kW</td><td>0.19 kW</td><td>3.8%<span class="bar" style="width:56px;opacity:0.45"></span></td></tr>
-    <tr><td>Clear-sky persistence</td><td>1.66 kW</td><td>0.17 kW</td><td>3.3%<span class="bar" style="width:49px;opacity:0.5"></span></td></tr>
-    <tr><td>SolarCast v1 (weather so far)</td><td>1.19 kW</td><td>0.12 kW</td><td>2.4%<span class="bar" style="width:36px;opacity:0.7"></span></td></tr>
-    <tr class="me"><td>SolarCast v4 (current)</td><td>1.12 kW</td><td>0.11 kW</td><td>2.2%<span class="bar" style="width:33px"></span></td></tr>
+    <tr><th lang-en>Method</th><th lang-zh>方法</th><th lang-en>50 kW business</th><th lang-zh>商用 50 kW</th><th lang-en>5 kW home</th><th lang-zh>家用 5 kW</th><th lang-en>% of capacity</th><th lang-zh>佔容量</th></tr>
+    <tr><td lang-en>Persistence (same as last hour)</td><td lang-zh>Persistence（和上一小時一樣）</td><td>4.03 kW</td><td>0.40 kW</td><td>8.1%<span class="bar" style="width:120px;opacity:0.35"></span></td></tr>
+    <tr><td lang-en>Open-Meteo day-ahead forecast alone</td><td lang-zh>直接用 Open-Meteo 前一天預報</td><td>1.88 kW</td><td>0.19 kW</td><td>3.8%<span class="bar" style="width:56px;opacity:0.45"></span></td></tr>
+    <tr><td lang-en>Clear-sky persistence</td><td lang-zh>晴空 Persistence</td><td>1.66 kW</td><td>0.17 kW</td><td>3.3%<span class="bar" style="width:49px;opacity:0.5"></span></td></tr>
+    <tr><td lang-en>SolarCast v1 (weather so far)</td><td lang-zh>SolarCast v1（只用目前為止的天氣）</td><td>1.19 kW</td><td>0.12 kW</td><td>2.4%<span class="bar" style="width:36px;opacity:0.7"></span></td></tr>
+    <tr class="me"><td lang-en>SolarCast v4 (current)</td><td lang-zh>SolarCast v4（目前版本）</td><td>1.12 kW</td><td>0.11 kW</td><td>2.2%<span class="bar" style="width:33px"></span></td></tr>
   </table>
-  <p class="small">v4 is 32.6% better than clear-sky persistence, 40.3% better than Open-Meteo's own day-ahead forecast, and beats both baselines in every region (14/14). The same error is 7.9% of the average daytime output. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
-  
-  <p class="small"><b>Can it get better?</b> We tried (v5, judged on the validation period only, with a bar set in advance: at least 1 W/m&sup2; better than v4): inputs for how wrong the day-ahead forecast is right now, the forecast's trend, and five tuning variants. The best gained only 0.26 W/m&sup2; (28.98 &rarr; 28.71), so v4 stays and the test period was not looked at again. Then v6 used the GPU: XGBoost trained on a Colab T4, 48 settings plus a blend with v4. Best 28.56 W/m&sup2; (gain 0.42), still below the bar. The error left seems to come from the weather data itself, not the model.</p>
-  
+  <p class="small" lang-en>v4 is 32.6% better than clear-sky persistence, 40.3% better than Open-Meteo's own day-ahead forecast, and beats both baselines in every region (14/14). The same error is 7.9% of the average daytime output. Weather is modelled (reanalysis) and PV output is derived with a stated formula, because New Zealand has no public hourly data for single solar sites; real plants would be harder to forecast.</p>
+  <p class="small" lang-zh>v4 比晴空 Persistence 好 32.6%、比 Open-Meteo 自己的前一天預報好 40.3%，並在每一個地區都贏過兩個基準方法（14/14）。同樣的誤差是白天平均發電量的 7.9%。天氣是模擬（再分析）資料，發電量用明確公式換算，因為紐西蘭沒有公開的單一電廠逐時資料；真實電廠會更難預測。</p>
+  <p class="small" lang-en><b>Can it get better?</b> We tried (v5, judged on the validation period only, with a bar set in advance: at least 1 W/m&sup2; better than v4): inputs for how wrong the day-ahead forecast is right now, the forecast's trend, and five tuning variants. The best gained only 0.26 W/m&sup2; (28.98 &rarr; 28.71), so v4 stays and the test period was not looked at again. Then v6 used the GPU: XGBoost trained on a Colab T4, 48 settings plus a blend with v4. Best 28.56 W/m&sup2; (gain 0.42), still below the bar. The error left seems to come from the weather data itself, not the model.</p>
+  <p class="small" lang-zh><b>還能更準嗎？</b>我們試過（v5，只看驗證期，門檻事先訂好：要比 v4 好至少 1 W/m&sup2;）：加入「前一天預報現在錯了多少」、預報的變化趨勢，以及五組參數調整。最好的只進步 0.26 W/m&sup2;（28.98 &rarr; 28.71），所以保留 v4，也沒有再去看測試期。接著 v6 改用 GPU：在 Colab T4 上訓練 XGBoost，試了 48 組設定，再和 v4 混合。最好是 28.56 W/m&sup2;（進步 0.42），還是沒過門檻。剩下的誤差看起來主要來自天氣資料本身，而不是模型。</p>
 </div></section>
 
 <section id="value"><div class="wrap">
-  <h2><span>Worked example: better forecast, better decision</span></h2>
-  <p class="sub">The same charging rule, driven by different forecasts on 6,818 workshop-days of the test period, settled with the actual sunshine. Grid power the EV causes per day (lower is better).</p>
-  
+  <h2><span lang-en>Worked example: better forecast, better decision</span><span lang-zh>應用範例：預測更準，決策更好</span></h2>
+  <p class="sub" lang-en>The same charging rule, driven by different forecasts on 6,818 workshop-days of the test period, settled with the actual sunshine. Grid power the EV causes per day (lower is better).</p>
+  <p class="sub" lang-zh>同一套充電規則，在測試期 6,818 個「加工店日」搭配不同預測，再用實際日照結算。電動車每天造成的電網用電（越少越好）。</p>
   <table>
-    <tr><th>Strategy</th><th>Grid kWh / day</th></tr>
-    <tr><td>Charge on arrival</td><td>18.01<span class="bar" style="width:120px;opacity:.3"></span></td></tr>
-    <tr><td>Always charge 10:00-14:00</td><td>8.46<span class="bar" style="width:56px;opacity:.45"></span></td></tr>
-    <tr><td>Clear-sky persistence forecast</td><td>7.60<span class="bar" style="width:51px;opacity:.6"></span></td></tr>
-    <tr class="me"><td>SolarCast v4 forecast</td><td>6.96<span class="bar" style="width:46px"></span></td></tr>
-    <tr><td>Perfect forecast (upper bound)</td><td>5.31<span class="bar" style="width:35px;opacity:.3"></span></td></tr>
+    <tr><th lang-en>Strategy</th><th lang-zh>策略</th><th lang-en>Grid kWh / day</th><th lang-zh>電網 kWh／天</th></tr>
+    <tr><td lang-en>Charge on arrival</td><td lang-zh>到了就充</td><td>18.01<span class="bar" style="width:120px;opacity:.3"></span></td></tr>
+    <tr><td lang-en>Always charge 10:00-14:00</td><td lang-zh>每天固定 10–14 點充</td><td>8.46<span class="bar" style="width:56px;opacity:.45"></span></td></tr>
+    <tr><td lang-en>Clear-sky persistence forecast</td><td lang-zh>晴空 Persistence 預測</td><td>7.60<span class="bar" style="width:51px;opacity:.6"></span></td></tr>
+    <tr class="me"><td lang-en>SolarCast v4 forecast</td><td lang-zh>SolarCast v4 預測</td><td>6.96<span class="bar" style="width:46px"></span></td></tr>
+    <tr><td lang-en>Perfect forecast (upper bound)</td><td lang-zh>完美預測（上限）</td><td>5.31<span class="bar" style="width:35px;opacity:.3"></span></td></tr>
   </table>
-  <p class="small">Even against the good 10:00-14:00 habit, SolarCast saves 1.5 kWh a day per workshop; a perfect forecast would add only 1.65 kWh more.</p>
-  
+  <p class="small" lang-en>Even against the good 10:00-14:00 habit, SolarCast saves 1.5 kWh a day per workshop; a perfect forecast would add only 1.65 kWh more.</p>
+  <p class="small" lang-zh>就算和「固定 10–14 點充」這個好習慣比，SolarCast 每間加工店每天還能少用 1.5 kWh；完美預測也只能再多省 1.65 kWh。</p>
 </div></section>
 
 <section id="ai"><div class="wrap two">
   <div>
-    <h2><span>AI you can trust with the numbers</span></h2>
-    <p class="sub">On top of the forecast, an open language model (Qwen3) runs on the notebook's own machine. It writes a national briefing every hour and answers questions in English or Chinese, but it never computes or invents numbers.</p>
-    
+    <h2><span lang-en>AI you can trust with the numbers</span><span lang-zh>不亂編數字的 AI</span></h2>
+    <p class="sub" lang-en>On top of the forecast, an open language model (Qwen3) runs on the notebook's own machine. It writes a national briefing every hour and answers questions in English or Chinese, but it never computes or invents numbers.</p>
+    <p class="sub" lang-zh>在預測之上，開源語言模型（Qwen3）直接在 notebook 那台機器上執行。它每小時寫一段全國摘要，也用中英文回答問題，但它從不自己算數字或編數字。</p>
   </div>
   <ul class="tick">
-    <li>Grounded: the server looks up the facts with the same code as the map; the model only explains them.</li>
-    
-    <li>Offline: no internet, no tools, no API keys.</li>
-    
-    <li>Guarded: keyword and injection filters, the Llama Guard 3 safety classifier, topic rules and rate limits.</li>
-    
-    <li>Size-aware: every number is already scaled to your panel size before the model sees it. Tested on a T4: a 5 kW home in Christchurch gets 3.36 kW next hour, the 50 kW workshop example 33.6 kW.</li>
-    
-    <li>Honest: in replay mode it says the hour is in the past, and the page always shows which answers came from the AI.</li>
-    
+    <li lang-en>Grounded: the server looks up the facts with the same code as the map; the model only explains them.</li>
+    <li lang-zh>有根據：伺服器用和地圖相同的程式查出數據，模型只負責解釋。</li>
+    <li lang-en>Offline: no internet, no tools, no API keys.</li>
+    <li lang-zh>離線：不能上網、沒有工具、不需要 API 金鑰。</li>
+    <li lang-en>Guarded: keyword and injection filters, the Llama Guard 3 safety classifier, topic rules and rate limits.</li>
+    <li lang-zh>有防護：關鍵字與提示注入過濾、Llama Guard 3 安全分類器、主題限制和頻率限制。</li>
+    <li lang-en>Size-aware: every number is already scaled to your panel size before the model sees it. Tested on a T4: a 5 kW home in Christchurch gets 3.36 kW next hour, the 50 kW workshop example 33.6 kW.</li>
+    <li lang-zh>依系統大小：交給模型的每個數字都已換算成你的系統大小。在 T4 上實測：基督城家用 5 kW 下一小時 3.36 kW，50 kW 加工店範例 33.6 kW。</li>
+    <li lang-en>Honest: in replay mode it says the hour is in the past, and the page always shows which answers came from the AI.</li>
+    <li lang-zh>誠實：回放模式下會說明那是過去的時段，網頁也會標示哪些回答來自 AI。</li>
   </ul>
 </div></section>
 
 <section id="run"><div class="wrap">
-  <h2><span>Run it</span></h2>
-  <p class="sub">Pick the cloud notebook you like: Google Colab or Kaggle. Both run the same notebook on a free GPU and give you the same live dashboard and AI. Use whichever you already have an account, GPU quota or a paid plan on (a bigger GPU from a paid plan is used automatically).</p>
-  
+  <h2><span lang-en>Run it</span><span lang-zh>如何執行</span></h2>
+  <p class="sub" lang-en>Pick the cloud notebook you like: Google Colab or Kaggle. Both run the same notebook on a free GPU and give you the same live dashboard and AI. Use whichever you already have an account, GPU quota or a paid plan on (a bigger GPU from a paid plan is used automatically).</p>
+  <p class="sub" lang-zh>選你喜歡的雲端 notebook：Google Colab 或 Kaggle。兩個跑的是同一份 notebook、都用免費 GPU，打開的儀表板和 AI 也完全一樣。你在哪一邊有帳號、有 GPU 額度或有訂閱付費方案，就用哪一邊（付費方案給的更大 GPU 會自動用上）。</p>
   <div class="two">
     <div class="card">
-      <h3>Google Colab</h3>
-      <p>Free GPU: one T4. Open the judges notebook and choose Runtime &gt; Run all. It asks for the T4 GPU (used by the AI) and prints a public link to the dashboard once the AI is ready.</p>
-      
+      <h3 lang-en>Google Colab</h3><h3 lang-zh>Google Colab</h3>
+      <p lang-en>Free GPU: one T4. Open the judges notebook and choose Runtime &gt; Run all. It asks for the T4 GPU (used by the AI) and prints a public link to the dashboard once the AI is ready.</p>
+      <p lang-zh>免費 GPU：一張 T4。打開評審用 notebook，選 Runtime &gt; Run all。它會要求 T4 GPU（給 AI 用），等 AI 準備好後印出儀表板的公開連結。</p>
       <div class="cta"><a class="btn primary" href="https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb">Open in Colab &rarr;</a></div>
     </div>
     <div class="card">
-      <h3>Kaggle</h3>
-      <p>Free GPU: two T4s. Open the judges notebook, in Settings choose Accelerator: GPU T4 x2 and Internet: On (needs a phone-verified Kaggle account), then Run All. It prints the same public link once the AI is ready. Kaggle shows an empty page for 15-30 seconds while it copies the notebook from GitHub: wait, don't reload. If it stays empty, sign in to Kaggle and open the link again, or use File &gt; Import Notebook and paste the notebook's GitHub link.</p>
-      
+      <h3 lang-en>Kaggle</h3><h3 lang-zh>Kaggle</h3>
+      <p lang-en>Free GPU: two T4s. Open the judges notebook, in Settings choose Accelerator: GPU T4 x2 and Internet: On (needs a phone-verified Kaggle account), then Run All. It prints the same public link once the AI is ready. Kaggle shows an empty page for 15-30 seconds while it copies the notebook from GitHub: wait, don't reload. If it stays empty, sign in to Kaggle and open the link again, or use File &gt; Import Notebook and paste the notebook's GitHub link.</p>
+      <p lang-zh>免費 GPU：兩張 T4。打開評審用 notebook，在 Settings 選 Accelerator: GPU T4 x2、Internet: On（需要先在 Kaggle 驗證手機號碼），再按 Run All。等 AI 準備好後一樣會印出公開連結。Kaggle 從 GitHub 複製 notebook 時，頁面會空白 15～30 秒，請等一下、不要重新整理。如果一直空白，先登入 Kaggle 再開一次連結，或在 Kaggle 用 File &gt; Import Notebook 貼上 notebook 的 GitHub 連結。</p>
       <div class="cta"><a class="btn primary" href="https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb">Open in Kaggle &rarr;</a></div>
     </div>
   </div>
   <div class="card" style="margin-top:16px">
-      <h3>On your own computer</h3>
-      <p>Python 3.10 or newer. Open http://127.0.0.1:8000 when it is ready.</p>
-      
+      <h3 lang-en>On your own computer</h3><h3 lang-zh>在你自己的電腦</h3>
+      <p lang-en>Python 3.10 or newer. Open http://127.0.0.1:8000 when it is ready.</p>
+      <p lang-zh>需要 Python 3.10 以上。準備好後打開 http://127.0.0.1:8000。</p>
 <pre>git clone https://github.com/nashwu0117/SolarCast-Lite.git
 cd SolarCast-Lite
 python -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install -e .
 python -m solarcast.nz</pre>
-      <p class="small">Optional AI: install <a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:1.7b</code>, then <code>python -m solarcast.nz --ai</code>.</p>
-      
+      <p class="small" lang-en>Optional AI: install <a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:1.7b</code>, then <code>python -m solarcast.nz --ai</code>.</p>
+      <p class="small" lang-zh>選用 AI：安裝 <a href="https://ollama.com">Ollama</a>，執行 <code>ollama pull qwen3:1.7b</code>，再執行 <code>python -m solarcast.nz --ai</code>。</p>
   </div>
 </div></section>
 
 <footer><div class="wrap">
-  <p>Open source under the <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT License</a>. Weather data by <a href="https://open-meteo.com">Open-Meteo.com</a> (CC BY 4.0). Chat models: Qwen3 (Apache-2.0) and Llama Guard 3 (Llama 3.2 Community License; Built with Llama). Full credits in <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.md">NOTICE.md</a>. A high-school hackathon prototype; not energy or financial advice.</p>
-  
+  <p lang-en>Open source under the <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT License</a>. Weather data by <a href="https://open-meteo.com">Open-Meteo.com</a> (CC BY 4.0). Chat models: Qwen3 (Apache-2.0) and Llama Guard 3 (Llama 3.2 Community License; Built with Llama). Full credits in <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.md">NOTICE.md</a>. A high-school hackathon prototype; not energy or financial advice.</p>
+  <p lang-zh>以 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT 授權</a>開源。天氣資料來自 <a href="https://open-meteo.com">Open-Meteo.com</a>（CC BY 4.0）。聊天模型：Qwen3（Apache-2.0）與 Llama Guard 3（Llama 3.2 Community License；Built with Llama）。完整來源見 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.zh-TW.md">NOTICE.zh-TW.md</a>。高中黑客松原型，不構成能源或財務建議。</p>
 </div></footer>
 
 <script>
+// Language toggle (remembered in this browser only).
+const btn = document.getElementById('lang');
+function setLang(zh) {
+  document.body.classList.toggle('zh', zh);
+  document.documentElement.lang = zh ? 'zh-Hant' : 'en';
+  btn.textContent = zh ? 'English' : '中文';
+  try { localStorage.setItem('lang', zh ? 'zh' : 'en'); } catch (e) {}
+}
+btn.onclick = () => setLang(!document.body.classList.contains('zh'));
+let saved = null;
+try { saved = localStorage.getItem('lang'); } catch (e) {}
+setLang(saved ? saved === 'zh' : /^zh/i.test(navigator.language || ''));
+
 // Draw the real grid cells (the land cells the model forecasts every hour) from the repository.
 (async function () {
   const svg = document.getElementById('nzmap');
@@ -301,6 +320,7 @@ python -m solarcast.nz</pre>
 // Power-flow demo: the same picture as the dashboard, for a 5 kW home in three example hours (illustrative numbers).
 (function () {
   const SIZE = 5, MODES = { sun: { share: 0.8, ev: true }, cloud: { share: 0.25, ev: false }, night: { share: 0, ev: false } };
+  const zh = () => document.body.classList.contains('zh');
   function svg(share, ev) {
     const kw = (SIZE * share).toFixed(2), on = share >= 0.02, car = on && ev;
     const speed = (2.6 - 2.1 * share).toFixed(2) + 's';
@@ -315,14 +335,14 @@ python -m solarcast.nz</pre>
     return `<svg class="flow" viewBox="0 0 330 118" role="img" aria-label="${on ? `Your ${SIZE} kW panels send about ${kw} kW to your home${car ? ' and the EV' : ''}` : 'Night: the home runs on the grid'}">
       ${sun}${on ? juice('M52 40 L92 62', 'juice') : wire('M52 40 L92 62')}
       <g transform="translate(92 54)"><path d="M0 22 L12 0 L44 0 L32 22 Z" fill="#1e3a5f"/><path d="M11 2 L5 20 M22 0 L16 22 M33 0 L27 22 M6 11 L38 11" stroke="#7fa7d6" stroke-width="1"/><line x1="22" y1="22" x2="22" y2="34" stroke="#6b7684" stroke-width="2"/></g>
-      <text x="114" y="104" text-anchor="middle">${`Your ${SIZE} kW`}</text>
+      <text x="114" y="104" text-anchor="middle">${zh() ? `你的 ${SIZE} kW` : `Your ${SIZE} kW`}</text>
       ${on ? juice('M134 70 C170 70 180 70 214 70', 'juice') + `<text class="kw" x="174" y="60" text-anchor="middle">${kw} kW</text>` : wire('M134 70 C170 70 180 70 214 70')}
       <g transform="translate(214 46)"><path d="M0 18 L22 0 L44 18 Z" fill="#c2410c"/><rect x="5" y="18" width="34" height="26" fill="#f1e4d3"/><rect x="17" y="28" width="10" height="16" fill="#8b5a2b"/><rect x="8" y="22" width="7" height="7" fill="${on ? '#fde68a' : '#93c5fd'}"/></g>
-      <text x="236" y="104" text-anchor="middle">${'Home'}</text>
+      <text x="236" y="104" text-anchor="middle">${zh() ? '家' : 'Home'}</text>
       ${car ? juice('M258 82 C276 86 280 92 292 92', 'juice') : wire('M258 82 C276 86 280 92 292 92')}
       <g transform="translate(288 80)" opacity="${car ? 1 : 0.45}"><path d="M2 12 L8 3 L26 3 L33 12 L38 13 L38 20 L0 20 L0 13 Z" fill="${car ? '#15803d' : '#6b7684'}"/><circle cx="9" cy="21" r="4" fill="#1c2733"/><circle cx="29" cy="21" r="4" fill="#1c2733"/></g>
-      <text x="328" y="114" text-anchor="end">${car ? ('EV charging') : ('EV')}</text>
-      ${on ? '' : `<g transform="translate(176 6)" stroke="#6d83b3" stroke-width="2" fill="none"><path d="M10 0 L2 34 M10 0 L18 34 M4 14 L16 14 M3 24 L17 24"/></g><text x="200" y="20">${'Grid'}</text>${juice('M186 42 C200 56 210 60 222 62', 'grid-juice')}`}
+      <text x="328" y="114" text-anchor="end">${car ? (zh() ? '電動車充電中' : 'EV charging') : (zh() ? '電動車' : 'EV')}</text>
+      ${on ? '' : `<g transform="translate(176 6)" stroke="#6d83b3" stroke-width="2" fill="none"><path d="M10 0 L2 34 M10 0 L18 34 M4 14 L16 14 M3 24 L17 24"/></g><text x="200" y="20">${zh() ? '電網' : 'Grid'}</text>${juice('M186 42 C200 56 210 60 222 62', 'grid-juice')}`}
     </svg>`;
   }
   const order = ['sun', 'cloud', 'night'];
@@ -332,11 +352,12 @@ python -m solarcast.nz</pre>
     const { share, ev } = MODES[m];
     document.getElementById('flowPic').innerHTML = svg(share, ev);
     document.getElementById('flowRead').innerHTML = share
-      ? `${(SIZE * share).toFixed(2)} kW <small>${`next hour, ${Math.round(share * 100)}% of rated power${ev ? ', enough to charge the EV' : ''}`}</small>`
-      : `0 kW <small>${'no sun at night, the home uses grid power'}</small>`;
+      ? `${(SIZE * share).toFixed(2)} kW <small>${zh() ? `下一小時，額定功率的 ${Math.round(share * 100)}%${ev ? '，夠幫電動車充電' : ''}` : `next hour, ${Math.round(share * 100)}% of rated power${ev ? ', enough to charge the EV' : ''}`}</small>`
+      : `0 kW <small>${zh() ? '晚上沒有太陽，家裡用電網的電' : 'no sun at night, the home uses grid power'}</small>`;
     document.querySelectorAll('#flowModes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   }
   document.querySelectorAll('#flowModes button').forEach(b => b.onclick = () => { clearInterval(timer); show(b.dataset.m); });
+  btn.addEventListener('click', () => show(mode));                 // redraw labels in the new language
   show('sun');
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     timer = setInterval(() => show(order[(order.indexOf(mode) + 1) % order.length]), 4500);

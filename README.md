@@ -1,5 +1,6 @@
 # SolarCast NZ
 
+**English** | [繁體中文](README.zh-TW.md)
 
 How much power will your solar panels give in the next hour, anywhere in New Zealand? SolarCast NZ forecasts it with
 machine learning and shows it on an interactive map for any panel size (a 5 kW home or a 50 kW business), with smart EV
@@ -17,10 +18,10 @@ Colab: Runtime > **Run all** (the notebook asks for a free T4 GPU, used only by 
 notebook loads our trained model from this repository, shows how accurate it is, and prints a public link (free
 Cloudflare tunnel) to the live dashboard; the AI chat is ready a few minutes later.
 
-| Notebook | Purpose | Colab | Kaggle |
-|---|---|---|---|
-| Judges | Load the trained model, show results, open the dashboard (GPU T4) | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb) |
-| Train | Fetch data, train and evaluate the model, back it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/train_Kaggle.ipynb) |
+| Notebook | Purpose | Colab (English) | Colab (繁體中文) | Kaggle (English) | Kaggle (繁體中文) |
+|---|---|---|---|---|---|
+| Judges | Load the trained model, show results, open the dashboard (GPU T4) | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges.zh-TW.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/SolarCast_NZ_Judges_Kaggle.zh-TW.ipynb) |
+| Train | Fetch data, train and evaluate the model, back it up to GitHub | [Open](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.ipynb) | [開啟](https://colab.research.google.com/github/nashwu0117/SolarCast-Lite/blob/main/notebooks/train.zh-TW.ipynb) | [Open](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/train_Kaggle.ipynb) | [開啟](https://kaggle.com/kernels/welcome?src=https://github.com/nashwu0117/SolarCast-Lite/blob/main/notebooks/train_Kaggle.zh-TW.ipynb) |
 
 ## The user and the decision
 Anyone with rooftop solar in New Zealand, from a family with 5 kW of panels to a school or business with 50 kW, gets the
@@ -172,7 +173,7 @@ charging on arrival and the 10:00-14:00 habit. Reproduce: `python experiments/nz
 ## Repository
 ```
 src/solarcast/nz/   config, data, features, ensemble, model, service, grid, webapp, app, assistant, llm_setup, __main__
-notebooks/          Judges and Train notebooks
+notebooks/          Judges and Train notebooks, English and 繁體中文
 models/             trained model (nz_model.joblib) and its report (nz_model.json)
 data/nz/            compact replay data for the dashboard (Open-Meteo, CC BY 4.0)
 data/nz/grid_cells.json  the 137 land cells of the nationwide grid
