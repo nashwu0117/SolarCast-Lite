@@ -75,7 +75,7 @@ Counted from the latest weather data, we beat the weather service by 40% at 1 ho
 at all from 6 hours. We stop where we add value (`experiments/results/nz_horizons.md`).
 
 **10. How much history does it need?**
-About six months to beat clear-sky persistence, and little gain after one year (learning curve on v1).
+About three months: with 90 days of training the error (37.3 W/m2) is already below clear-sky persistence (41.5), and gains flatten after about one year (learning curve on v1; the README says six months, which is more conservative).
 
 **11. Where does it fail?**
 When clouds arrive or clear inside the hour, at dawn and dusk, and in cloudier southern regions (Invercargill,

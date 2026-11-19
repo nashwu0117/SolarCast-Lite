@@ -62,7 +62,7 @@ EN: "No. All choices used validation only, with a bar fixed in advance of 1 W/m2
 EN: "We beat the weather service by 40% at 1 hour, 16% at 2, 6% at 3 and not from 6 hours. We stop where we add value."
 
 **10. 需要多少歷史資料？**
-EN: "About six months to beat clear-sky persistence, with little gain after one year."
+EN: "About three months: 90 days of training already beats clear-sky persistence, and gains flatten after about one year."
 
 **11. 哪裡會失敗？**
 EN: "When clouds arrive or clear inside the hour, at dawn and dusk, and in cloudier southern regions like Invercargill and Queenstown."
