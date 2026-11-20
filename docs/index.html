@@ -102,6 +102,14 @@
   @keyframes flowdash { to { stroke-dashoffset: -32; } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .flow .juice, .flow .grid-juice, .flow .sunrays { animation: none; } }
+  /* "Build with NashWu" badge, fixed at the bottom-right corner (same pill as the dashboard) */
+  .buildby { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: inline-flex; align-items: center; gap: 8px;
+             padding: 9px 16px; border-radius: 999px; background: #0d2a1f; color: #9db0a6; font: 600 13px/1 Inter, system-ui, sans-serif;
+             letter-spacing: .02em; text-decoration: none; border: 1px solid #17402f; box-shadow: 0 4px 14px rgba(0,0,0,.22);
+             transition: color .15s, border-color .15s, transform .15s; }
+  .buildby:hover { color: #e6f2ec; border-color: #2f7a58; transform: translateY(-1px); }
+  .buildby .arr { font-size: 15px; line-height: 1; }
+  footer { padding-bottom: 72px; }
 </style>
 </head>
 <body>
@@ -330,6 +338,7 @@ python -m solarcast.nz</pre>
   <p lang-en>Open source under the <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT License</a>. Weather data by <a href="https://open-meteo.com">Open-Meteo.com</a> (CC BY 4.0). Chat models: Qwen3 (Apache-2.0) and Llama Guard 3 (Llama 3.2 Community License; Built with Llama). Full credits in <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.md">NOTICE.md</a>. A high-school hackathon prototype; not energy or financial advice.</p>
   <p lang-zh>以 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/LICENSE">MIT 授權</a>開源。天氣資料來自 <a href="https://open-meteo.com">Open-Meteo.com</a>（CC BY 4.0）。聊天模型：Qwen3（Apache-2.0）與 Llama Guard 3（Llama 3.2 Community License；Built with Llama）。完整來源見 <a href="https://github.com/nashwu0117/SolarCast-Lite/blob/main/NOTICE.zh-TW.md">NOTICE.zh-TW.md</a>。高中黑客松原型，不構成能源或財務建議。</p>
 </div></footer>
+<a class="buildby" href="https://github.com/nashwu0117" target="_blank" rel="noopener noreferrer">Build with NashWu <span class="arr" aria-hidden="true">&#8599;</span></a>
 
 <script>
 // Language toggle (remembered in this browser only).
