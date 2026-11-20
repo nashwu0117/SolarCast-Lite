@@ -173,3 +173,5 @@ tests/nz/           pytest 測試（離線）
 ## 授權
 [MIT 授權](LICENSE)：可以使用、複製、修改和分享程式碼、notebook、文件與訓練好的模型，只要保留版權聲明。
 第三方資料、模型與函式庫依各自的授權（例如 Open-Meteo 資料是 CC BY 4.0，需要標示來源），詳見 [NOTICE.zh-TW.md](NOTICE.zh-TW.md)。
+
+<p align="right"><a href="https://github.com/nashwu0117"><img src="docs/assets/build-with-nashwu.svg" alt="Build with NashWu" width="200" height="40"></a></p>

@@ -434,7 +434,7 @@ INDEX_HTML = r"""<!doctype html>
   table.m th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 3px 0; }
   table.m th:not(:first-child) { text-align: right; }
   @media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0, 1fr); } #modelView { padding: 10px 12px; } }
-  footer { padding: 6px 16px 22px; color: var(--muted); font-size: 12px; }
+  footer { padding: 6px 16px 64px; color: var(--muted); font-size: 12px; }
   .leaflet-tooltip.tip { font-size: 13px; line-height: 1.4; padding: 8px 10px; border-radius: 8px; }
   .tip b.gen { color: var(--good); } .tip b.nogen { color: #6b7684; }
   .rname { background: none; border: 0; box-shadow: none; font-size: 11px; font-weight: 600; color: #26323f; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; padding: 0; }
@@ -455,11 +455,18 @@ INDEX_HTML = r"""<!doctype html>
   .brief.err #briefText { color: #8a1f1f; font-size: 13px; }
   .maptools .gt { margin-left: auto; display: flex; align-items: center; gap: 5px; cursor: pointer; }
   /* ----- SolarCast AI chat ----- */
-  #chatBtn { position: fixed; right: 18px; bottom: 18px; z-index: 1001; background: var(--ink); color: #fff; border: 0;
+  /* "Build with NashWu" badge: the lowest item in the bottom-right corner, the chat button sits just above it */
+  .buildby { position: fixed; right: 18px; bottom: 14px; z-index: 1000; display: inline-flex; align-items: center; gap: 8px;
+             padding: 9px 16px; border-radius: 999px; background: #0d2a1f; color: #9db0a6; font-size: 13px; font-weight: 600;
+             letter-spacing: .02em; text-decoration: none; border: 1px solid #17402f; box-shadow: 0 4px 14px rgba(0,0,0,.22);
+             transition: color .15s, border-color .15s, transform .15s; }
+  .buildby:hover { color: #e6f2ec; border-color: #2f7a58; transform: translateY(-1px); }
+  .buildby .arr { font-size: 15px; line-height: 1; }
+  #chatBtn { position: fixed; right: 18px; bottom: 66px; z-index: 1001; background: var(--ink); color: #fff; border: 0;
              padding: 12px 18px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.25); display: none; }
   #chatBtn:hover { background: #2d3d4f; }
-  #chat { position: fixed; right: 18px; bottom: 18px; z-index: 1002; width: 400px; max-width: calc(100vw - 32px);
-          height: min(620px, calc(100vh - 36px)); background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  #chat { position: fixed; right: 18px; bottom: 66px; z-index: 1002; width: 400px; max-width: calc(100vw - 32px);
+          height: min(620px, calc(100vh - 84px)); background: var(--card); border: 1px solid var(--line); border-radius: 14px;
           box-shadow: 0 12px 34px rgba(0,0,0,.22); display: none; flex-direction: column; overflow: hidden; }
   #chat.open { display: flex; }
   .chead { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
@@ -634,6 +641,7 @@ INDEX_HTML = r"""<!doctype html>
   AI chat: Qwen3 (Apache-2.0) running locally on the notebook's machine, safety check by Llama Guard 3 (Built with Llama); it answers only from this dashboard's data and may make mistakes.
   Weather: Open-Meteo (CC BY 4.0), past weather and weather forecasts. Panel power is worked out from sunlight and scaled to the panel size you pick. Prototype; not energy or financial advice.
 </footer>
+<a class="buildby" href="https://github.com/nashwu0117" target="_blank" rel="noopener noreferrer">Build with NashWu <span class="arr" aria-hidden="true">&#8599;</span></a>
 
 <script>
 // ---------- colours: predicted next-hour kW -> circle colour ----------

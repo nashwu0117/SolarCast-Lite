@@ -196,3 +196,5 @@ This project is a prototype and is not energy or financial advice.
 [MIT License](LICENSE): you may use, copy, modify and share the code, notebooks, docs and trained model, keeping the
 copyright notice. Third-party data, models and libraries keep their own licenses (for example Open-Meteo data is
 CC BY 4.0 and needs attribution); see [NOTICE.md](NOTICE.md).
+
+<p align="right"><a href="https://github.com/nashwu0117"><img src="docs/assets/build-with-nashwu.svg" alt="Build with NashWu" width="200" height="40"></a></p>
